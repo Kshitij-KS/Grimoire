@@ -162,7 +162,7 @@ export function NarratorTools({ worldId }: NarratorToolsProps) {
                 className="space-y-4"
               >
                 {/* Affected Entities */}
-                {impactResult.affected?.length > 0 && (
+                {(impactResult.affected?.length ?? 0) > 0 && (
                   <div className="glass-panel rounded-[24px] p-5">
                     <p className="chapter-label mb-3">— Affected Entities —</p>
                     <div className="space-y-2">
@@ -202,7 +202,7 @@ export function NarratorTools({ worldId }: NarratorToolsProps) {
                 )}
 
                 {/* Orphaned */}
-                {impactResult.orphaned?.length > 0 && (
+                {(impactResult.orphaned?.length ?? 0) > 0 && (
                   <div className="glass-panel rounded-[24px] p-5">
                     <p className="chapter-label mb-3 text-[rgb(var(--danger-rgb))]">
                       — Orphaned Characters —
@@ -221,7 +221,7 @@ export function NarratorTools({ worldId }: NarratorToolsProps) {
                 )}
 
                 {/* Invalidated */}
-                {impactResult.invalidated?.length > 0 && (
+                {(impactResult.invalidated?.length ?? 0) > 0 && (
                   <div className="glass-panel rounded-[24px] p-5">
                     <p className="chapter-label mb-3">
                       — Invalidated World Rules —
