@@ -14,6 +14,7 @@ export const loreIngestFunction = inngest.createFunction(
   {
     id: "lore-inscribe",
     retries: 3,
+    triggers: [{ event: "lore.inscribed" }],
     onFailure: async ({ error, event }: { error: { message: string }; event: { data: Record<string, unknown> } }) => {
       const supabase = getServiceClient();
       const eventData = event.data as { userId: string; worldId: string; entryId: string };
@@ -31,7 +32,6 @@ export const loreIngestFunction = inngest.createFunction(
         .update({ processing_status: "failed" })
         .eq("id", eventData.entryId);
     },
-    triggers: [{ event: "lore.inscribed" }],
   },
   async ({ event, step }: { event: { data: Record<string, unknown> }; step: { run: <T>(name: string, fn: () => Promise<T>) => Promise<T> } }) => {
     const { worldId, entryId, content } = event.data as {
