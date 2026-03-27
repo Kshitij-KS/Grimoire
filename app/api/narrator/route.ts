@@ -1,9 +1,9 @@
 export const dynamic = "force-dynamic";
 import { z } from "zod";
-import { hasSupabaseEnv } from "@/lib/env";
+import { hasAiEnv, hasSupabaseEnv } from "@/lib/env";
 import { analyzeImpact, detectBlankSpots, orderEventsChronologically, embedText } from "@/lib/embeddings";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { zodErrorResponse } from "@/lib/api";
+import { jsonError, zodErrorResponse } from "@/lib/api";
 
 // Accept any non-empty string worldId — "demo-world" is valid for demo mode
 const worldIdSchema = z.string().min(1);
@@ -55,6 +55,11 @@ export async function POST(request: Request) {
         invalidated: ["The western bells have been silent for nine winters — this may no longer hold."],
       });
     }
+    if (!hasAiEnv()) {
+      return jsonError("AI_NOT_CONFIGURED", 503, {
+        detail: "Missing GEMINI_API_KEY on the server.",
+      });
+    }
 
     const [{ data: entities }, embedding] = await Promise.all([
       supabase.from("entities").select("*").eq("world_id", worldId),
@@ -84,6 +89,11 @@ export async function POST(request: Request) {
           { entity: "Ember Cult", missing: "Founding history and original purpose", suggestion: "A document about the Cult's founding ideology would enrich the faction." },
           { entity: "Ember Bridge", missing: "Construction history and who controls it now", suggestion: "Add a lore entry describing the bridge's origin and current guardians." },
         ],
+      });
+    }
+    if (!hasAiEnv()) {
+      return jsonError("AI_NOT_CONFIGURED", 503, {
+        detail: "Missing GEMINI_API_KEY on the server.",
       });
     }
 
@@ -117,6 +127,11 @@ export async function POST(request: Request) {
           { era: "The Ember Years", events: [{ id: "e2", name: "Rise of the Ember Cult", summary: "The Cult rose to prominence, wrapping civic ritual in fire-lit obedience." }] },
           { era: "The Fracture", events: [{ id: "e3", name: "Night of Hollow Glass", summary: "Mira deserted the cult after this pivotal event." }] },
         ],
+      });
+    }
+    if (!hasAiEnv()) {
+      return jsonError("AI_NOT_CONFIGURED", 503, {
+        detail: "Missing GEMINI_API_KEY on the server.",
       });
     }
 

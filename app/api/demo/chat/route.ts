@@ -1,5 +1,7 @@
 export const dynamic = "force-dynamic";
 import { z } from "zod";
+import { jsonError } from "@/lib/api";
+import { hasAiEnv } from "@/lib/env";
 import { getChatModel } from "@/lib/gemini";
 import { demoLoreEntries, demoSoulCard } from "@/lib/mock-data";
 
@@ -23,6 +25,12 @@ RULES:
 - Do not reference that you are an AI or a demo.`;
 
 export async function POST(request: Request) {
+  if (!hasAiEnv()) {
+    return jsonError("AI_NOT_CONFIGURED", 503, {
+      detail: "Missing GEMINI_API_KEY on the server.",
+    });
+  }
+
   let body: unknown;
   try {
     body = await request.json();

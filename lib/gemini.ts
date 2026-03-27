@@ -3,7 +3,7 @@ import { env } from "@/lib/env";
 
 let client: GoogleGenerativeAI | null = null;
 
-function getClient() {
+export function getGeminiClient() {
   if (!env.geminiApiKey) {
     throw new Error("Missing GEMINI_API_KEY");
   }
@@ -13,10 +13,10 @@ function getClient() {
 
 /** Heavy generation model — soul generation, entity extraction, consistency checks. */
 export function getGeminiModel() {
-  return getClient().getGenerativeModel({ model: "gemini-2.5-pro" });
+  return getGeminiClient().getGenerativeModel({ model: "gemini-2.5-pro" });
 }
 
 /** Fast conversational model — soul chat, demo chat. */
 export function getChatModel() {
-  return getClient().getGenerativeModel({ model: "gemini-2.0-flash" });
+  return getGeminiClient().getGenerativeModel({ model: "gemini-2.0-flash" });
 }

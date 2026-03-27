@@ -2,8 +2,9 @@ export const dynamic = "force-dynamic";
 import { z } from "zod";
 import { DAILY_LIMITS } from "@/lib/constants";
 import { embedText, generateTavernResponse } from "@/lib/embeddings";
+import { hasAiEnv } from "@/lib/env";
 import { checkAndIncrement } from "@/lib/rate-limit";
-import { jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
+import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
 
 const sendSchema = z.object({
   worldId: z.string().uuid(),
@@ -47,6 +48,11 @@ export async function POST(request: Request) {
   // Route: send message
   const parsed = sendSchema.safeParse(body);
   if (!parsed.success) return zodErrorResponse(parsed.error);
+  if (!hasAiEnv()) {
+    return jsonError("AI_NOT_CONFIGURED", 503, {
+      detail: "Missing GEMINI_API_KEY on the server.",
+    });
+  }
 
   const rate = await checkAndIncrement(
     supabase,

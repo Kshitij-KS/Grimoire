@@ -1,10 +1,11 @@
 export const dynamic = "force-dynamic";
 import { z } from "zod";
 import { DAILY_LIMITS, SEMANTIC_CACHE_THRESHOLD } from "@/lib/constants";
+import { hasAiEnv } from "@/lib/env";
 import { getChatModel } from "@/lib/gemini";
 import { embedText } from "@/lib/embeddings";
 import { checkAndIncrement } from "@/lib/rate-limit";
-import { jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
+import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
 import crypto from "crypto";
 import { soulMatchesWorld } from "@/lib/soul-access";
 
@@ -21,6 +22,11 @@ function hashPrompt(text: string): string {
 export async function POST(request: Request) {
   const auth = await requireUser();
   if ("error" in auth) return auth.error;
+  if (!hasAiEnv()) {
+    return jsonError("AI_NOT_CONFIGURED", 503, {
+      detail: "Missing GEMINI_API_KEY on the server.",
+    });
+  }
 
   const body = await request.json();
   const parsed = schema.safeParse(body);

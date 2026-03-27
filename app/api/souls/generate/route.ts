@@ -1,9 +1,10 @@
 export const dynamic = "force-dynamic";
 import { z } from "zod";
 import { DAILY_LIMITS, FREE_TIER_LIMITS } from "@/lib/constants";
+import { hasAiEnv } from "@/lib/env";
 import { getGeminiModel } from "@/lib/gemini";
 import { checkAndIncrement } from "@/lib/rate-limit";
-import { jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
+import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
 import { parseSoulCard, soulCardPrompt } from "@/lib/soul-card";
 import { initialsFromName } from "@/lib/utils";
 
@@ -18,6 +19,11 @@ const schema = z.object({
 export async function POST(request: Request) {
   const auth = await requireUser();
   if ("error" in auth) return auth.error;
+  if (!hasAiEnv()) {
+    return jsonError("AI_NOT_CONFIGURED", 503, {
+      detail: "Missing GEMINI_API_KEY on the server.",
+    });
+  }
 
   const body = await request.json();
   const parsed = schema.safeParse(body);

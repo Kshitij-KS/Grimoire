@@ -10,10 +10,12 @@ export default async function SoulChatPage({
 }: {
   params: { id: string; soulId: string };
 }) {
-  if (!hasSupabaseEnv()) {
+  const isDemoWorld = params.id === "demo-world";
+
+  if (!hasSupabaseEnv() || isDemoWorld) {
     const demo = await getDemoData();
     const soul = demo.souls.find((entry) => entry.id === params.soulId) ?? demo.souls[0];
-    return <EchoesInterface soul={soul} worldId={params.id} initialMessages={[]} remaining={38} />;
+    return <EchoesInterface soul={soul} worldId={demo.world.id} initialMessages={[]} remaining={38} isDemo />;
   }
 
   const user = await getSessionUser();

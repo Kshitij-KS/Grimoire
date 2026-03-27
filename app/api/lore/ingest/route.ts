@@ -3,8 +3,9 @@ import { z } from "zod";
 import { DAILY_LIMITS, FREE_TIER_LIMITS } from "@/lib/constants";
 import { chunkLoreText } from "@/lib/chunker";
 import { embedText, extractEntities } from "@/lib/embeddings";
+import { hasAiEnv } from "@/lib/env";
 import { checkAndIncrement } from "@/lib/rate-limit";
-import { jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
+import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
 import { inngest } from "@/lib/inngest-client";
 
 const schema = z.object({
@@ -22,6 +23,11 @@ function sseEvent(event: string, data: Record<string, unknown>) {
 export async function POST(request: Request) {
   const auth = await requireUser();
   if ("error" in auth) return auth.error;
+  if (!hasAiEnv()) {
+    return jsonError("AI_NOT_CONFIGURED", 503, {
+      detail: "Missing GEMINI_API_KEY on the server.",
+    });
+  }
 
   const body = await request.json();
   const parsed = schema.safeParse(body);
