@@ -73,13 +73,18 @@ export function WorldSidebar({
           <div className="flex items-start justify-between">
             <div className="min-w-0">
               <p className="text-[10px] uppercase tracking-[0.25em] text-secondary/70 mb-1">Current world</p>
-              <h1 className="font-heading text-3xl text-foreground truncate" title={world.name}>{world.name}</h1>
+              <h1
+                className="font-heading text-3xl text-foreground truncate transition-colors duration-300 hover:text-[var(--gold-soft)] cursor-default"
+                title={world.name}
+              >
+                {world.name}
+              </h1>
             </div>
             <div className="flex items-center gap-1 shrink-0">
               <AmbientToggle />
               <Link
                 href={isDemo ? "/" : "/dashboard"}
-                className="rounded-xl p-1.5 text-secondary transition hover:bg-[rgba(54,44,34,0.3)] hover:text-foreground"
+                className="rounded-xl p-1.5 text-secondary transition-all duration-200 hover:bg-[rgba(54,44,34,0.3)] hover:text-foreground hover:scale-110"
                 title={isDemo ? "Back to Home" : "Back to Dashboard"}
               >
                 <Compass className="h-4 w-4" />
@@ -119,21 +124,35 @@ export function WorldSidebar({
                         type="button"
                         onClick={() => router.push(nextHref(item.key))}
                         className={cn(
-                          "relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all duration-200",
+                          "group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all duration-200",
                           active
-                            ? "bg-[rgba(54,44,34,0.3)] text-foreground shadow-sm"
-                            : "text-secondary hover:bg-[rgba(54,44,34,0.15)] hover:text-foreground",
+                            ? "bg-[rgba(196,168,106,0.08)] text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_4px_16px_rgba(4,6,12,0.3)]"
+                            : "text-secondary hover:bg-[rgba(165,148,255,0.06)] hover:text-foreground",
                         )}
                       >
                         {active && (
                           <motion.span
                             layoutId="indicator"
-                            className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-[rgb(212,168,83)]"
+                            className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full"
+                            style={{
+                              background: "linear-gradient(180deg, rgba(196,168,106,0.9), rgba(165,148,255,0.7))",
+                              boxShadow: "0 0 8px rgba(196,168,106,0.4)",
+                            }}
                             transition={{ type: "spring", stiffness: 380, damping: 30 }}
                           />
                         )}
-                        <Icon className={cn("h-4 w-4 shrink-0", active ? "text-[rgb(212,168,83)]" : "opacity-70")} />
+                        <Icon
+                          className={cn(
+                            "h-4 w-4 shrink-0 transition-all duration-200",
+                            active
+                              ? "text-[rgb(212,168,83)] scale-110"
+                              : "opacity-60 group-hover:opacity-100 group-hover:text-[rgba(165,148,255,0.8)]"
+                          )}
+                        />
                         <span className="truncate">{item.label}</span>
+                        {active && (
+                          <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[rgb(196,168,106)] opacity-70 animate-breathe" />
+                        )}
                       </button>
                     );
                   })}

@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
+import { motion, useInView, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { useRef, useCallback } from "react";
 import {
   BookOpenText,
   ChevronRight,
@@ -264,11 +264,13 @@ export function LandingPage() {
                   return (
                     <motion.div
                       key={pillar.label}
-                      whileHover={{ y: -3, boxShadow: "0 12px 32px rgba(126,109,242,0.14)" }}
-                      transition={{ type: "spring", stiffness: 340, damping: 24 }}
+                      whileHover={{ y: -4, boxShadow: "0 16px 36px rgba(126,109,242,0.18)" }}
+                      transition={{ type: "spring", stiffness: 340, damping: 22 }}
+                      className="group"
                     >
-                      <Card className="rounded-[24px] p-5 transition-colors duration-200">
-                        <Icon className="mb-2 h-4 w-4 text-[rgba(196,168,106,0.7)]" />
+                      <Card className="rounded-[24px] p-5 transition-all duration-200 hover:border-[rgba(165,148,255,0.28)]"
+                      >
+                        <Icon className="mb-2 h-4 w-4 text-[rgba(196,168,106,0.7)] transition-transform duration-300 group-hover:scale-110 group-hover:text-[rgba(196,168,106,1)]" />
                         <p className="chapter-label">{pillar.label}</p>
                         <p className="mt-2 font-heading text-xl text-foreground">{pillar.value}</p>
                       </Card>
@@ -293,6 +295,19 @@ export function LandingPage() {
                     "radial-gradient(circle, rgba(126,109,242,0.18), rgba(196,168,106,0.08), transparent 70%)",
                 }}
               />
+              {/* Floating decorative rune */}
+              <motion.span
+                className="pointer-events-none absolute -right-3 -top-4 font-heading text-3xl opacity-20 select-none"
+                animate={{ y: [-4, 4, -4], rotate: [-4, 4, -4] }}
+                transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+                style={{ color: "rgba(165,148,255,0.6)" }}
+              >ᚦ</motion.span>
+              <motion.span
+                className="pointer-events-none absolute -left-4 bottom-8 font-heading text-2xl opacity-15 select-none"
+                animate={{ y: [4, -4, 4], rotate: [3, -3, 3] }}
+                transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
+                style={{ color: "rgba(196,168,106,0.5)" }}
+              >ᚠ</motion.span>
 
               <div className="arcane-border glass-panel-elevated relative overflow-hidden rounded-[36px] p-6">
                 <div className="pointer-events-none absolute inset-0 bg-grid opacity-[0.15]" />
@@ -303,9 +318,13 @@ export function LandingPage() {
                       <p className="chapter-label">Demo world</p>
                       <h2 className="font-heading text-5xl text-foreground">Ashveil</h2>
                     </div>
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[rgba(165,148,255,0.22)] bg-[rgba(126,109,242,0.14)]">
+                    <motion.div
+                      className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[rgba(165,148,255,0.22)] bg-[rgba(126,109,242,0.14)]"
+                      whileHover={{ scale: 1.08, rotate: 12 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    >
                       <Compass className="h-5 w-5 text-[rgb(196,205,242)]" />
-                    </div>
+                    </motion.div>
                   </div>
 
                   {/* Live soul chat preview */}
@@ -315,8 +334,15 @@ export function LandingPage() {
                   <div>
                     <p className="chapter-label mb-2">Detected entities</p>
                     <div className="flex flex-wrap gap-2">
-                      {["Mira Ashveil", "Ember Bridge", "Lantern Spirits", "The Hollow Glass"].map((item) => (
-                        <Badge key={item} className="text-[10px]">{item}</Badge>
+                      {["Mira Ashveil", "Ember Bridge", "Lantern Spirits", "The Hollow Glass"].map((item, i) => (
+                        <motion.div
+                          key={item}
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.3, delay: 1.2 + i * 0.1 }}
+                        >
+                          <Badge className="text-[10px] transition-all duration-200 hover:border-[rgba(165,148,255,0.4)] hover:bg-[rgba(165,148,255,0.08)]">{item}</Badge>
+                        </motion.div>
                       ))}
                     </div>
                   </div>
@@ -409,16 +435,32 @@ export function LandingPage() {
       </section>
 
       {/* ── FOOTER ────────────────────────────────────────────────────── */}
-      <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-8 text-sm text-secondary lg:flex-row lg:items-center lg:justify-between lg:px-10">
-          <GrimoireLogo className="origin-left scale-90" />
-          <div className="flex gap-5">
-            <Link href="/auth" className="transition hover:text-foreground">
+      <footer className="relative border-t border-border overflow-hidden">
+        {/* subtle footer ambient */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: "radial-gradient(ellipse 60% 80% at 50% 100%, rgba(126,109,242,0.06), transparent 70%)",
+          }}
+        />
+        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-10 lg:flex-row lg:items-center lg:justify-between lg:px-10 relative">
+          <div className="space-y-2">
+            <GrimoireLogo className="origin-left scale-90" />
+            <p className="text-xs text-dim max-w-xs">
+              A living archive for worldbuilders who take their lore seriously.
+            </p>
+          </div>
+          <div className="flex items-center gap-6 text-sm text-secondary">
+            <Link href="/auth" className="link-underline transition-colors hover:text-foreground">
               Sign in
             </Link>
-            <Link href="/demo" className="transition hover:text-foreground">
+            <Link href="/demo" className="link-underline transition-colors hover:text-foreground">
               Demo world
             </Link>
+            <span className="h-4 w-px bg-border" />
+            <span className="text-xs text-dim">
+              © {new Date().getFullYear()} Grimoire
+            </span>
           </div>
         </div>
       </footer>

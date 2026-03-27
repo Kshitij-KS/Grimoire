@@ -109,13 +109,28 @@ export function DashboardOverview({
         transition={{ duration: 0.5, delay: 0.1 }}
       >
         {statCards.map(({ key, label, icon: Icon, color }, i) => (
-          <div
+          <motion.div
             key={key}
-            className="glass-panel group rounded-[24px] p-5 transition-all duration-200 hover:border-[rgba(165,148,255,0.25)]"
+            className="stat-card-hover glass-panel group relative overflow-hidden rounded-[24px] p-5"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 + i * 0.07 }}
           >
+            {/* Top accent line */}
+            <div
+              className="absolute inset-x-0 top-0 h-[2px] rounded-t-[24px] opacity-60 transition-opacity duration-300 group-hover:opacity-100"
+              style={{ background: `linear-gradient(90deg, ${color}cc, ${color}44, transparent)` }}
+            />
+            {/* Inner ambient glow */}
+            <div
+              className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+              style={{
+                background: `radial-gradient(ellipse 80% 60% at 20% 20%, ${color}12, transparent 60%)`,
+              }}
+            />
             <div className="mb-3 flex items-center gap-2">
               <div
-                className="flex h-9 w-9 items-center justify-center rounded-xl"
+                className="flex h-9 w-9 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-110"
                 style={{ background: `${color}18` }}
               >
                 <Icon className="h-4 w-4" style={{ color }} />
@@ -123,14 +138,15 @@ export function DashboardOverview({
               <span className="text-xs text-secondary">{label}</span>
             </div>
             <motion.p
-              className="font-heading text-4xl text-foreground"
+              className="font-heading text-5xl text-foreground"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, delay: 0.15 + i * 0.08 }}
+              transition={{ duration: 0.4, delay: 0.18 + i * 0.08 }}
+              style={{ ['--stat-color' as string]: color }}
             >
               {globalStats[key]}
             </motion.p>
-          </div>
+          </motion.div>
         ))}
       </motion.div>
 
@@ -240,16 +256,36 @@ export function DashboardOverview({
             ) : (
               recentActivity.map((item, i) => {
                 const Icon = activityIcons[item.type] ?? Clock;
+                const typeColors: Record<string, string> = {
+                  lore_created: "rgba(196,168,106,0.15)",
+                  soul_forged: "rgba(165,148,255,0.15)",
+                  consistency_check: "rgba(210,90,90,0.12)",
+                  chat_message: "rgba(126,109,242,0.15)",
+                  entity_discovered: "rgba(110,207,189,0.12)",
+                };
+                const typeIconColors: Record<string, string> = {
+                  lore_created: "rgb(196,168,106)",
+                  soul_forged: "rgb(165,148,255)",
+                  consistency_check: "rgb(210,90,90)",
+                  chat_message: "rgb(126,109,242)",
+                  entity_discovered: "rgb(110,207,189)",
+                };
                 return (
                   <motion.div
                     key={item.id}
-                    className="flex items-start gap-3 p-4 first:rounded-t-[24px] last:rounded-b-[24px] hover:bg-[rgba(255,255,255,0.02)] transition-colors"
+                    className="flex items-start gap-3 p-4 first:rounded-t-[24px] last:rounded-b-[24px] hover:bg-[rgba(255,255,255,0.025)] transition-colors"
                     initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3, delay: 0.3 + i * 0.05 }}
                   >
-                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[rgba(165,148,255,0.1)]">
-                      <Icon className="h-3.5 w-3.5 text-[var(--violet-soft)]" />
+                    <div
+                      className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-transform duration-200 hover:scale-110"
+                      style={{ background: typeColors[item.type] ?? "rgba(165,148,255,0.1)" }}
+                    >
+                      <Icon
+                        className="h-3.5 w-3.5"
+                        style={{ color: typeIconColors[item.type] ?? "var(--violet-soft)" }}
+                      />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-foreground truncate">
@@ -277,16 +313,16 @@ export function DashboardOverview({
           </div>
 
           {/* Quick Actions */}
-          <div className="glass-panel rounded-[24px] p-5 space-y-3">
+          <div className="glass-panel arcane-border rounded-[24px] p-5 space-y-3">
             <p className="chapter-label">— Quick Actions —</p>
             <div className="grid gap-2">
-              <Button variant="secondary" size="sm" className="w-full justify-start gap-2" asChild>
+              <Button variant="secondary" size="sm" className="w-full justify-start gap-2 transition-all hover:border-[rgba(196,168,106,0.3)] hover:bg-[rgba(196,168,106,0.06)]" asChild>
                 <Link href="/demo">
                   <Compass className="h-3.5 w-3.5" />
                   Explore Ashveil Demo
                 </Link>
               </Button>
-              <Button variant="secondary" size="sm" className="w-full justify-start gap-2" asChild>
+              <Button variant="secondary" size="sm" className="w-full justify-start gap-2 transition-all hover:border-[rgba(165,148,255,0.3)] hover:bg-[rgba(165,148,255,0.06)]" asChild>
                 <Link href="/worlds/new">
                   <Globe2 className="h-3.5 w-3.5" />
                   Forge a New World

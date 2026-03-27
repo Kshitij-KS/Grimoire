@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { BookOpenText, ShieldAlert, Users } from "lucide-react";
+import { ArrowRight, BookOpenText, ShieldAlert, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 
 interface WorldCardProps {
   world: {
@@ -23,42 +22,48 @@ interface WorldCardProps {
 }
 
 const statItems = [
-  { icon: BookOpenText, color: "rgb(196,168,106)", key: "loreEntries" as const, label: "lore entries" },
-  { icon: Users, color: "rgb(165,148,255)", key: "souls" as const, label: "bound souls" },
-  { icon: ShieldAlert, color: "rgb(210,90,90)", key: "contradictions" as const, label: "open tensions" },
+  { icon: BookOpenText, color: "rgb(196,168,106)", key: "loreEntries" as const, label: "lore entries", hoverColor: "rgba(196,168,106,0.12)" },
+  { icon: Users, color: "rgb(165,148,255)", key: "souls" as const, label: "bound souls", hoverColor: "rgba(165,148,255,0.12)" },
+  { icon: ShieldAlert, color: "rgb(210,90,90)", key: "contradictions" as const, label: "open tensions", hoverColor: "rgba(210,90,90,0.10)" },
 ];
 
 export function WorldCard({ world }: WorldCardProps) {
   return (
     <motion.div
-      whileHover={{ y: -4 }}
-      transition={{ type: "spring", stiffness: 380, damping: 28 }}
+      whileHover={{ y: -5 }}
+      transition={{ type: "spring", stiffness: 360, damping: 26 }}
     >
-      <div className="glass-panel hoverable-card group overflow-hidden rounded-[32px] transition-all duration-300">
+      <div className="glass-panel group overflow-hidden rounded-[32px] transition-all duration-300 hover:border-[rgba(165,148,255,0.24)] hover:shadow-[0_20px_60px_rgba(4,6,12,0.55),0_0_36px_rgba(126,109,242,0.1)]">
         {/* ── Gradient header ── */}
         <div
-          className="relative h-32 overflow-hidden rounded-t-[32px]"
+          className="relative h-36 overflow-hidden rounded-t-[32px] transition-all duration-500"
           style={{
-            background: `linear-gradient(135deg, ${world.cover_color}44, ${world.cover_color}11)`,
+            background: `linear-gradient(135deg, ${world.cover_color}55 0%, ${world.cover_color}18 50%, ${world.cover_color}08 100%)`,
           }}
         >
           {/* Grid overlay */}
-          <div className="absolute inset-0 bg-grid opacity-20" />
-          {/* Glow spot */}
+          <div className="absolute inset-0 bg-grid opacity-20 transition-opacity duration-300 group-hover:opacity-30" />
+          {/* Glow spot — shifts on hover */}
           <div
-            className="absolute inset-0"
+            className="absolute inset-0 transition-all duration-500"
             style={{
-              background: `radial-gradient(circle at 30% 50%, ${world.cover_color}28, transparent 60%)`,
+              background: `radial-gradient(circle at 30% 50%, ${world.cover_color}38, transparent 60%)`,
+            }}
+          />
+          <div
+            className="absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+            style={{
+              background: `radial-gradient(circle at 65% 40%, ${world.cover_color}30, transparent 55%)`,
             }}
           />
           {/* Watermark world name */}
           <p
-            className="absolute bottom-2 left-5 select-none font-heading text-7xl font-bold leading-none opacity-[0.07]"
+            className="absolute bottom-2 left-5 select-none font-heading text-7xl font-bold leading-none opacity-[0.07] transition-all duration-500 group-hover:opacity-[0.11]"
             aria-hidden
           >
             {world.name}
           </p>
-          {/* Genre badge top-right */}
+          {/* Genre badge */}
           {world.genre ? (
             <div className="absolute right-4 top-3">
               <Badge>{world.genre}</Badge>
@@ -66,15 +71,15 @@ export function WorldCard({ world }: WorldCardProps) {
           ) : null}
           {/* Color accent line at bottom of header */}
           <div
-            className="absolute bottom-0 left-0 right-0 h-[2px]"
-            style={{ background: `linear-gradient(90deg, ${world.cover_color}88, transparent)` }}
+            className="absolute bottom-0 left-0 right-0 h-[2px] transition-opacity duration-300 group-hover:opacity-80"
+            style={{ background: `linear-gradient(90deg, ${world.cover_color}cc, ${world.cover_color}44, transparent)` }}
           />
         </div>
 
         <div className="space-y-5 p-6">
           <div className="space-y-2">
             <p className="chapter-label">World</p>
-            <h2 className="font-heading text-4xl text-foreground">{world.name}</h2>
+            <h2 className="font-heading text-4xl text-foreground transition-colors duration-200 group-hover:text-[var(--silver)]">{world.name}</h2>
             <div className="flex flex-wrap gap-2">
               {world.tone ? <Badge variant="gold">{world.tone}</Badge> : null}
             </div>
@@ -85,31 +90,53 @@ export function WorldCard({ world }: WorldCardProps) {
             ) : null}
           </div>
 
-          {/* Animated stats */}
-          <div className="grid gap-3 text-sm sm:grid-cols-3">
-            {statItems.map(({ icon: Icon, color, key, label }, i) => (
+          {/* Animated stat mini-cards */}
+          <div className="grid gap-2.5 text-sm sm:grid-cols-3">
+            {statItems.map(({ icon: Icon, color, key, label, hoverColor }, i) => (
               <div
                 key={key}
-                className="rounded-2xl border border-border bg-[rgba(255,255,255,0.025)] p-4"
+                className="group/stat rounded-2xl border border-border bg-[rgba(255,255,255,0.02)] p-3.5 transition-all duration-200"
+                style={{
+                  ['--stat-hover-bg' as string]: hoverColor,
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.background = hoverColor;
+                  (e.currentTarget as HTMLElement).style.borderColor = color.replace('rgb', 'rgba').replace(')', ',0.28)');
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.02)";
+                  (e.currentTarget as HTMLElement).style.borderColor = "";
+                }}
               >
-                <Icon className="mb-2 h-4 w-4" style={{ color }} />
+                <Icon className="mb-1.5 h-3.5 w-3.5 transition-transform duration-200 group-hover/stat:scale-110" style={{ color }} />
                 <motion.p
                   key={world.stats[key]}
-                  className="font-medium text-foreground"
+                  className="font-heading text-lg text-foreground"
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2, delay: i * 0.08 }}
                 >
                   {world.stats[key]}
                 </motion.p>
-                <p className="text-xs text-secondary">{label}</p>
+                <p className="text-[10px] text-secondary">{label}</p>
               </div>
             ))}
           </div>
 
-          <Button asChild className="w-full">
-            <Link href={`/worlds/${world.id}`}>Enter World</Link>
-          </Button>
+          {/* CTA — arrow slides in on hover */}
+          <Link
+            href={`/worlds/${world.id}`}
+            className="group/cta flex w-full items-center justify-between rounded-2xl border border-border bg-[rgba(165,148,255,0.05)] px-4 py-3 text-sm font-medium text-foreground transition-all duration-200 hover:border-[rgba(165,148,255,0.3)] hover:bg-[rgba(165,148,255,0.1)]"
+          >
+            <span>Enter World</span>
+            <motion.div
+              initial={{ x: -4, opacity: 0 }}
+              whileHover={{ x: 0, opacity: 1 }}
+              className="transition-all"
+            >
+              <ArrowRight className="h-4 w-4 translate-x-0 opacity-0 transition-all duration-200 group-hover/cta:translate-x-0 group-hover/cta:opacity-100" />
+            </motion.div>
+          </Link>
         </div>
       </div>
     </motion.div>

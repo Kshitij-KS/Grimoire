@@ -6,7 +6,8 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Stars } from "lucide-react";
+import { Loader2, Sparkles, Stars, Eye, EyeOff } from "lucide-react";
+import { motion } from "framer-motion";
 import { GrimoireLogo } from "@/components/shared/grimoire-logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -89,8 +90,48 @@ export function AuthShell() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 py-12">
+      {/* Background grid */}
       <div className="pointer-events-none absolute inset-0 bg-grid opacity-20" />
-      <Card className="aether-panel-elevated arcane-border relative z-10 w-full max-w-[calc(100vw-32px)] rounded-[34px] p-6 sm:max-w-md sm:p-8">
+
+      {/* Atmospheric radial glows */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 60% 70% at 15% 50%, rgba(126,109,242,0.1), transparent 55%), " +
+            "radial-gradient(ellipse 50% 60% at 85% 50%, rgba(196,168,106,0.06), transparent 50%)",
+        }}
+      />
+
+      {/* Floating background runes */}
+      {["ᚠ","ᚱ","ᚷ","ᚦ","ᚨ"].map((rune, i) => (
+        <motion.span
+          key={i}
+          className="pointer-events-none absolute select-none font-heading"
+          style={{
+            top: `${15 + i * 16}%`,
+            left: i % 2 === 0 ? `${6 + i * 2}%` : `${88 - i * 2}%`,
+            fontSize: `${18 + i * 4}px`,
+            opacity: 0.04 + i * 0.01,
+            color: i % 2 === 0 ? "rgba(165,148,255,0.7)" : "rgba(196,168,106,0.7)",
+          }}
+          animate={{
+            y: [0, i % 2 === 0 ? -10 : 10, 0],
+            rotate: [0, i % 2 === 0 ? 5 : -5, 0],
+          }}
+          transition={{ duration: 8 + i * 2, repeat: Infinity, ease: "easeInOut" }}
+        >
+          {rune}
+        </motion.span>
+      ))}
+
+      <motion.div
+        initial={{ opacity: 0, y: 24, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+        className="w-full max-w-[calc(100vw-32px)] sm:max-w-md"
+      >
+      <Card className="aether-panel-elevated arcane-border relative z-10 w-full rounded-[34px] p-6 sm:p-8">
         <div className="mb-8 space-y-4 text-center">
           <div className="flex justify-center">
             <GrimoireLogo className="scale-90" />
@@ -127,16 +168,24 @@ export function AuthShell() {
         <form className="mt-6 space-y-4" onSubmit={submit}>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="scribe@ashveil.com" {...form.register("email")} />
+            <Input id="email" type="email" placeholder="scribe@ashveil.com" className="input-glow" {...form.register("email")} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" placeholder="At least 8 characters" {...form.register("password")} />
+            <Input
+              id="password"
+              type="password"
+              placeholder="At least 8 characters"
+              className="input-glow"
+              {...form.register("password")}
+            />
           </div>
-          <Button className="w-full" type="submit" disabled={busy}>
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            {mode === "signup" ? "Begin the first chapter" : "Return to the archive"}
-          </Button>
+          <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
+            <Button className="w-full" type="submit" disabled={busy}>
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {mode === "signup" ? "Begin the first chapter" : "Return to the archive"}
+            </Button>
+          </motion.div>
         </form>
 
         <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-[0.25em] text-secondary">
@@ -145,11 +194,14 @@ export function AuthShell() {
           <span className="h-px flex-1 bg-border" />
         </div>
 
-        <Button className="w-full" variant="secondary" onClick={signInWithGoogle}>
-          <Sparkles className="h-4 w-4" />
-          Continue with Google
-        </Button>
+        <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
+          <Button className="w-full" variant="secondary" onClick={signInWithGoogle}>
+            <Sparkles className="h-4 w-4" />
+            Continue with Google
+          </Button>
+        </motion.div>
       </Card>
+      </motion.div>
     </div>
   );
 }

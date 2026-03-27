@@ -16,7 +16,7 @@ The aesthetic is **dark parchment, warm candlelight, arcane purple** — NOT col
 | Styling | Tailwind CSS + shadcn/ui + Framer Motion |
 | Auth | Supabase Auth (email/password + Google OAuth) |
 | Database | Supabase PostgreSQL + pgvector (768-dim embeddings) |
-| AI — All features | Google Gemini (`gemini-2.5-pro` for generation, `text-embedding-004` for embeddings) |
+| AI — All features | Google Gemini (`gemini-2.5-pro` for generation, `gemini-2.5-flash` for chat, `gemini-embedding-2-preview` for embeddings) |
 | Background Jobs | Inngest (multi-step functions, retry/backoff, dead-letter queue) |
 | Rich Text | TipTap (StarterKit + CharacterCount + Placeholder) |
 | State | Zustand (`useWorkspaceStore`, `useDraftStore`, `useAmbientStore`) |
@@ -62,6 +62,7 @@ The aesthetic is **dark parchment, warm candlelight, arcane purple** — NOT col
 - `ConstellationCanvas` — interactive canvas (zoom/pan, type-specific shapes, faction membership hierarchy)
 - `ConstellationDossier` — side panel: summary, lore fragments, associated characters, "Forge Soul from X" CTA
 - Entity relationships stored in `entity_relationships` table via POST `/api/relationships`
+- **Incremental Refresh**: GET `/api/entities?worldId=<id>&since=<ISO>` returns only entities updated after `since`. A "Refresh Archive" button in the Bible overlay calls this endpoint and merges new/updated entities into the live constellation without a full page reload. Hidden on demo worlds.
 
 **Entity types:** character, location, faction, artifact, event, rule
 
@@ -279,7 +280,7 @@ onFailure: → insert failed_jobs record, mark entry "failed"
 ```
 User sends message
   → POST /api/souls/chat
-    → Embed prompt (Gemini text-embedding-004)
+    → Embed prompt (Gemini gemini-embedding-2-preview)
     → Query semantic_cache (match_semantic_cache RPC, threshold 0.92)
     → Cache HIT: return cached response (instant, increment hit_count)
     → Cache MISS:
@@ -305,7 +306,8 @@ User sends message
 | `app/globals.css` | CSS variables, design tokens, keyframes |
 | `lib/types.ts` | All TypeScript types + new interfaces (FailedJob, SemanticCacheEntry, LoreFolder, EntityRelationship, TavernSession, TavernMessage, DashboardData, ActivityItem) |
 | `lib/constants.ts` | DAILY_LIMITS, FREE_TIER_LIMITS, WORLD_SECTIONS (7 sections) |
-| `lib/embeddings.ts` | All AI functions (embedText, extractEntities, generateAutocomplete, analyzeImpact, detectBlankSpots, orderEventsChronologically, generateTavernResponse, detectDeclarativeFact) + Zod validation |
+| `lib/gemini.ts` | Gemini client singleton; `getGeminiModel()` → `gemini-2.5-pro`, `getChatModel()` → `gemini-2.5-flash` |
+| `lib/embeddings.ts` | All AI functions (embedText [gemini-embedding-2-preview], extractEntities, generateAutocomplete, analyzeImpact, detectBlankSpots, orderEventsChronologically, generateTavernResponse, detectDeclarativeFact) + Zod validation |
 | `lib/json-repair.ts` | Robust JSON parsing for malformed AI outputs |
 | `lib/store.ts` | Zustand: `useWorkspaceStore` (section/modals/entity/soul), `useDraftStore` (offline auto-save), `useAmbientStore` (in ambient-audio.tsx) |
 | `lib/inngest-client.ts` | Inngest SDK singleton |
@@ -316,10 +318,12 @@ User sends message
 | `lib/mock-data.ts` | Demo world "Ashveil" data |
 | `lib/rate-limit.ts` | Per-user per-day rate limiting |
 | `lib/env.ts` | Env var accessors — MUST use dot notation |
-| `components/worlds/world-workspace.tsx` | Main workspace; renders all 7 sections + CommandPalette |
+| `app/api/entities/route.ts` | GET `/api/entities?worldId=&since=<ISO>` — incremental entity fetch for archive refresh |
+| `components/worlds/world-workspace.tsx` | Main workspace; renders all 7 sections + CommandPalette + archive refresh logic |
 | `components/layout/world-sidebar.tsx` | 7-section nav + AmbientToggle; mobile shows first 5 |
 | `components/shared/command-palette.tsx` | Cmd+K palette (cmdk) |
 | `components/shared/ambient-audio.tsx` | Web Audio API ambient system + AmbientToggle |
+| `components/shared/loading-shimmer.tsx` | `LoadingShimmer` (legacy) + `SectionLoadingScreen` (themed arcane loading animation with orbiting runes) |
 | `components/tapestry/tapestry-timeline.tsx` | Chronological event timeline |
 | `components/tavern/tavern-chat.tsx` | Multi-soul conversation UI |
 | `components/narrator/narrator-tools.tsx` | Impact simulator + lore hole detection |
@@ -408,3 +412,11 @@ supabase db reset              # Reset local DB and run all migrations
 17. **`suppressHydrationWarning`** on timestamps rendered with `formatRelativeTime()` — value differs between SSR and client hydration.
 
 18. **Demo mode**: `WorldWorkspace` receives `data.world.is_demo`, passes `isDemo` down to sidebar and `EchoesInterface`. Demo soul chat uses `/api/demo/chat` (no auth, no rate limit). Demo header shows "Sign up free" instead of "← Dashboard".
+
+19. **Gemini model strings** (as of the current API key): `gemini-2.5-pro` for all heavy generation (entity extraction, consistency, autocomplete, impact analysis, timeline ordering, tavern, declarative fact detection), `gemini-2.5-flash` for conversational soul chat, `gemini-embedding-2-preview` for vector embeddings. The `gemini-1.5-*` series is **not supported** by the current API key. Do not revert to it.
+
+20. **`DialogContent` base class** (`components/ui/dialog.tsx`) includes `max-h-[min(92vh,860px)] overflow-y-auto overflow-x-hidden` to ensure all modals are viewport-safe and scrollable on short screens. Do not pass redundant `max-h` or `overflow` overrides from individual modal components.
+
+21. **Archive incremental refresh**: `GET /api/entities?worldId=<id>&since=<ISO>` returns only entities with `updated_at > since`. The `WorldWorkspace` tracks `lastRefreshed` state and merges returned entities by `id` into the existing `entities` state — the `ConstellationCanvas` reacts automatically. The refresh button is hidden for demo worlds.
+
+22. **`SectionLoadingScreen`** exported from `components/shared/loading-shimmer.tsx` — accepts `label` and `subtitle` props. Renders an animated arcane loading animation (orbiting runes, pulsing orb, Framer Motion) used during section tab transitions in `WorldWorkspace`. The legacy `LoadingShimmer` component is also still exported from the same file.
