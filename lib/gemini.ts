@@ -18,5 +18,5 @@ export function getGeminiModel() {
 
 /** Fast conversational model — soul chat, demo chat. */
 export function getChatModel() {
-  return getClient().getGenerativeModel({ model: "gemini-2.5-flash-preview-04-17" });
+  return getClient().getGenerativeModel({ model: "gemini-2.0-flash" });
 }

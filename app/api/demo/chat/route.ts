@@ -36,28 +36,26 @@ export async function POST(request: Request) {
   }
 
   const model = getChatModel();
-  const result = await model.generateContent({
+
+  // Use true streaming from Gemini — avoids Vercel timeout on slow generations
+  const geminiStream = await model.generateContentStream({
     systemInstruction,
     contents: [{ role: "user", parts: [{ text: parsed.data.message }] }],
   });
 
-  const assistantText = result.response.text().trim();
-
   const encoder = new TextEncoder();
-  const words = assistantText.split(/(\s+)/);
   const stream = new ReadableStream({
-    start(controller) {
-      let index = 0;
-      const push = () => {
-        if (index >= words.length) {
-          controller.close();
-          return;
+    async start(controller) {
+      try {
+        for await (const chunk of geminiStream.stream) {
+          const text = chunk.text();
+          if (text) controller.enqueue(encoder.encode(text));
         }
-        controller.enqueue(encoder.encode(words[index]));
-        index += 1;
-        setTimeout(push, 16);
-      };
-      push();
+      } catch (e) {
+        console.error("Gemini stream error:", e);
+      } finally {
+        controller.close();
+      }
     },
   });
 

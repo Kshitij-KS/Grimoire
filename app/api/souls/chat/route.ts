@@ -225,7 +225,7 @@ RULES:
   );
 
   const model = getChatModel();
-  const result = await model.generateContent({
+  const geminiStream = await model.generateContentStream({
     systemInstruction,
     contents: [
       ...history,
@@ -233,58 +233,53 @@ RULES:
     ],
   });
 
-  const assistantText = result.response.text().trim();
-
-  // Save messages with source attribution
-  await supabase.from("messages").insert([
-    {
-      conversation_id: conversation.id,
-      role: "user",
-      content: parsed.data.message,
-    },
-    {
-      conversation_id: conversation.id,
-      role: "assistant",
-      content: assistantText,
-      source_chunk_ids: sourceChunkIds.length > 0 ? sourceChunkIds : null,
-    },
-  ]);
-
-  await supabase
-    .from("conversations")
-    .update({ last_active: new Date().toISOString() })
-    .eq("id", conversation.id);
-
-  // ── Async: Save to semantic cache ─────────────────────────────────────
-  const promptHash = hashPrompt(parsed.data.message);
-  supabase
-    .from("semantic_cache")
-    .insert({
-      world_id: parsed.data.worldId,
-      soul_id: parsed.data.soulId,
-      prompt_hash: promptHash,
-      prompt_text: parsed.data.message,
-      embedding,
-      response: assistantText,
-    })
-    .then(() => {});
-
-  // Stream response word-by-word
   const encoder = new TextEncoder();
-  const words = assistantText.split(/(\s+)/);
+  let assistantText = "";
+
   const stream = new ReadableStream({
-    start(controller) {
-      let index = 0;
-      const push = () => {
-        if (index >= words.length) {
-          controller.close();
-          return;
+    async start(controller) {
+      try {
+        for await (const chunk of geminiStream.stream) {
+          const text = chunk.text();
+          if (text) {
+            assistantText += text;
+            controller.enqueue(encoder.encode(text));
+          }
         }
-        controller.enqueue(encoder.encode(words[index]));
-        index += 1;
-        setTimeout(push, 16);
-      };
-      push();
+      } catch (e) {
+        console.error("Gemini stream error:", e);
+      } finally {
+        controller.close();
+
+        // ── Post-stream: save to DB and semantic cache ──────────────────
+        const finalText = assistantText.trim();
+        if (finalText && conversation) {
+          supabase.from("messages").insert([
+            { conversation_id: conversation.id, role: "user", content: parsed.data.message },
+            {
+              conversation_id: conversation.id,
+              role: "assistant",
+              content: finalText,
+              source_chunk_ids: sourceChunkIds.length > 0 ? sourceChunkIds : null,
+            },
+          ]).then(() => {});
+
+          supabase.from("conversations")
+            .update({ last_active: new Date().toISOString() })
+            .eq("id", conversation.id)
+            .then(() => {});
+
+          const promptHash = hashPrompt(parsed.data.message);
+          supabase.from("semantic_cache").insert({
+            world_id: parsed.data.worldId,
+            soul_id: parsed.data.soulId,
+            prompt_hash: promptHash,
+            prompt_text: parsed.data.message,
+            embedding,
+            response: finalText,
+          }).then(() => {});
+        }
+      }
     },
   });
 
