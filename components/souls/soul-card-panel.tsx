@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, RefreshCw, X } from "lucide-react";
+import { Edit2, Eye, EyeOff, RefreshCw, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
 import { initialsFromName } from "@/lib/utils";
 import type { Soul } from "@/lib/types";
 
@@ -21,6 +22,18 @@ interface SoulCardPanelProps {
 export function SoulCardPanel({ soul, worldId, onClose, onRegenerated }: SoulCardPanelProps) {
   const [revealedSecrets, setRevealedSecrets] = useState<Set<number>>(new Set());
   const [regenerating, setRegenerating] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [descriptionDraft, setDescriptionDraft] = useState(soul.description);
+  const [voiceDraft, setVoiceDraft] = useState(soul.soul_card?.voice ?? "");
+  const [coreDraft, setCoreDraft] = useState(soul.soul_card?.core ?? "");
+
+  useEffect(() => {
+    setDescriptionDraft(soul.description);
+    setVoiceDraft(soul.soul_card?.voice ?? "");
+    setCoreDraft(soul.soul_card?.core ?? "");
+    setIsEditing(false);
+  }, [soul]);
 
   const toggleSecret = (index: number) => {
     setRevealedSecrets((prev) => {
@@ -60,6 +73,35 @@ export function SoulCardPanel({ soul, worldId, onClose, onRegenerated }: SoulCar
     }
   };
 
+  const saveOverrides = async () => {
+    if (!voiceDraft.trim() || !coreDraft.trim() || descriptionDraft.trim().length < 10) {
+      toast.error("Description, voice, and core notes all need meaningful text.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/souls/${soul.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description: descriptionDraft,
+          voice: voiceDraft,
+          core: coreDraft,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Failed to save overrides.");
+      toast.success("Soul guidance updated.");
+      setIsEditing(false);
+      onRegenerated?.(payload.soul ?? soul);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save overrides.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const card = soul.soul_card;
 
   return (
@@ -70,7 +112,6 @@ export function SoulCardPanel({ soul, worldId, onClose, onRegenerated }: SoulCar
       transition={{ type: "spring", stiffness: 340, damping: 32 }}
       className="glass-panel-elevated fixed inset-y-4 right-4 z-40 flex w-[min(92vw,460px)] flex-col rounded-[30px] shadow-arcane"
     >
-      {/* Header */}
       <div className="flex items-start justify-between border-b border-border p-5 pb-4">
         <div className="flex items-center gap-4">
           <Avatar
@@ -86,9 +127,20 @@ export function SoulCardPanel({ soul, worldId, onClose, onRegenerated }: SoulCar
             <h3 className="font-heading text-4xl text-foreground">{soul.name}</h3>
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose} className="shrink-0">
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          {!isEditing ? (
+            <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)} title="Edit voice and core">
+              <Edit2 className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Button variant="ghost" size="icon" onClick={saveOverrides} disabled={saving} title="Save overrides">
+              <Save className="h-4 w-4" />
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" onClick={onClose} className="shrink-0">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <ScrollArea className="flex-1 overflow-y-auto">
@@ -101,17 +153,46 @@ export function SoulCardPanel({ soul, worldId, onClose, onRegenerated }: SoulCar
             </div>
           ) : (
             <>
-              {/* Voice */}
+              {isEditing ? (
+                <Card className="rounded-[24px] border border-border bg-[rgba(255,255,255,0.02)] p-4">
+                  <p className="chapter-label">Manual Overrides</p>
+                  <div className="mt-4 space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-xs uppercase tracking-[0.22em] text-secondary">Character Description</label>
+                      <Textarea value={descriptionDraft} onChange={(event) => setDescriptionDraft(event.target.value)} className="min-h-[120px]" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs uppercase tracking-[0.22em] text-secondary">Voice</label>
+                      <Textarea value={voiceDraft} onChange={(event) => setVoiceDraft(event.target.value)} className="min-h-[110px]" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs uppercase tracking-[0.22em] text-secondary">Core</label>
+                      <Textarea value={coreDraft} onChange={(event) => setCoreDraft(event.target.value)} className="min-h-[110px]" />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" onClick={() => setIsEditing(false)}>
+                        Cancel
+                      </Button>
+                      <Button onClick={saveOverrides} disabled={saving}>
+                        {saving ? "Saving..." : "Save overrides"}
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ) : null}
+
               <SoulSection title="Voice" color="gold">
                 <p className="text-sm leading-7 text-secondary">{card.voice}</p>
               </SoulSection>
 
-              {/* Core */}
               <SoulSection title="Core" color="purple">
                 <p className="text-sm leading-7 text-secondary">{card.core}</p>
               </SoulSection>
 
-              {/* Knows */}
+              <SoulSection title="Source Description" color="muted">
+                <p className="text-sm leading-7 text-secondary">{soul.description}</p>
+              </SoulSection>
+
               {card.knows && card.knows.length > 0 && (
                 <SoulSection title="Knows" color="gold">
                   <ul className="space-y-1.5">
@@ -125,7 +206,6 @@ export function SoulCardPanel({ soul, worldId, onClose, onRegenerated }: SoulCar
                 </SoulSection>
               )}
 
-              {/* Doesn't Know */}
               {card.doesnt_know && card.doesnt_know.length > 0 && (
                 <SoulSection title="Doesn't Know" color="muted">
                   <ul className="space-y-1.5">
@@ -139,14 +219,13 @@ export function SoulCardPanel({ soul, worldId, onClose, onRegenerated }: SoulCar
                 </SoulSection>
               )}
 
-              {/* Relationships */}
               {card.relationships && card.relationships.length > 0 && (
                 <SoulSection title="Relationships" color="purple">
                   <div className="space-y-2">
                     {card.relationships.map((rel, i) => (
                       <div key={i} className="flex items-start gap-2 rounded-[14px] border border-border bg-[rgba(28,22,14,0.6)] px-3 py-2">
                         <span className="font-heading text-base text-[rgb(157,127,224)]">{rel.name}</span>
-                        <span className="text-secondary">—</span>
+                        <span className="text-secondary">-</span>
                         <span className="text-sm text-secondary">{rel.attitude}</span>
                       </div>
                     ))}
@@ -154,44 +233,34 @@ export function SoulCardPanel({ soul, worldId, onClose, onRegenerated }: SoulCar
                 </SoulSection>
               )}
 
-              {/* Secrets */}
               {card.secrets && card.secrets.length > 0 && (
-                <SoulSection title="Secrets" color="danger">
+                <SoulSection title="Secrets" color="gold">
                   <div className="space-y-2">
-                    {card.secrets.map((secret, i) => (
-                      <div
-                        key={i}
-                        className="group relative flex items-start justify-between gap-3 rounded-[14px] border border-[rgba(192,74,74,0.22)] bg-[rgba(192,74,74,0.07)] px-3 py-2"
-                      >
-                        <p
-                          className="text-sm leading-6 text-secondary transition-all duration-300"
-                          style={{ filter: revealedSecrets.has(i) ? "none" : "blur(5px)", userSelect: revealedSecrets.has(i) ? "auto" : "none" }}
-                        >
-                          {secret}
-                        </p>
+                    {card.secrets.map((secret, i) => {
+                      const visible = revealedSecrets.has(i);
+                      return (
                         <button
+                          key={i}
                           type="button"
                           onClick={() => toggleSecret(i)}
-                          className="shrink-0 text-[rgb(192,74,74)] opacity-60 transition hover:opacity-100"
-                          title={revealedSecrets.has(i) ? "Hide" : "Reveal"}
+                          className="flex w-full items-start justify-between rounded-[14px] border border-border bg-[rgba(28,22,14,0.6)] px-3 py-2 text-left"
                         >
-                          {revealedSecrets.has(i) ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          <span className="pr-3 text-sm leading-7 text-secondary">
+                            {visible ? secret : "Hidden until willingly revealed."}
+                          </span>
+                          {visible ? <EyeOff className="mt-1 h-4 w-4 text-secondary" /> : <Eye className="mt-1 h-4 w-4 text-secondary" />}
                         </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </SoulSection>
               )}
 
-              {/* Sample Lines */}
               {card.sample_lines && card.sample_lines.length > 0 && (
-                <SoulSection title="Sample Lines" color="gold">
-                  <div className="space-y-4">
+                <SoulSection title="Sample Lines" color="purple">
+                  <div className="space-y-3">
                     {card.sample_lines.map((line, i) => (
-                      <blockquote
-                        key={i}
-                        className="border-l-[3px] border-[rgba(212,168,83,0.5)] pl-4 font-heading text-xl italic text-[rgb(240,224,192)]"
-                      >
+                      <blockquote key={i} className="rounded-[14px] border border-border bg-[rgba(28,22,14,0.6)] px-4 py-3 font-heading text-lg italic text-[rgb(240,230,214)]">
                         &ldquo;{line}&rdquo;
                       </blockquote>
                     ))}
@@ -203,18 +272,16 @@ export function SoulCardPanel({ soul, worldId, onClose, onRegenerated }: SoulCar
         </div>
       </ScrollArea>
 
-      {/* Footer */}
-      <div className="border-t border-border p-4">
-        <Button
-          variant="secondary"
-          className="w-full gap-2"
-          onClick={regenerate}
-          disabled={regenerating}
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${regenerating ? "animate-spin" : ""}`} />
-          {regenerating ? "Reforging soul card..." : "Reforge Soul Card"}
-        </Button>
-        <p className="mt-2 text-center text-xs text-secondary">Counts against your daily soul generation limit</p>
+      <div className="border-t border-border p-5">
+        <div className="flex gap-2">
+          <Button onClick={regenerate} disabled={regenerating} className="flex-1">
+            <RefreshCw className={`mr-2 h-4 w-4 ${regenerating ? "animate-spin" : ""}`} />
+            {regenerating ? "Reforging..." : "Reforge Soul Card"}
+          </Button>
+        </div>
+        <p className="mt-3 text-xs leading-6 text-secondary">
+          Manual overrides change the soul&apos;s voice and core guidance without discarding the rest of the generated card.
+        </p>
       </div>
     </motion.div>
   );
@@ -226,24 +293,20 @@ function SoulSection({
   children,
 }: {
   title: string;
-  color: "gold" | "purple" | "muted" | "danger";
+  color: "gold" | "purple" | "muted";
   children: React.ReactNode;
 }) {
-  const colorMap = {
-    gold: "text-[rgb(212,168,83)]",
-    purple: "text-[rgb(157,127,224)]",
-    muted: "text-secondary",
-    danger: "text-[rgb(192,74,74)]",
-  };
+  const accentClass =
+    color === "gold"
+      ? "text-[rgb(212,168,83)]"
+      : color === "purple"
+        ? "text-[rgb(157,127,224)]"
+        : "text-[rgb(139,133,160)]";
 
   return (
-    <Card className="rounded-[20px] p-4">
-      <div className={`mb-3 flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] ${colorMap[color]}`}>
-        <span className="h-px flex-1 bg-current opacity-20" />
-        {title}
-        <span className="h-px flex-1 bg-current opacity-20" />
-      </div>
-      {children}
+    <Card className="rounded-[24px] border border-border bg-[rgba(255,255,255,0.02)] p-4">
+      <p className={`text-xs uppercase tracking-[0.24em] ${accentClass}`}>{title}</p>
+      <div className="mt-3">{children}</div>
     </Card>
   );
 }

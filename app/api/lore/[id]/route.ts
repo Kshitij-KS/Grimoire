@@ -12,13 +12,20 @@ export async function DELETE(
   // Verify ownership
   const { data: lore } = await supabase
     .from("lore_entries")
-    .select("id, worlds(user_id)")
+    .select("id, world_id")
     .eq("id", params.id)
     .maybeSingle();
 
   if (!lore) return jsonError("Lore entry not found", 404);
-  // @ts-ignore
-  if (lore.worlds?.user_id !== user.id) return jsonError("Forbidden", 403);
+
+  const { data: world } = await supabase
+    .from("worlds")
+    .select("id, user_id")
+    .eq("id", lore.world_id)
+    .maybeSingle();
+
+  if (!world) return jsonError("World not found", 404);
+  if (world.user_id !== user.id) return jsonError("Forbidden", 403);
 
   const { error } = await supabase
     .from("lore_entries")

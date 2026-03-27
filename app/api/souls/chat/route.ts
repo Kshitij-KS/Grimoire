@@ -6,6 +6,7 @@ import { embedText } from "@/lib/embeddings";
 import { checkAndIncrement } from "@/lib/rate-limit";
 import { jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
 import crypto from "crypto";
+import { soulMatchesWorld } from "@/lib/soul-access";
 
 const schema = z.object({
   worldId: z.string().uuid(),
@@ -37,8 +38,9 @@ export async function POST(request: Request) {
   const [{ data: soul }, embedding] = await Promise.all([
     supabase
       .from("souls")
-      .select("*")
+      .select("id, world_id, name, soul_card")
       .eq("id", parsed.data.soulId)
+      .eq("user_id", user.id)
       .maybeSingle(),
     embedText(parsed.data.message),
   ]);
@@ -46,12 +48,18 @@ export async function POST(request: Request) {
   if (!soul)
     return Response.json({ error: "SOUL_NOT_FOUND" }, { status: 404 });
 
+  if (!soulMatchesWorld(soul.world_id, parsed.data.worldId)) {
+    return Response.json({ error: "FORBIDDEN_WORLD_MISMATCH" }, { status: 403 });
+  }
+
+  const soulWorldId = soul.world_id;
+
   // ── Semantic Cache Check ──────────────────────────────────────────────
   try {
     const { data: cacheHits } = await supabase.rpc("match_semantic_cache", {
       query_embedding: embedding,
       soul_uuid: parsed.data.soulId,
-      world_uuid: parsed.data.worldId,
+      world_uuid: soulWorldId,
       threshold: SEMANTIC_CACHE_THRESHOLD,
     });
 
@@ -71,6 +79,7 @@ export async function POST(request: Request) {
         .select("*")
         .eq("soul_id", parsed.data.soulId)
         .eq("user_id", user.id)
+        .eq("world_id", soulWorldId)
         .maybeSingle();
 
       if (!conversation) {
@@ -79,7 +88,7 @@ export async function POST(request: Request) {
           .insert({
             soul_id: parsed.data.soulId,
             user_id: user.id,
-            world_id: parsed.data.worldId,
+            world_id: soulWorldId,
           })
           .select("*")
           .single();
@@ -143,6 +152,7 @@ export async function POST(request: Request) {
     .select("*")
     .eq("soul_id", parsed.data.soulId)
     .eq("user_id", user.id)
+    .eq("world_id", soulWorldId)
     .maybeSingle();
 
   if (!conversation) {
@@ -151,7 +161,7 @@ export async function POST(request: Request) {
       .insert({
         soul_id: parsed.data.soulId,
         user_id: user.id,
-        world_id: parsed.data.worldId,
+        world_id: soulWorldId,
       })
       .select("*")
       .single();
@@ -166,7 +176,7 @@ export async function POST(request: Request) {
       .order("created_at", { ascending: false })
       .limit(6),
     supabase.rpc("match_lore_chunks", {
-      world_uuid: parsed.data.worldId,
+      world_uuid: soulWorldId,
       query_embedding: embedding,
       match_count: 4,
       filter_tags: [soul.name],
@@ -234,10 +244,10 @@ RULES:
         { role: "user", parts: [{ text: parsed.data.message }] },
       ],
     });
-  } catch (e: any) {
-    console.error("Gemini API error:", e);
+  } catch (error: unknown) {
+    console.error("Gemini API error:", error);
     return Response.json(
-      { error: e.message || "Failed to speak with the soul." },
+      { error: error instanceof Error ? error.message : "Failed to speak with the soul." },
       { status: 500 }
     );
   }
@@ -280,7 +290,7 @@ RULES:
 
           const promptHash = hashPrompt(parsed.data.message);
           supabase.from("semantic_cache").insert({
-            world_id: parsed.data.worldId,
+            world_id: soulWorldId,
             soul_id: parsed.data.soulId,
             prompt_hash: promptHash,
             prompt_text: parsed.data.message,

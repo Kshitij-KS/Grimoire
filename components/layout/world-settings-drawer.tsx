@@ -13,6 +13,7 @@ import {
   Loader2,
   Download, // Added Download icon
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { DestructiveActionModal } from "@/components/shared/destructive-action-modal";
@@ -101,7 +102,7 @@ export function WorldSettingsDrawer({
       document.body.removeChild(a);
       
       toast.success("World data exported successfully.");
-    } catch (err) {
+    } catch {
       toast.error("Failed to export world data.");
     } finally {
       setExporting(false);
@@ -308,10 +309,16 @@ export function WorldSettingsDrawer({
                           : "1 world · 3 souls · 50 lore entries · 5 consistency checks/day"}
                       </p>
                       {!isDemo && (
-                        <button className="mt-3 flex w-full items-center justify-between rounded-[12px] border border-[rgba(196,168,106,0.3)] bg-[rgba(196,168,106,0.08)] px-3 py-2.5 text-xs text-[var(--gold)] transition hover:border-[var(--gold)]55">
-                          <span>Upgrade to Pro</span>
-                          <ChevronRight className="h-3.5 w-3.5" />
-                        </button>
+                        <Button
+                          asChild
+                          variant="ghost"
+                          className="mt-3 flex w-full items-center justify-between rounded-[12px] border border-[rgba(196,168,106,0.3)] bg-[rgba(196,168,106,0.08)] px-3 py-2.5 text-xs text-[var(--gold)] transition hover:border-[var(--gold)]55 hover:bg-[rgba(196,168,106,0.12)]"
+                        >
+                          <Link href="/dashboard/settings#billing">
+                            <span>Upgrade to Pro</span>
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </Link>
+                        </Button>
                       )}
                     </div>
 

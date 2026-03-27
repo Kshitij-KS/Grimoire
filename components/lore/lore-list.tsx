@@ -73,7 +73,7 @@ export function LoreList({
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={(e) => { e.stopPropagation(); onDelete(entry.id, entry.title); }}
+                      onClick={(e) => { e.stopPropagation(); onDelete(entry.id, entry.title ?? undefined); }}
                       className="px-2 text-secondary hover:bg-red-500/10 hover:text-red-400"
                     >
                       <Trash2 className="h-4 w-4" />

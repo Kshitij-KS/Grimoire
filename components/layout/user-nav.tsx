@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { LogOut, Settings, User } from "lucide-react";
+import { CreditCard, LogOut, Settings, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/browser";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
@@ -30,7 +31,7 @@ export function UserNav({ email }: { email?: string }) {
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content
-          className="z-50 min-w-[200px] overflow-hidden rounded-[16px] border border-border bg-[rgba(15,18,25,0.95)] p-1 text-foreground shadow-2xl backdrop-blur-xl animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
+          className="z-50 min-w-[220px] overflow-hidden rounded-[16px] border border-border bg-[rgba(15,18,25,0.95)] p-1 text-foreground shadow-2xl backdrop-blur-xl animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
           align="end"
           sideOffset={8}
         >
@@ -41,13 +42,23 @@ export function UserNav({ email }: { email?: string }) {
             </p>
           </div>
           <DropdownMenu.Separator className="-mx-1 my-1 h-px bg-border" />
-          <DropdownMenu.Item className="relative flex cursor-pointer select-none items-center gap-2 rounded-xl px-3 py-2 text-sm outline-none transition-colors focus:bg-[rgba(255,255,255,0.06)] focus:text-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
-            <User className="h-4 w-4 text-secondary" />
-            <span>Profile</span>
+          <DropdownMenu.Item asChild className="relative flex cursor-pointer select-none items-center gap-2 rounded-xl px-3 py-2 text-sm outline-none transition-colors focus:bg-[rgba(255,255,255,0.06)] focus:text-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
+            <Link href="/dashboard/settings">
+              <User className="h-4 w-4 text-secondary" />
+              <span>Profile</span>
+            </Link>
           </DropdownMenu.Item>
-          <DropdownMenu.Item className="relative flex cursor-pointer select-none items-center gap-2 rounded-xl px-3 py-2 text-sm outline-none transition-colors focus:bg-[rgba(255,255,255,0.06)] focus:text-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
-            <Settings className="h-4 w-4 text-secondary" />
-            <span>Account Settings</span>
+          <DropdownMenu.Item asChild className="relative flex cursor-pointer select-none items-center gap-2 rounded-xl px-3 py-2 text-sm outline-none transition-colors focus:bg-[rgba(255,255,255,0.06)] focus:text-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
+            <Link href="/dashboard/settings">
+              <Settings className="h-4 w-4 text-secondary" />
+              <span>Account Settings</span>
+            </Link>
+          </DropdownMenu.Item>
+          <DropdownMenu.Item asChild className="relative flex cursor-pointer select-none items-center gap-2 rounded-xl px-3 py-2 text-sm outline-none transition-colors focus:bg-[rgba(255,255,255,0.06)] focus:text-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
+            <Link href="/dashboard/settings#billing">
+              <CreditCard className="h-4 w-4 text-secondary" />
+              <span>Billing & Plan</span>
+            </Link>
           </DropdownMenu.Item>
           <DropdownMenu.Separator className="-mx-1 my-1 h-px bg-border" />
           <DropdownMenu.Item

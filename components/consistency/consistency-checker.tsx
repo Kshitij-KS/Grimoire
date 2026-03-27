@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { FlagCard } from "@/components/consistency/flag-card";
+import { partitionConsistencyFlags, toggleConsistencyFlagResolved } from "@/lib/consistency-flags";
 import type { ConsistencyCheck, ConsistencyFlag } from "@/lib/types";
 
 export function ConsistencyChecker({
@@ -16,22 +17,30 @@ export function ConsistencyChecker({
   initialFlags,
   initialChecks = [],
   isReadonly,
+  isDemo,
 }: {
   worldId: string;
   initialFlags: ConsistencyFlag[];
   initialChecks?: ConsistencyCheck[];
   isReadonly?: boolean;
+  isDemo?: boolean;
 }) {
   const [text, setText] = useState("");
   const [flags, setFlags] = useState(initialFlags);
   const [checks] = useState(initialChecks);
   const [loading, setLoading] = useState(false);
   const [hasChecked, setHasChecked] = useState(false);
+  const [view, setView] = useState<"active" | "resolved">("active");
 
   const resolveFlag = async (id: string) => {
+    if (isDemo) {
+      setFlags((current) => toggleConsistencyFlagResolved(current, id, true));
+      return;
+    }
+
     // Optimistic update with rollback on failure
     const prev = [...flags];
-    setFlags((current) => current.map((flag) => (flag.id === id ? { ...flag, resolved: true } : flag)));
+    setFlags((current) => toggleConsistencyFlagResolved(current, id, true));
     try {
       const res = await fetch("/api/consistency/resolve", {
         method: "POST",
@@ -45,8 +54,29 @@ export function ConsistencyChecker({
     }
   };
 
+  const unresolveFlag = async (id: string) => {
+    if (isDemo) {
+      setFlags((current) => toggleConsistencyFlagResolved(current, id, false));
+      return;
+    }
+
+    const prev = [...flags];
+    setFlags((current) => toggleConsistencyFlagResolved(current, id, false));
+    try {
+      const res = await fetch("/api/consistency/unresolve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) throw new Error("Unresolve failed.");
+    } catch {
+      setFlags(prev);
+      toast.error("Failed to restore the flag. Please try again.");
+    }
+  };
+
   const runCheck = async () => {
-    if (!text.trim() || isReadonly) return;
+    if (!text.trim() || (isReadonly && !isDemo)) return;
     setLoading(true);
     try {
       const response = await fetch("/api/consistency/check", {
@@ -68,8 +98,8 @@ export function ConsistencyChecker({
     }
   };
 
-  const activeFlags = flags.filter((f) => !f.resolved);
-  const resolvedFlags = flags.filter((f) => f.resolved);
+  const { active: activeFlags, resolved: resolvedFlags } = partitionConsistencyFlags(flags);
+  const visibleFlags = view === "active" ? activeFlags : resolvedFlags;
 
   return (
     <div className="space-y-6">
@@ -98,9 +128,26 @@ export function ConsistencyChecker({
         ) : null}
       </Card>
 
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant={view === "active" ? "default" : "ghost"}
+          onClick={() => setView("active")}
+        >
+          Active ({activeFlags.length})
+        </Button>
+        <Button
+          type="button"
+          variant={view === "resolved" ? "default" : "ghost"}
+          onClick={() => setView("resolved")}
+        >
+          Resolved ({resolvedFlags.length})
+        </Button>
+      </div>
+
       {/* Results */}
       <AnimatePresence mode="wait">
-        {hasChecked && activeFlags.length === 0 ? (
+        {view === "active" && hasChecked && activeFlags.length === 0 ? (
           <motion.div
             key="success"
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -123,7 +170,7 @@ export function ConsistencyChecker({
               <p className="mt-3 text-sm text-secondary">No contradictions detected in this passage.</p>
             </Card>
           </motion.div>
-        ) : activeFlags.length > 0 ? (
+        ) : view === "active" && activeFlags.length > 0 ? (
           <motion.div
             key="flags"
             initial={{ opacity: 0 }}
@@ -139,7 +186,7 @@ export function ConsistencyChecker({
               ) : null}
             </div>
             <AnimatePresence>
-              {activeFlags.map((flag, index) => (
+              {visibleFlags.map((flag, index) => (
                 <motion.div
                   key={flag.id}
                   layout
@@ -148,23 +195,26 @@ export function ConsistencyChecker({
                   exit={{ opacity: 0, x: -24, height: 0, marginBottom: 0 }}
                   transition={{ delay: index * 0.06, duration: 0.25 }}
                 >
-                  <FlagCard flag={flag} onResolve={resolveFlag} />
+                  <FlagCard flag={flag} onResolve={resolveFlag} onUnresolve={unresolveFlag} />
                 </motion.div>
               ))}
             </AnimatePresence>
           </motion.div>
-        ) : initialFlags.length > 0 ? (
+        ) : view === "resolved" && resolvedFlags.length > 0 ? (
           <motion.div
-            key="initial-flags"
+            key="resolved-flags"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="space-y-4"
           >
-            <p className="text-sm uppercase tracking-[0.25em] text-secondary">
-              {initialFlags.filter((f) => !f.resolved).length} unresolved {initialFlags.filter((f) => !f.resolved).length === 1 ? "tension" : "tensions"}
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm uppercase tracking-[0.25em] text-secondary">
+                {resolvedFlags.length} resolved {resolvedFlags.length === 1 ? "tension" : "tensions"}
+              </p>
+              <p className="text-xs text-secondary">Undo any mistaken resolutions.</p>
+            </div>
             <AnimatePresence>
-              {flags.filter((f) => !f.resolved).map((flag, index) => (
+              {visibleFlags.map((flag, index) => (
                 <motion.div
                   key={flag.id}
                   layout
@@ -173,11 +223,15 @@ export function ConsistencyChecker({
                   exit={{ opacity: 0, x: -24, height: 0, marginBottom: 0 }}
                   transition={{ delay: index * 0.06, duration: 0.25 }}
                 >
-                  <FlagCard flag={flag} onResolve={resolveFlag} />
+                  <FlagCard flag={flag} onResolve={resolveFlag} onUnresolve={unresolveFlag} />
                 </motion.div>
               ))}
             </AnimatePresence>
           </motion.div>
+        ) : view === "resolved" ? (
+          <Card className="rounded-[30px] border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-6">
+            <p className="text-sm text-secondary">No resolved contradictions yet.</p>
+          </Card>
         ) : null}
       </AnimatePresence>
 

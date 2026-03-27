@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Sparkles } from "lucide-react";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { WorldSidebar } from "@/components/layout/world-sidebar";
 import { ConstellationCanvas } from "@/components/bible/constellation-canvas";
 import { ConstellationDossier } from "@/components/bible/constellation-dossier";
@@ -18,6 +18,7 @@ import { TapestryTimeline } from "@/components/tapestry/tapestry-timeline";
 import { TavernChat } from "@/components/tavern/tavern-chat";
 import { NarratorTools } from "@/components/narrator/narrator-tools";
 import { SoulCard } from "@/components/souls/soul-card";
+import { SoulCardPanel } from "@/components/souls/soul-card-panel";
 import { SoulCreationModal } from "@/components/souls/soul-creation-modal";
 import { DestructiveActionModal } from "@/components/shared/destructive-action-modal";
 import { Button } from "@/components/ui/button";
@@ -71,18 +72,18 @@ export function WorldWorkspace({
   data: WorldWorkspaceData;
   checks?: ConsistencyCheck[];
 }) {
-  const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const { limitModal, hideLimitModal, forgeSoulName, setForgeSoulName, selectedEntity } = useWorkspaceStore();
   const [soulModalOpen, setSoulModalOpen] = useState(false);
   const [activeSoulId, setActiveSoulId] = useState<string | null>(null);
+  const [activeSoulCardId, setActiveSoulCardId] = useState<string | null>(null);
   const [souls, setSouls] = useState<Soul[]>(data.souls);
   const [entities, setEntities] = useState<Entity[]>(data.entities);
   const [deletingSoulId, setDeletingSoulId] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   const activeSoul = souls.find((s) => s.id === activeSoulId) ?? null;
+  const activeSoulCard = souls.find((s) => s.id === activeSoulCardId) ?? null;
   const deletingSoul = souls.find((s) => s.id === deletingSoulId) ?? null;
   const meta = SECTION_META[data.activeSection] ?? SECTION_META.lore;
   const structuredSection = data.activeSection === "lore" || data.activeSection === "consistency" || data.activeSection === "tapestry" || data.activeSection === "narrator";
@@ -283,7 +284,7 @@ export function WorldWorkspace({
                           soul={soul}
                           worldId={data.world.id}
                           isDemo={isDemo}
-                          onView={() => setActiveSoulId(soul.id)}
+                          onView={() => setActiveSoulCardId(soul.id)}
                           onDelete={setDeletingSoulId}
                         />
                       ))}
@@ -386,6 +387,16 @@ export function WorldWorkspace({
         souls={souls}
         loreEntries={data.loreEntries}
       />
+      {activeSoulCard ? (
+        <SoulCardPanel
+          soul={activeSoulCard}
+          worldId={data.world.id}
+          onClose={() => setActiveSoulCardId(null)}
+          onRegenerated={(updatedSoul) =>
+            setSouls((current) => current.map((soul) => (soul.id === updatedSoul.id ? updatedSoul : soul)))
+          }
+        />
+      ) : null}
       <DestructiveActionModal
         open={!!deletingSoulId}
         onOpenChange={(open) => !open && setDeletingSoulId(null)}

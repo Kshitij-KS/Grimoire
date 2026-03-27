@@ -46,7 +46,7 @@ export function EchoesInterface({
       setMessages([]);
       setDisplayedWords([]);
       toast.success("Memory wiped successfully.");
-    } catch (e) {
+    } catch {
       toast.error("Failed to reset memory.");
     }
   };

@@ -43,10 +43,10 @@ export async function POST(request: Request) {
       systemInstruction,
       contents: [{ role: "user", parts: [{ text: parsed.data.message }] }],
     });
-  } catch (e: any) {
-    console.error("Gemini API error:", e);
+  } catch (error: unknown) {
+    console.error("Gemini API error:", error);
     return Response.json(
-      { error: e.message || "Failed to speak with the soul." },
+      { error: error instanceof Error ? error.message : "Failed to speak with the soul." },
       { status: 500 }
     );
   }

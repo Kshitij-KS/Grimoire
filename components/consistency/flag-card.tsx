@@ -37,9 +37,11 @@ const SEVERITY_CONFIG = {
 export function FlagCard({
   flag,
   onResolve,
+  onUnresolve,
 }: {
   flag: ConsistencyFlag;
-  onResolve: (id: string) => void;
+  onResolve?: (id: string) => void;
+  onUnresolve?: (id: string) => void;
 }) {
   const config =
     SEVERITY_CONFIG[flag.severity as keyof typeof SEVERITY_CONFIG] ?? SEVERITY_CONFIG.low;
@@ -70,11 +72,13 @@ export function FlagCard({
             </div>
           </div>
           {!flag.resolved ? (
-            <Button variant="secondary" size="sm" onClick={() => onResolve(flag.id)}>
+            <Button variant="secondary" size="sm" onClick={() => onResolve?.(flag.id)} disabled={!onResolve}>
               Resolve
             </Button>
           ) : (
-            <span className="text-xs italic text-secondary">Resolved</span>
+            <Button variant="ghost" size="sm" onClick={() => onUnresolve?.(flag.id)} disabled={!onUnresolve}>
+              Undo resolve
+            </Button>
           )}
         </div>
 

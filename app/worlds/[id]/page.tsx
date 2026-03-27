@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { getDemoData, getSessionUser, getWorldWorkspaceData } from "@/lib/data";
+import { getDemoData, getSessionUser, getWorldChecks, getWorldWorkspaceData } from "@/lib/data";
 import { hasSupabaseEnv } from "@/lib/env";
 import { WORLD_SECTIONS } from "@/lib/constants";
 import { WorldWorkspace } from "@/components/worlds/world-workspace";
@@ -25,5 +25,7 @@ export default async function WorldPage({
 
   if (!data) return notFound();
 
-  return <WorldWorkspace data={data} checks={(await getDemoData()).checks} />;
+  const checks = data.world.is_demo ? (await getDemoData()).checks : await getWorldChecks(params.id);
+
+  return <WorldWorkspace data={data} checks={checks} />;
 }

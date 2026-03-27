@@ -172,6 +172,24 @@ export async function getWorldWorkspaceData(
   };
 }
 
+export async function getWorldChecks(worldId: string, isDemo = false): Promise<ConsistencyCheck[]> {
+  if (!hasSupabaseEnv() || isDemo) return demoChecks as ConsistencyCheck[];
+
+  const user = await getSessionUser();
+  if (!user) return [];
+
+  const supabase = createServerSupabaseClient();
+  const { data } = await supabase
+    .from("consistency_checks")
+    .select("id, world_id, user_id, source_text, created_at")
+    .eq("world_id", worldId)
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(12);
+
+  return (data ?? []) as ConsistencyCheck[];
+}
+
 export async function getDemoData() {
   return {
     world: demoWorld,
