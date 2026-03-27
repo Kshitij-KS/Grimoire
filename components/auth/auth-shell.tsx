@@ -1,0 +1,155 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+import { Loader2, Sparkles, Stars } from "lucide-react";
+import { GrimoireLogo } from "@/components/shared/grimoire-logo";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/browser";
+import { hasSupabaseEnv } from "@/lib/env";
+
+const authSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+});
+
+type AuthValues = z.infer<typeof authSchema>;
+
+export function AuthShell() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [busy, setBusy] = useState(false);
+  const mode = useMemo(() => (searchParams.get("mode") === "signup" ? "signup" : "signin"), [searchParams]);
+  const form = useForm<AuthValues>({
+    resolver: zodResolver(authSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  const submit = form.handleSubmit(async (values) => {
+    if (!hasSupabaseEnv()) {
+      toast.error("Supabase env vars are missing. Add them to enable auth.");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const supabase = createBrowserSupabaseClient();
+      if (mode === "signup") {
+        const { error } = await supabase.auth.signUp({
+          email: values.email,
+          password: values.password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/api/auth/callback`,
+          },
+        });
+
+        if (error) throw error;
+        toast.success("Account created. Check your inbox if email confirmation is enabled.");
+      } else {
+        const { error } = await supabase.auth.signInWithPassword(values);
+        if (error) throw error;
+        router.push("/dashboard");
+        router.refresh();
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Authentication failed.");
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  const signInWithGoogle = async () => {
+    if (!hasSupabaseEnv()) {
+      toast.error("Supabase env vars are missing. Add them to enable auth.");
+      return;
+    }
+
+    const supabase = createBrowserSupabaseClient();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/api/auth/callback`,
+      },
+    });
+
+    if (error) toast.error(error.message);
+  };
+
+  return (
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 py-12">
+      <div className="pointer-events-none absolute inset-0 bg-grid opacity-20" />
+      <Card className="aether-panel-elevated arcane-border relative z-10 w-full max-w-[calc(100vw-32px)] rounded-[34px] p-6 sm:max-w-md sm:p-8">
+        <div className="mb-8 space-y-4 text-center">
+          <div className="flex justify-center">
+            <GrimoireLogo className="scale-90" />
+          </div>
+          <div className="flex justify-center">
+            <Badge variant="outline" className="gap-2 px-3 py-1">
+              <Stars className="h-3.5 w-3.5 text-[rgb(196,168,106)]" />
+              Moonlit Arcane access
+            </Badge>
+          </div>
+          <div>
+            <h1 className="font-heading text-4xl text-foreground">
+              {mode === "signup" ? "Begin the first chapter." : "Return to your world."}
+            </h1>
+            <p className="mt-2 text-sm text-secondary">
+              {mode === "signup"
+                ? "Create an account to start building your living world."
+                : "Sign in to continue shaping your worlds."}
+            </p>
+          </div>
+        </div>
+
+        <Tabs value={mode} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="signin" onClick={() => router.replace("/auth?mode=signin")}>
+              Return
+            </TabsTrigger>
+            <TabsTrigger value="signup" onClick={() => router.replace("/auth?mode=signup")}>
+              Begin
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        <form className="mt-6 space-y-4" onSubmit={submit}>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" type="email" placeholder="scribe@ashveil.com" {...form.register("email")} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input id="password" type="password" placeholder="At least 8 characters" {...form.register("password")} />
+          </div>
+          <Button className="w-full" type="submit" disabled={busy}>
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            {mode === "signup" ? "Begin the first chapter" : "Return to the archive"}
+          </Button>
+        </form>
+
+        <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-[0.25em] text-secondary">
+          <span className="h-px flex-1 bg-border" />
+          Or
+          <span className="h-px flex-1 bg-border" />
+        </div>
+
+        <Button className="w-full" variant="secondary" onClick={signInWithGoogle}>
+          <Sparkles className="h-4 w-4" />
+          Continue with Google
+        </Button>
+      </Card>
+    </div>
+  );
+}

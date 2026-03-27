@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find C:UsersKIIT0001DesktopProjectsgrimoire -maxdepth 1 -name .env* -type f)",
+      "Bash(npx tsc:*)",
+      "Bash(npx next:*)",
+      "Bash(for f:*)",
+      "Bash(do sed:*)",
+      "Bash(done)",
+      "Bash(node -e \"const l = require\\(''''lucide-react''''\\); console.log\\(''''Stars:'''', !!l.Stars, ''''Moon:'''', !!l.Moon, ''''Orbit:'''', !!l.Orbit, ''''Ghost:'''', !!l.Ghost\\)\")",
+      "Bash(node -e \"import\\(''lucide-react''\\).then\\(l => { console.log\\(''Stars:'', !!l.Stars, ''Moon:'', !!l.Moon, ''Orbit:'', !!l.Orbit, ''Ghost:'', !!l.Ghost\\); }\\)\")",
+      "Bash(grep -l Stars node_modules/lucide-react/dist/*.js)",
+      "Bash(ls \"C:\\\\Users\\\\KIIT0001\\\\Desktop\\\\Projects\\\\grimoire\\\\node_modules\\\\lucide-react\\\\dist\"\" 2>/dev/null | head -5 || ls \"C:/Users/KIIT0001/Desktop/Projects/grimoire/node_modules/lucide-react/dist/ \")",
+      "Bash(ls -la C:UsersKIIT0001DesktopProjectsgrimoireapp*)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)"
+    ]
+  }
+}
