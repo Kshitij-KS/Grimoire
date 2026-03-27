@@ -120,9 +120,11 @@ export default async function DashboardPage() {
       <div className="mx-auto max-w-7xl px-6 py-10 lg:px-10">
         {dashboardData ? (
           <DashboardOverview
-            worlds={dashboardData.worlds as any}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            worlds={dashboardData.worlds as unknown as any[]}
             globalStats={dashboardData.globalStats}
-            recentActivity={dashboardData.recentActivity as any}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            recentActivity={dashboardData.recentActivity as unknown as any[]}
             displayName={displayName}
           />
         ) : (
