@@ -116,7 +116,7 @@ export default async function DashboardPage() {
 
   return (
     <main className="page-fade min-h-screen">
-      <DashboardNav isAuthed={Boolean(user)} />
+      <DashboardNav isAuthed={Boolean(user)} userEmail={user?.email} />
       <div className="mx-auto max-w-7xl px-6 py-10 lg:px-10">
         {dashboardData ? (
           <DashboardOverview
