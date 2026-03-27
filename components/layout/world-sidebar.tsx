@@ -67,7 +67,7 @@ export function WorldSidebar({
   return (
     <>
       {/* ── Desktop sidebar ── */}
-      <aside className="glass-panel sticky top-6 hidden h-[calc(100vh-48px)] w-[240px] shrink-0 rounded-[28px] lg:flex lg:flex-col overflow-hidden">
+      <aside className="glass-panel sticky top-6 hidden h-[calc(100vh-48px)] w-[240px] shrink-0 rounded-2xl lg:flex lg:flex-col overflow-hidden">
         {/* TOP: Pinned Section */}
         <div className="p-5 pb-4 space-y-4 shrink-0 border-b border-border/50">
           <div className="flex items-start justify-between">
@@ -124,7 +124,7 @@ export function WorldSidebar({
                         type="button"
                         onClick={() => router.push(nextHref(item.key))}
                         className={cn(
-                          "group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all duration-200",
+                          "group relative flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition-all duration-200",
                           active
                             ? "bg-[rgba(196,168,106,0.08)] text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_4px_16px_rgba(4,6,12,0.3)]"
                             : "text-secondary hover:bg-[rgba(165,148,255,0.06)] hover:text-foreground",
@@ -237,7 +237,7 @@ export function WorldSidebar({
               type="button"
               onClick={() => router.push(nextHref(item.key))}
               className={cn(
-                "relative flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] transition-colors duration-150",
+                "relative flex flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-[10px] transition-colors duration-150",
                 active ? "bg-[rgba(124,92,191,0.14)] text-foreground" : "text-secondary",
               )}
             >

@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Stars, Eye, EyeOff } from "lucide-react";
+import { Loader2, Sparkles, Stars } from "lucide-react";
 import { motion } from "framer-motion";
 import { GrimoireLogo } from "@/components/shared/grimoire-logo";
 import { Badge } from "@/components/ui/badge";
@@ -131,7 +131,7 @@ export function AuthShell() {
         transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
         className="w-full max-w-[calc(100vw-32px)] sm:max-w-md"
       >
-      <Card className="aether-panel-elevated arcane-border relative z-10 w-full rounded-[34px] p-6 sm:p-8">
+      <Card className="aether-panel-elevated arcane-border relative z-10 w-full rounded-2xl p-6 sm:p-8">
         <div className="mb-8 space-y-4 text-center">
           <div className="flex justify-center">
             <GrimoireLogo className="scale-90" />

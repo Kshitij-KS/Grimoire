@@ -111,7 +111,7 @@ export function DashboardOverview({
         {statCards.map(({ key, label, icon: Icon, color }, i) => (
           <motion.div
             key={key}
-            className="stat-card-hover glass-panel group relative overflow-hidden rounded-[24px] p-5"
+            className="stat-card-hover glass-panel group relative overflow-hidden rounded-[14px] p-5"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.1 + i * 0.07 }}
@@ -161,7 +161,7 @@ export function DashboardOverview({
           </div>
 
           {worlds.length === 0 ? (
-            <div className="glass-panel rounded-[28px] p-8 text-center">
+            <div className="glass-panel rounded-[16px] p-8 text-center">
               <Globe2 className="mx-auto mb-3 h-8 w-8 text-secondary" />
               <p className="text-sm text-secondary">
                 No worlds forged yet. Begin your first creation.
@@ -180,10 +180,10 @@ export function DashboardOverview({
                   transition={{ duration: 0.4, delay: 0.2 + i * 0.06 }}
                 >
                   <Link href={`/worlds/${world.id}`}>
-                    <div className="glass-panel hoverable-card group overflow-hidden rounded-[28px]">
+                    <div className="glass-panel hoverable-card group overflow-hidden rounded-[16px]">
                       {/* Color gradient bar */}
                       <div
-                        className="relative h-20 overflow-hidden rounded-t-[28px]"
+                        className="relative h-20 overflow-hidden rounded-t-[16px]"
                         style={{
                           background: `linear-gradient(135deg, ${world.cover_color}44, ${world.cover_color}11)`,
                         }}
@@ -248,7 +248,7 @@ export function DashboardOverview({
             <h2 className="font-heading text-2xl text-foreground">Recent Activity</h2>
           </div>
 
-          <div className="glass-panel rounded-[24px] divide-y divide-border">
+          <div className="glass-panel rounded-[14px] divide-y divide-border">
             {recentActivity.length === 0 ? (
               <div className="p-6 text-center text-sm text-secondary">
                 No activity yet. Start inscribing lore to see your progress here.
@@ -273,7 +273,7 @@ export function DashboardOverview({
                 return (
                   <motion.div
                     key={item.id}
-                    className="flex items-start gap-3 p-4 first:rounded-t-[24px] last:rounded-b-[24px] hover:bg-[rgba(255,255,255,0.025)] transition-colors"
+                    className="flex items-start gap-3 p-4 first:rounded-t-[14px] last:rounded-b-[14px] hover:bg-[rgba(255,255,255,0.025)] transition-colors"
                     initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3, delay: 0.3 + i * 0.05 }}
@@ -313,7 +313,7 @@ export function DashboardOverview({
           </div>
 
           {/* Quick Actions */}
-          <div className="glass-panel arcane-border rounded-[24px] p-5 space-y-3">
+          <div className="glass-panel arcane-border rounded-[14px] p-5 space-y-3">
             <p className="chapter-label">— Quick Actions —</p>
             <div className="grid gap-2">
               <Button variant="secondary" size="sm" className="w-full justify-start gap-2 transition-all hover:border-[rgba(196,168,106,0.3)] hover:bg-[rgba(196,168,106,0.06)]" asChild>

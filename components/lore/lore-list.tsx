@@ -40,7 +40,7 @@ export function LoreList({
           >
             <Card
               className={[
-                "group relative overflow-hidden rounded-[24px] p-4 transition-all duration-250 cursor-pointer",
+                "group relative overflow-hidden rounded-[14px] p-4 transition-all duration-250 cursor-pointer",
                 isSelected
                   ? "border-l-[3px] border-l-[rgb(212,168,83)] pl-[calc(1rem-3px)] shadow-[0_0_24px_rgba(196,168,106,0.12),-2px_0_12px_rgba(196,168,106,0.15)]"
                   : "hover:border-[rgba(212,168,83,0.24)] hover:shadow-[0_8px_32px_rgba(4,6,12,0.4),0_0_20px_rgba(196,168,106,0.06)]",

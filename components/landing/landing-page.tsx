@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { motion, useInView, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { useRef, useCallback } from "react";
+import { motion, useInView } from "framer-motion";
+import { useRef } from "react";
 import {
   BookOpenText,
   ChevronRight,
@@ -90,7 +90,7 @@ function FeatureCard({
       whileHover={{ y: -5 }}
     >
       <Card
-        className="group h-full rounded-[32px] p-7 transition-all duration-300"
+        className="group h-full rounded-2xl p-7 transition-all duration-300"
         style={{
           borderColor: `${feature.accentColor}0.08)`,
         }}
@@ -268,7 +268,7 @@ export function LandingPage() {
                       transition={{ type: "spring", stiffness: 340, damping: 22 }}
                       className="group"
                     >
-                      <Card className="rounded-[24px] p-5 transition-all duration-200 hover:border-[rgba(165,148,255,0.28)]"
+                      <Card className="rounded-xl p-5 transition-all duration-200 hover:border-[rgba(165,148,255,0.28)]"
                       >
                         <Icon className="mb-2 h-4 w-4 text-[rgba(196,168,106,0.7)] transition-transform duration-300 group-hover:scale-110 group-hover:text-[rgba(196,168,106,1)]" />
                         <p className="chapter-label">{pillar.label}</p>
@@ -309,7 +309,7 @@ export function LandingPage() {
                 style={{ color: "rgba(196,168,106,0.5)" }}
               >ᚠ</motion.span>
 
-              <div className="arcane-border glass-panel-elevated relative overflow-hidden rounded-[36px] p-6">
+              <div className="arcane-border glass-panel-elevated relative overflow-hidden rounded-2xl p-6">
                 <div className="pointer-events-none absolute inset-0 bg-grid opacity-[0.15]" />
                 <div className="relative space-y-5">
                   {/* World header */}
@@ -398,7 +398,7 @@ export function LandingPage() {
                   "radial-gradient(circle at 50% 50%, rgba(126,109,242,0.12), rgba(196,168,106,0.04) 50%, transparent 70%)",
               }}
             />
-            <div className="glass-panel-elevated arcane-border relative flex flex-col gap-8 rounded-[36px] p-10 lg:flex-row lg:items-end lg:justify-between">
+            <div className="glass-panel-elevated arcane-border relative flex flex-col gap-8 rounded-2xl p-10 lg:flex-row lg:items-end lg:justify-between">
               <div className="space-y-4">
                 <p className="chapter-label">Begin the first chapter</p>
                 <h2 className="max-w-xl font-heading text-5xl text-foreground">

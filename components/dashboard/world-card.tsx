@@ -33,10 +33,10 @@ export function WorldCard({ world }: WorldCardProps) {
       whileHover={{ y: -5 }}
       transition={{ type: "spring", stiffness: 360, damping: 26 }}
     >
-      <div className="glass-panel group overflow-hidden rounded-[32px] transition-all duration-300 hover:border-[rgba(165,148,255,0.24)] hover:shadow-[0_20px_60px_rgba(4,6,12,0.55),0_0_36px_rgba(126,109,242,0.1)]">
+      <div className="glass-panel group overflow-hidden rounded-[18px] transition-all duration-300 hover:border-[rgba(165,148,255,0.24)] hover:shadow-[0_20px_60px_rgba(4,6,12,0.55),0_0_36px_rgba(126,109,242,0.1)]">
         {/* ── Gradient header ── */}
         <div
-          className="relative h-36 overflow-hidden rounded-t-[32px] transition-all duration-500"
+          className="relative h-36 overflow-hidden rounded-t-[18px] transition-all duration-500"
           style={{
             background: `linear-gradient(135deg, ${world.cover_color}55 0%, ${world.cover_color}18 50%, ${world.cover_color}08 100%)`,
           }}
@@ -95,7 +95,7 @@ export function WorldCard({ world }: WorldCardProps) {
             {statItems.map(({ icon: Icon, color, key, label, hoverColor }, i) => (
               <div
                 key={key}
-                className="group/stat rounded-2xl border border-border bg-[rgba(255,255,255,0.02)] p-3.5 transition-all duration-200"
+                className="group/stat rounded-lg border border-border bg-[rgba(255,255,255,0.02)] p-3.5 transition-all duration-200"
                 style={{
                   ['--stat-hover-bg' as string]: hoverColor,
                 }}
@@ -126,7 +126,7 @@ export function WorldCard({ world }: WorldCardProps) {
           {/* CTA — arrow slides in on hover */}
           <Link
             href={`/worlds/${world.id}`}
-            className="group/cta flex w-full items-center justify-between rounded-2xl border border-border bg-[rgba(165,148,255,0.05)] px-4 py-3 text-sm font-medium text-foreground transition-all duration-200 hover:border-[rgba(165,148,255,0.3)] hover:bg-[rgba(165,148,255,0.1)]"
+            className="group/cta flex w-full items-center justify-between rounded-lg border border-border bg-[rgba(165,148,255,0.05)] px-4 py-3 text-sm font-medium text-foreground transition-all duration-200 hover:border-[rgba(165,148,255,0.3)] hover:bg-[rgba(165,148,255,0.1)]"
           >
             <span>Enter World</span>
             <motion.div
