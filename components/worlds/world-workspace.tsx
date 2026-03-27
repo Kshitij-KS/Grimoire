@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Sparkles } from "lucide-react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { WorldSidebar } from "@/components/layout/world-sidebar";
 import { ConstellationCanvas } from "@/components/bible/constellation-canvas";
 import { ConstellationDossier } from "@/components/bible/constellation-dossier";
@@ -19,10 +20,11 @@ import { NarratorTools } from "@/components/narrator/narrator-tools";
 import { SoulCard } from "@/components/souls/soul-card";
 import { SoulCreationModal } from "@/components/souls/soul-creation-modal";
 import { DestructiveActionModal } from "@/components/shared/destructive-action-modal";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Breadcrumbs, type BreadcrumbItem } from "@/components/shared/breadcrumbs";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkspaceStore } from "@/lib/store";
-import type { ConsistencyCheck, Soul, WorldWorkspaceData } from "@/lib/types";
+import type { ConsistencyCheck, Entity, Soul, WorldWorkspaceData } from "@/lib/types";
 
 const SECTION_META: Record<string, { label: string; subtitle: string; description: string }> = {
   lore: {
@@ -69,17 +71,45 @@ export function WorldWorkspace({
   data: WorldWorkspaceData;
   checks?: ConsistencyCheck[];
 }) {
-  const { limitModal, hideLimitModal, forgeSoulName, setForgeSoulName } = useWorkspaceStore();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { limitModal, hideLimitModal, forgeSoulName, setForgeSoulName, selectedEntity } = useWorkspaceStore();
   const [soulModalOpen, setSoulModalOpen] = useState(false);
   const [activeSoulId, setActiveSoulId] = useState<string | null>(null);
   const [souls, setSouls] = useState<Soul[]>(data.souls);
   const [entities, setEntities] = useState<Entity[]>(data.entities);
   const [deletingSoulId, setDeletingSoulId] = useState<string | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   const activeSoul = souls.find((s) => s.id === activeSoulId) ?? null;
   const deletingSoul = souls.find((s) => s.id === deletingSoulId) ?? null;
   const meta = SECTION_META[data.activeSection] ?? SECTION_META.lore;
   const structuredSection = data.activeSection === "lore" || data.activeSection === "consistency" || data.activeSection === "tapestry" || data.activeSection === "narrator";
+
+  // Simulate loading on section change for "perceived performance" and skeletal demo
+  useEffect(() => {
+    setIsTransitioning(true);
+    const timer = setTimeout(() => setIsTransitioning(false), 400);
+    return () => clearTimeout(timer);
+  }, [data.activeSection]);
+
+  const breadcrumbs: BreadcrumbItem[] = [
+    { label: data.world.name, href: `/dashboard` }, // Or just some root
+    { 
+      label: meta.label, 
+      active: !activeSoul && !selectedEntity,
+      href: activeSoul || selectedEntity ? undefined : undefined // Can click to reset if we had a dedicated handler
+    }
+  ];
+
+  if (data.activeSection === "souls" && activeSoul) {
+    breadcrumbs[1].href = pathname + "?section=souls";
+    breadcrumbs.push({ label: activeSoul.name, active: true });
+  } else if (data.activeSection === "bible" && selectedEntity) {
+    breadcrumbs[1].href = pathname + "?section=bible";
+    breadcrumbs.push({ label: selectedEntity.name, active: true });
+  }
 
   const handleDeleteSoul = async () => {
     if (!deletingSoulId) return;
@@ -107,36 +137,47 @@ export function WorldWorkspace({
             isDemo={isDemo}
           />
           <main className="flex-1 min-w-0">
-        <header className="glass-panel mb-6 flex flex-col gap-4 rounded-[30px] px-5 py-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <Badge variant="outline">{meta.label}</Badge>
-              <span className="chapter-label">{meta.subtitle}</span>
+        <header className="glass-panel mb-6 flex flex-col gap-4 rounded-[30px] px-6 py-6 lg:flex-row lg:items-center lg:justify-between border border-border/50 shadow-sm">
+          <div className="space-y-4 min-w-0">
+            <Breadcrumbs items={breadcrumbs} className="opacity-80" />
+            <div className="flex items-baseline gap-3">
+              <h1 className="font-heading text-4xl text-foreground tracking-tight truncate max-w-xl">
+                {activeSoul ? activeSoul.name : (selectedEntity ? selectedEntity.name : data.world.name)}
+              </h1>
+              <span className="chapter-label text-xs opacity-40 uppercase tracking-[0.3em] font-bold">
+                {activeSoul ? "Echo" : (selectedEntity ? "Dossier" : meta.subtitle)}
+              </span>
             </div>
-            <div>
-              <h1 className="font-heading text-5xl text-foreground">{data.world.name}</h1>
-              <p className="mt-2 max-w-3xl text-sm leading-7 text-secondary">{meta.description}</p>
-            </div>
+            {isTransitioning ? (
+              <div className="space-y-2 py-1">
+                <Skeleton className="h-4 w-[85%]" />
+                <Skeleton className="h-4 w-[60%]" />
+              </div>
+            ) : (
+              <p className="max-w-3xl text-sm leading-7 text-secondary/80 animate-in fade-in slide-in-from-left-2 duration-500">
+                {activeSoul ? `Listening to the echoes of ${activeSoul.name}. Forge their destiny through your dialogue.` : meta.description}
+              </p>
+            )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
             {isDemo ? (
-              <Button variant="ghost" asChild>
+              <Button variant="ghost" asChild className="rounded-2xl border border-border/50 bg-background/20 hover:bg-background/40">
                 <Link href="/auth?mode=signup">
-                  <Sparkles className="h-4 w-4" />
+                  <Sparkles className="h-4 w-4 text-[rgb(212,168,83)]" />
                   Sign up free
                 </Link>
               </Button>
             ) : (
-              <Button variant="ghost" asChild>
+              <Button variant="ghost" asChild className="rounded-2xl border border-border/50 bg-background/20 hover:bg-background/40">
                 <Link href="/dashboard">
                   <ArrowLeft className="h-4 w-4" />
                   Dashboard
                 </Link>
               </Button>
             )}
-            {data.activeSection === "souls" && !data.isReadonly ? (
-              <Button onClick={() => setSoulModalOpen(true)}>
+            {data.activeSection === "souls" && !data.isReadonly && !activeSoul ? (
+              <Button onClick={() => setSoulModalOpen(true)} className="rounded-2xl shadow-lg shadow-arcane-glow/20">
                 <Sparkles className="h-4 w-4" />
                 Forge Soul
               </Button>
@@ -145,14 +186,33 @@ export function WorldWorkspace({
         </header>
 
         <AnimatePresence mode="wait">
-          <motion.div
-            key={data.activeSection}
-            initial={{ opacity: 0, x: 20, filter: "blur(6px)" }}
-            animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-            exit={{ opacity: 0, x: -20, filter: "blur(6px)" }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="relative z-10"
-          >
+          {isTransitioning ? (
+            <motion.div
+              key="loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="space-y-6 pt-4"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 {[1,2,3,4,5,6].map(i => (
+                   <div key={i} className="glass-panel h-[220px] rounded-[30px] p-6 space-y-4">
+                     <Skeleton className="h-8 w-8 rounded-full" />
+                     <Skeleton className="h-6 w-3/4" />
+                     <Skeleton className="h-20 w-full" />
+                   </div>
+                 ))}
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key={data.activeSection}
+              initial={{ opacity: 0, x: 20, filter: "blur(6px)" }}
+              animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, x: -20, filter: "blur(6px)" }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="relative z-10"
+            >
             {data.activeSection === "lore" ? (
               <div className={structuredSection ? "mx-auto max-w-[1100px]" : ""}>
                 <LoomEditor worldId={data.world.id} initialEntries={data.loreEntries} isReadonly={data.isReadonly} />
@@ -294,6 +354,7 @@ export function WorldWorkspace({
               </div>
             ) : null}
           </motion.div>
+        )}
         </AnimatePresence>
           </main>
         </div>
