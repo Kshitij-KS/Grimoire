@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft, RefreshCw, Sparkles } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { WorldSidebar } from "@/components/layout/world-sidebar";
 import { ConstellationCanvas } from "@/components/bible/constellation-canvas";
@@ -24,6 +24,7 @@ import { DestructiveActionModal } from "@/components/shared/destructive-action-m
 import { Button } from "@/components/ui/button";
 import { Breadcrumbs, type BreadcrumbItem } from "@/components/shared/breadcrumbs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SectionLoadingScreen } from "@/components/shared/loading-shimmer";
 import { useWorkspaceStore } from "@/lib/store";
 import type { ConsistencyCheck, Entity, Soul, WorldWorkspaceData } from "@/lib/types";
 
@@ -81,12 +82,16 @@ export function WorldWorkspace({
   const [entities, setEntities] = useState<Entity[]>(data.entities);
   const [deletingSoulId, setDeletingSoulId] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isRefreshingArchive, setIsRefreshingArchive] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState(() => new Date().toISOString());
+  const [archiveRefreshCount, setArchiveRefreshCount] = useState(0);
 
   const activeSoul = souls.find((s) => s.id === activeSoulId) ?? null;
   const activeSoulCard = souls.find((s) => s.id === activeSoulCardId) ?? null;
   const deletingSoul = souls.find((s) => s.id === deletingSoulId) ?? null;
   const meta = SECTION_META[data.activeSection] ?? SECTION_META.lore;
   const structuredSection = data.activeSection === "lore" || data.activeSection === "consistency" || data.activeSection === "tapestry" || data.activeSection === "narrator";
+  const isDemo = data.world.is_demo ?? false;
 
   // Simulate loading on section change for "perceived performance" and skeletal demo
   useEffect(() => {
@@ -94,6 +99,33 @@ export function WorldWorkspace({
     const timer = setTimeout(() => setIsTransitioning(false), 400);
     return () => clearTimeout(timer);
   }, [data.activeSection]);
+
+  // Incremental archive refresh — only fetches entities updated since last refresh
+  const refreshArchive = useCallback(async () => {
+    if (isDemo || isRefreshingArchive) return;
+    setIsRefreshingArchive(true);
+    try {
+      const res = await fetch(
+        `/api/entities?worldId=${data.world.id}&since=${encodeURIComponent(lastRefreshed)}`
+      );
+      if (!res.ok) return;
+      const json = await res.json() as { entities: Entity[] };
+      if (json.entities && json.entities.length > 0) {
+        setEntities((prev) => {
+          const incoming = json.entities as Entity[];
+          const map = new Map(prev.map((e) => [e.id, e]));
+          for (const e of incoming) map.set(e.id, e);
+          return Array.from(map.values());
+        });
+        setArchiveRefreshCount((n) => n + json.entities.length);
+      }
+      setLastRefreshed(new Date().toISOString());
+    } catch {
+      // silent fail — archive still shows existing data
+    } finally {
+      setIsRefreshingArchive(false);
+    }
+  }, [data.world.id, isDemo, isRefreshingArchive, lastRefreshed]);
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: data.world.name, href: `/dashboard` }, // Or just some root
@@ -124,8 +156,6 @@ export function WorldWorkspace({
       setDeletingSoulId(null);
     }
   };
-
-  const isDemo = data.world.is_demo ?? false;
 
   return (
     <div className="relative min-h-screen pb-20 lg:pb-6">
@@ -193,17 +223,11 @@ export function WorldWorkspace({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="space-y-6 pt-4"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                 {[1,2,3,4,5,6].map(i => (
-                   <div key={i} className="glass-panel h-[220px] rounded-[30px] p-6 space-y-4">
-                     <Skeleton className="h-8 w-8 rounded-full" />
-                     <Skeleton className="h-6 w-3/4" />
-                     <Skeleton className="h-20 w-full" />
-                   </div>
-                 ))}
-              </div>
+              <SectionLoadingScreen
+                label={meta.label}
+                subtitle={meta.subtitle}
+              />
             </motion.div>
           ) : (
             <motion.div
@@ -229,6 +253,28 @@ export function WorldWorkspace({
                       Explore the constellation, then open a dossier to read the archive.
                     </p>
                   </div>
+                  {/* Refresh Archive button — only for non-demo worlds */}
+                  {!isDemo && (
+                    <div className="pointer-events-auto">
+                      <button
+                        onClick={refreshArchive}
+                        disabled={isRefreshingArchive}
+                        className="flex items-center gap-2 rounded-[18px] border border-border/60 bg-[rgba(13,11,8,0.82)] px-4 py-2.5 text-xs text-secondary backdrop-blur-sm transition-all hover:border-[rgba(124,92,191,0.5)] hover:text-foreground disabled:opacity-50"
+                        title={`Last refreshed: ${new Date(lastRefreshed).toLocaleTimeString()}`}
+                      >
+                        <RefreshCw
+                          className={`h-3.5 w-3.5 ${
+                            isRefreshingArchive ? "animate-spin text-[rgb(124,92,191)]" : "text-secondary"
+                          }`}
+                        />
+                        {isRefreshingArchive
+                          ? "Consulting the archive…"
+                          : archiveRefreshCount > 0
+                          ? `Refresh Archive (+${archiveRefreshCount})`
+                          : "Refresh Archive"}
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <ConstellationCanvas entities={entities} />
                 <AnimatePresence>

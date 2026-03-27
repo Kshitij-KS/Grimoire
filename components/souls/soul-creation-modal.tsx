@@ -165,7 +165,7 @@ export function SoulCreationModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="relative max-h-[min(92vh,820px)] max-w-lg overflow-y-auto overflow-x-hidden">
+      <DialogContent className="relative pb-4 max-w-lg overflow-x-hidden">
         {/* ── Decorative rune corners ── */}
         {RUNES.map((rune, i) => (
           <span

@@ -35,6 +35,7 @@ export const DialogContent = React.forwardRef<
       ref={ref}
       className={cn(
         "glass-panel-elevated fixed left-[50%] top-[50%] z-50 grid w-[min(92vw,720px)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-[30px] p-6 shadow-arcane",
+        "max-h-[min(92vh,860px)] overflow-y-auto overflow-x-hidden",
         "transition-all duration-200 ease-out",
         "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-[0.97]",
         "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-[0.97]",
