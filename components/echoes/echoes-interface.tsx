@@ -89,8 +89,15 @@ export function EchoesInterface({
       });
 
       if (!response.ok || !response.body) {
-        const payload = await response.json();
-        throw new Error(payload.error || "Chat failed.");
+        let errMsg = `Chat failed (${response.status})`;
+        try {
+          const text = await response.text();
+          if (text) {
+            const json = JSON.parse(text);
+            errMsg = json.error || json.message || errMsg;
+          }
+        } catch { /* empty body or non-JSON — use status fallback */ }
+        throw new Error(errMsg);
       }
 
       const reader = response.body.getReader();
