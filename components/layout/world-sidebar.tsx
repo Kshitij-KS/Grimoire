@@ -63,8 +63,8 @@ export function WorldSidebar({
   return (
     <>
       {/* ── Desktop sidebar ── */}
-      <aside className="glass-panel sticky top-6 hidden h-[calc(100vh-48px)] w-[240px] shrink-0 rounded-[28px] p-5 lg:flex lg:flex-col">
-        <div className="space-y-4">
+      <aside className="glass-panel sticky top-6 hidden h-[calc(100vh-48px)] w-[240px] shrink-0 overflow-y-auto rounded-[28px] p-5 lg:flex lg:flex-col">
+        <div className="space-y-4 shrink-0">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.25em] text-secondary">Current world</p>
@@ -88,7 +88,7 @@ export function WorldSidebar({
         </div>
 
         {/* ── Nav with spring indicator ── */}
-        <nav className="mt-8 flex flex-1 flex-col gap-1 overflow-y-auto">
+        <nav className="mt-8 flex flex-1 shrink-0 flex-col gap-1">
           {items.map((item) => {
             const Icon = item.icon;
             const active = item.key === activeSection;

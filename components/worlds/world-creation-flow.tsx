@@ -145,7 +145,7 @@ export function WorldCreationFlow() {
                       onClick={() => form.setValue("genre", genre.value, { shouldValidate: true })}
                       className={cn(
                         "glass-panel rounded-[24px] p-4 text-left transition hover:-translate-y-0.5",
-                        active && "border-[rgba(212,168,83,0.35)] bg-[rgba(124,92,191,0.14)]",
+                        active ? "border-[rgba(212,168,83,0.35)] bg-[rgba(124,92,191,0.14)]" : "border-border"
                       )}
                     >
                       <Icon className="mb-3 h-5 w-5 text-[rgb(212,168,83)]" />
@@ -161,20 +161,23 @@ export function WorldCreationFlow() {
             <div className="space-y-4">
               <h2 className="font-heading text-4xl text-foreground">Pick a tone</h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {tones.map((tone) => (
-                  <button
-                    key={tone}
-                    type="button"
-                    onClick={() => form.setValue("tone", tone, { shouldValidate: true })}
-                    className={cn(
-                      "glass-panel flex items-center gap-3 rounded-[24px] p-4 text-left transition hover:-translate-y-0.5",
-                      form.watch("tone") === tone && "border-[rgba(212,168,83,0.35)] bg-[rgba(124,92,191,0.14)]",
-                    )}
-                  >
-                    <Sword className="h-4 w-4 text-[rgb(157,127,224)]" />
-                    <span className="text-sm text-foreground">{tone}</span>
-                  </button>
-                ))}
+                {tones.map((tone) => {
+                  const active = form.watch("tone") === tone;
+                  return (
+                    <button
+                      key={tone}
+                      type="button"
+                      onClick={() => form.setValue("tone", tone, { shouldValidate: true })}
+                      className={cn(
+                        "glass-panel flex items-center gap-3 rounded-[24px] p-4 text-left transition hover:-translate-y-0.5",
+                        active ? "border-[rgba(212,168,83,0.35)] bg-[rgba(124,92,191,0.14)]" : "border-border"
+                      )}
+                    >
+                      <Sword className="h-4 w-4 text-[rgb(157,127,224)]" />
+                      <span className="text-sm text-foreground">{tone}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ) : null}
