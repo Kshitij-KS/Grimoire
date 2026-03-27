@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 import { z } from "zod";
 import { DAILY_LIMITS, SEMANTIC_CACHE_THRESHOLD } from "@/lib/constants";
-import { getGeminiModel } from "@/lib/gemini";
+import { getChatModel } from "@/lib/gemini";
 import { embedText } from "@/lib/embeddings";
 import { checkAndIncrement } from "@/lib/rate-limit";
 import { jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
@@ -224,7 +224,7 @@ RULES:
     }),
   );
 
-  const model = getGeminiModel();
+  const model = getChatModel();
   const result = await model.generateContent({
     systemInstruction,
     contents: [

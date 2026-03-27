@@ -11,7 +11,12 @@ function getClient() {
   return client;
 }
 
-/** Fast text generation model — replaces Claude Haiku for soul generation and chat. */
+/** Heavy generation model — soul generation, entity extraction, consistency checks. */
 export function getGeminiModel() {
   return getClient().getGenerativeModel({ model: "gemini-2.5-pro" });
+}
+
+/** Fast conversational model — soul chat, demo chat. */
+export function getChatModel() {
+  return getClient().getGenerativeModel({ model: "gemini-2.5-flash-preview-04-17" });
 }

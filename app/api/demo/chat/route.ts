@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 import { z } from "zod";
-import { getGeminiModel } from "@/lib/gemini";
+import { getChatModel } from "@/lib/gemini";
 import { demoLoreEntries, demoSoulCard } from "@/lib/mock-data";
 
 const schema = z.object({
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  const model = getGeminiModel();
+  const model = getChatModel();
   const result = await model.generateContent({
     systemInstruction,
     contents: [{ role: "user", parts: [{ text: parsed.data.message }] }],
