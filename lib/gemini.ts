@@ -13,10 +13,10 @@ export function getGeminiClient() {
 
 /** Heavy generation model — soul generation, entity extraction, consistency checks. */
 export function getGeminiModel() {
-  return getGeminiClient().getGenerativeModel({ model: "gemini-1.5-pro" });
+  return getGeminiClient().getGenerativeModel({ model: "gemini-2.5-pro" });
 }
 
 /** Fast conversational model — soul chat, demo chat. */
 export function getChatModel() {
-  return getGeminiClient().getGenerativeModel({ model: "gemini-1.5-flash" });
+  return getGeminiClient().getGenerativeModel({ model: "gemini-2.5-flash" });
 }
