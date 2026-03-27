@@ -35,13 +35,21 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  const model = getChatModel();
-
-  // Use true streaming from Gemini — avoids Vercel timeout on slow generations
-  const geminiStream = await model.generateContentStream({
-    systemInstruction,
-    contents: [{ role: "user", parts: [{ text: parsed.data.message }] }],
-  });
+  let geminiStream;
+  try {
+    const model = getChatModel();
+    // Use true streaming from Gemini — avoids Vercel timeout on slow generations
+    geminiStream = await model.generateContentStream({
+      systemInstruction,
+      contents: [{ role: "user", parts: [{ text: parsed.data.message }] }],
+    });
+  } catch (e: any) {
+    console.error("Gemini API error:", e);
+    return Response.json(
+      { error: e.message || "Failed to speak with the soul." },
+      { status: 500 }
+    );
+  }
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({

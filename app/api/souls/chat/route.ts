@@ -224,14 +224,23 @@ RULES:
     }),
   );
 
-  const model = getChatModel();
-  const geminiStream = await model.generateContentStream({
-    systemInstruction,
-    contents: [
-      ...history,
-      { role: "user", parts: [{ text: parsed.data.message }] },
-    ],
-  });
+  let geminiStream;
+  try {
+    const model = getChatModel();
+    geminiStream = await model.generateContentStream({
+      systemInstruction,
+      contents: [
+        ...history,
+        { role: "user", parts: [{ text: parsed.data.message }] },
+      ],
+    });
+  } catch (e: any) {
+    console.error("Gemini API error:", e);
+    return Response.json(
+      { error: e.message || "Failed to speak with the soul." },
+      { status: 500 }
+    );
+  }
 
   const encoder = new TextEncoder();
   let assistantText = "";
