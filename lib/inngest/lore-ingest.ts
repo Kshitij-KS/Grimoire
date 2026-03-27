@@ -34,7 +34,7 @@ export const loreIngestFunction = inngest.createFunction(
     triggers: [{ event: "lore.inscribed" }],
   },
   async ({ event, step }: { event: { data: Record<string, unknown> }; step: { run: <T>(name: string, fn: () => Promise<T>) => Promise<T> } }) => {
-    const { worldId, entryId, content, userId: _userId } = event.data as {
+    const { worldId, entryId, content } = event.data as {
       worldId: string;
       entryId: string;
       content: string;
