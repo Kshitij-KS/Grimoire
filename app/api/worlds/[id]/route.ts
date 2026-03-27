@@ -41,3 +41,33 @@ export async function PATCH(
   if (error) return jsonError(error.message, 500);
   return Response.json(data);
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  const auth = await requireUser();
+  if ("error" in auth) return auth.error;
+  const { user, supabase } = auth;
+
+  // Verify ownership
+  const { data: world } = await supabase
+    .from("worlds")
+    .select("id, user_id")
+    .eq("id", params.id)
+    .maybeSingle();
+
+  if (!world) return jsonError("World not found", 404);
+  if (world.user_id !== user.id) return jsonError("Forbidden", 403);
+
+  // Delete the world (Cascades to souls, lore, entities, etc)
+  const { error } = await supabase
+    .from("worlds")
+    .delete()
+    .eq("id", params.id);
+
+  if (error) return jsonError(error.message, 500);
+
+  return Response.json({ success: true });
+}
+

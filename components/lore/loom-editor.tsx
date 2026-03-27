@@ -10,6 +10,7 @@ import { Bold, Heading2, Italic, List, Quote } from "lucide-react";
 import { toast } from "sonner";
 import { LoreList } from "@/components/lore/lore-list";
 import { ProcessingStatus, type ProcessingStep } from "@/components/lore/processing-status";
+import { DestructiveActionModal } from "@/components/shared/destructive-action-modal";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type { LoreEntry } from "@/lib/types";
@@ -42,6 +43,27 @@ export function LoomEditor({
   const [title, setTitle] = useState(selectedEntry?.title ?? "");
   const [steps, setSteps] = useState(baseSteps);
   const [processing, setProcessing] = useState(false);
+  const [deletingLore, setDeletingLore] = useState<{ id: string; title: string } | null>(null);
+
+  const handleDeleteLore = async () => {
+    if (!deletingLore) return;
+    try {
+      const res = await fetch(`/api/lore/${deletingLore.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete lore.");
+      setEntries((prev) => prev.filter((e) => e.id !== deletingLore.id));
+      if (selectedEntry?.id === deletingLore.id) {
+        setSelectedEntry(null);
+        editor?.commands.clearContent();
+        setTitle("");
+      }
+      toast.success("Lore entry permanently deleted.");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to delete lore entry.");
+    } finally {
+      setDeletingLore(null);
+    }
+  };
 
   const editor = useEditor({
     extensions: [
@@ -388,8 +410,20 @@ export function LoomEditor({
           entries={entries}
           onSelect={setSelectedEntry}
           selectedEntryId={selectedEntry?.id}
+          isReadonly={isReadonly}
+          onDelete={(id, title) => setDeletingLore({ id, title: title || "Untitled Scroll" })}
         />
       </div>
+
+      <DestructiveActionModal
+        open={!!deletingLore}
+        onOpenChange={(open) => !open && setDeletingLore(null)}
+        title="Burn the Scroll"
+        description={`Are you sure you want to permanently erase "${deletingLore?.title}" from the world's memory? Extracted entities will remain, but this raw lore will be gone forever.`}
+        requireString={`burn ${deletingLore?.title}`}
+        onConfirm={handleDeleteLore}
+        isDemo={isReadonly}
+      />
     </div>
   );
 }

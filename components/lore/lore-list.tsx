@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ScrollText } from "lucide-react";
+import { ScrollText, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -12,10 +12,14 @@ export function LoreList({
   entries,
   onSelect,
   selectedEntryId,
+  isReadonly,
+  onDelete,
 }: {
   entries: LoreEntry[];
   onSelect: (entry: LoreEntry) => void;
   selectedEntryId?: string;
+  isReadonly?: boolean;
+  onDelete?: (id: string, title?: string) => void;
 }) {
   if (entries.length === 0) {
     return <EmptyState variant="lore" />;
@@ -56,7 +60,7 @@ export function LoreList({
                     <span className="text-[rgb(139,120,80)]">~{wordCount(entry.content)} words</span>
                   </p>
                 </div>
-                <div className="shrink-0">
+                <div className="shrink-0 flex items-center gap-2">
                   <Button
                     size="sm"
                     variant="secondary"
@@ -65,6 +69,16 @@ export function LoreList({
                     <ScrollText className="h-4 w-4" />
                     Open Scroll
                   </Button>
+                  {!isReadonly && onDelete && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => { e.stopPropagation(); onDelete(entry.id, entry.title); }}
+                      className="px-2 text-secondary hover:bg-red-500/10 hover:text-red-400"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </Card>

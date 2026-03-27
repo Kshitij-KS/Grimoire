@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   BookOpenText,
   Compass,
@@ -13,6 +13,8 @@ import {
   Clock,
   Users,
   Wand2,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -29,14 +31,14 @@ const items: Array<{
   mobileLabel: string;
   icon: React.ComponentType<{ className?: string }>;
 }> = [
-  { key: "lore", label: "Lore Scribe", mobileLabel: "Scribe", icon: BookOpenText },
-  { key: "bible", label: "The Archive", mobileLabel: "Archive", icon: PanelsTopLeft },
-  { key: "souls", label: "Bound Souls", mobileLabel: "Souls", icon: Sparkles },
-  { key: "consistency", label: "Narrator's Eye", mobileLabel: "Eye", icon: ShieldAlert },
-  { key: "tapestry", label: "The Tapestry", mobileLabel: "Time", icon: Clock },
-  { key: "tavern", label: "The Tavern", mobileLabel: "Tavern", icon: Users },
-  { key: "narrator", label: "Narrator's Tools", mobileLabel: "Tools", icon: Wand2 },
-];
+    { key: "lore", label: "Lore Scribe", mobileLabel: "Scribe", icon: BookOpenText },
+    { key: "bible", label: "The Archive", mobileLabel: "Archive", icon: PanelsTopLeft },
+    { key: "souls", label: "Bound Souls", mobileLabel: "Souls", icon: Sparkles },
+    { key: "consistency", label: "Narrator's Eye", mobileLabel: "Eye", icon: ShieldAlert },
+    { key: "tapestry", label: "The Tapestry", mobileLabel: "Time", icon: Clock },
+    { key: "tavern", label: "The Tavern", mobileLabel: "Tavern", icon: Users },
+    { key: "narrator", label: "Narrator's Tools", mobileLabel: "Tools", icon: Wand2 },
+  ];
 
 export function WorldSidebar({
   world,
@@ -53,6 +55,8 @@ export function WorldSidebar({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [isNavOpen, setIsNavOpen] = useState(true);
+  const [isUsageOpen, setIsUsageOpen] = useState(true);
 
   const nextHref = (section: WorldSection) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -63,94 +67,133 @@ export function WorldSidebar({
   return (
     <>
       {/* ── Desktop sidebar ── */}
-      <aside className="glass-panel sticky top-6 hidden h-[calc(100vh-48px)] w-[240px] shrink-0 overflow-y-auto rounded-[28px] p-5 lg:flex lg:flex-col">
-        <div className="space-y-4 shrink-0">
+      <aside className="glass-panel sticky top-6 hidden h-[calc(100vh-48px)] w-[240px] shrink-0 rounded-[28px] lg:flex lg:flex-col overflow-hidden">
+        {/* TOP: Pinned Section */}
+        <div className="p-5 pb-4 space-y-4 shrink-0 border-b border-border/50">
           <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.25em] text-secondary">Current world</p>
-              <h1 className="font-heading text-4xl text-foreground">{world.name}</h1>
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-[0.25em] text-secondary/70 mb-1">Current world</p>
+              <h1 className="font-heading text-3xl text-foreground truncate" title={world.name}>{world.name}</h1>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 shrink-0">
               <AmbientToggle />
               <Link
                 href={isDemo ? "/" : "/dashboard"}
-                className="rounded-xl p-2 text-secondary transition hover:bg-[rgba(54,44,34,0.3)] hover:text-foreground"
+                className="rounded-xl p-1.5 text-secondary transition hover:bg-[rgba(54,44,34,0.3)] hover:text-foreground"
                 title={isDemo ? "Back to Home" : "Back to Dashboard"}
               >
                 <Compass className="h-4 w-4" />
               </Link>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {world.genre ? <Badge>{world.genre}</Badge> : null}
-            {world.tone ? <Badge variant="gold">{world.tone}</Badge> : null}
+          <div className="flex flex-wrap gap-1.5">
+            {world.genre ? <Badge className="text-[10px] px-2 py-0">{world.genre}</Badge> : null}
+            {world.tone ? <Badge variant="gold" className="text-[10px] px-2 py-0">{world.tone}</Badge> : null}
           </div>
         </div>
 
-        {/* ── Nav with spring indicator ── */}
-        <nav className="mt-8 flex flex-1 shrink-0 flex-col gap-1">
-          {items.map((item) => {
-            const Icon = item.icon;
-            const active = item.key === activeSection;
-            return (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => router.push(nextHref(item.key))}
-                className={cn(
-                  "relative flex items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm transition-colors duration-150",
-                  active
-                    ? "bg-[rgba(54,44,34,0.3)] text-foreground"
-                    : "text-secondary hover:bg-[rgba(54,44,34,0.3)] hover:text-foreground",
-                )}
-              >
-                {active && (
-                  <motion.span
-                    layoutId="sidebar-active-indicator"
-                    className="absolute left-0 top-2 bottom-2 w-1 rounded-full bg-[rgb(212,168,83)]"
-                    style={{ boxShadow: "0 0 14px rgba(212,168,83,0.55)" }}
-                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                  />
-                )}
-                <Icon className="h-4 w-4 shrink-0" />
-                {item.label}
-              </button>
-            );
-          })}
-        </nav>
+        {/* MIDDLE: Scrollable & Collapsible Nav */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-5 pt-4 space-y-4 scrollbar-thin">
+          <div className="space-y-2">
+            <button 
+              onClick={() => setIsNavOpen(!isNavOpen)}
+              className="group flex w-full items-center justify-between text-[11px] font-bold uppercase tracking-[0.15em] text-secondary hover:text-foreground transition-colors"
+            >
+              <span>Chronicles</span>
+              {isNavOpen ? <ChevronDown className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100" /> : <ChevronRight className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100" />}
+            </button>
+            <AnimatePresence initial={false}>
+              {isNavOpen && (
+                <motion.nav 
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="space-y-1 overflow-hidden"
+                >
+                  {items.map((item) => {
+                    const Icon = item.icon;
+                    const active = item.key === activeSection;
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => router.push(nextHref(item.key))}
+                        className={cn(
+                          "relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all duration-200",
+                          active
+                            ? "bg-[rgba(54,44,34,0.3)] text-foreground shadow-sm"
+                            : "text-secondary hover:bg-[rgba(54,44,34,0.15)] hover:text-foreground",
+                        )}
+                      >
+                        {active && (
+                          <motion.span
+                            layoutId="indicator"
+                            className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-[rgb(212,168,83)]"
+                            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                          />
+                        )}
+                        <Icon className={cn("h-4 w-4 shrink-0", active ? "text-[rgb(212,168,83)]" : "opacity-70")} />
+                        <span className="truncate">{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </motion.nav>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
 
-        {/* ── Usage meters ── */}
-        <div className="space-y-4 border-t border-border pt-5">
-          <div className="flex items-center justify-between">
-            <p className="text-xs uppercase tracking-[0.25em] text-secondary">Today&apos;s Ink</p>
+        {/* BOTTOM: Pinned & Collapsible Usage */}
+        <div className="mt-auto p-5 pt-4 shrink-0 border-t border-border/50 bg-[linear-gradient(to_top,rgba(11,15,24,0.4),transparent)]">
+          <div className="flex items-center justify-between mb-3">
+            <button 
+              onClick={() => setIsUsageOpen(!isUsageOpen)}
+              className="group flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.15em] text-secondary hover:text-foreground transition-colors"
+            >
+              <span>Today&apos;s Ink</span>
+              {isUsageOpen ? <ChevronDown className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100" /> : <ChevronRight className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100" />}
+            </button>
             <button
               onClick={() => setSettingsOpen(true)}
-              className="rounded-lg p-1 text-secondary transition hover:bg-[rgba(54,44,34,0.4)] hover:text-foreground"
+              className="rounded-lg p-1.5 text-secondary transition hover:bg-[rgba(54,44,34,0.4)] hover:text-foreground"
               title="World Settings"
             >
               <Settings className="h-4 w-4" />
             </button>
           </div>
-          {usage.map((meter) => {
-            const pct = (meter.count / meter.limit) * 100;
-            const isWarning = pct >= 80;
-            return (
-              <div key={meter.action} className="space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-secondary capitalize">
-                    {meter.action.replace(/_/g, " ")}
-                  </span>
-                  <span className={isWarning ? "text-[rgb(212,168,83)]" : "text-secondary"}>
-                    {meter.count}/{meter.limit}
-                  </span>
+          <AnimatePresence initial={false}>
+            {isUsageOpen && (
+              <motion.div 
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="space-y-4 overflow-hidden"
+              >
+                <div className="space-y-3.5 max-h-[160px] overflow-y-auto pr-1 scrollbar-thin">
+                  {usage.map((meter) => {
+                    const pct = (meter.count / meter.limit) * 100;
+                    const isWarning = pct >= 80;
+                    return (
+                      <div key={meter.action} className="space-y-1.5">
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="text-secondary/80 capitalize">
+                            {meter.action.replace(/_/g, " ")}
+                          </span>
+                          <span className={isWarning ? "text-[rgb(212,168,83)] font-bold" : "text-secondary font-medium"}>
+                            {meter.count}/{meter.limit}
+                          </span>
+                        </div>
+                        <Progress
+                          value={pct}
+                          className={cn("h-1", isWarning ? "[&>div]:bg-[rgb(212,168,83)]" : "")}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
-                <Progress
-                  value={pct}
-                  className={isWarning ? "[&>div]:bg-[rgb(212,168,83)]" : ""}
-                />
-              </div>
-            );
-          })}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </aside>
 

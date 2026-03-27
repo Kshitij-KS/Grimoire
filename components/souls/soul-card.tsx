@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -12,11 +13,15 @@ import type { Soul } from "@/lib/types";
 export function SoulCard({
   soul,
   worldId,
+  isDemo = false,
   onView,
+  onDelete,
 }: {
   soul: Soul;
   worldId: string;
+  isDemo?: boolean;
   onView: () => void;
+  onDelete?: (id: string) => void;
 }) {
   const isGenerating = !soul.soul_card;
   const color = soul.avatar_color ?? "rgb(124,92,191)";
@@ -111,6 +116,19 @@ export function SoulCard({
               <Button variant="secondary" size="sm" onClick={onView}>
                 Soul Card
               </Button>
+              {!isDemo && onDelete && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onDelete(soul.id);
+                  }}
+                  className="px-2 text-secondary hover:text-red-400 hover:bg-red-500/10"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           )}
         </div>

@@ -11,9 +11,13 @@ import {
   ChevronRight,
   Check,
   Loader2,
+  Download, // Added Download icon
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { DestructiveActionModal } from "@/components/shared/destructive-action-modal";
 import type { World, UsageMeter } from "@/lib/types";
+import { toast } from "sonner"; // Added toast import
 
 interface WorldSettingsDrawerProps {
   open: boolean;
@@ -36,6 +40,9 @@ export function WorldSettingsDrawer({
   const [tab, setTab] = useState<"world" | "plan">("world");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [exporting, setExporting] = useState(false); // Added exporting state
+  const router = useRouter();
 
   // Editable world fields
   const [name, setName] = useState(world.name);
@@ -70,6 +77,37 @@ export function WorldSettingsDrawer({
     }
   };
 
+  const handleDeleteWorld = async () => {
+    const res = await fetch(`/api/worlds/${world.id}`, { method: "DELETE" });
+    if (!res.ok) throw new Error("Failed to delete world.");
+    router.push("/dashboard");
+    router.refresh();
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await fetch(`/api/worlds/${world.id}/export`);
+      if (!res.ok) throw new Error("Export failed");
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `grimoire_export_${world.name.replace(/\s+/g, "_").toLowerCase()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast.success("World data exported successfully.");
+    } catch (err) {
+      toast.error("Failed to export world data.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const dirty =
     name !== world.name ||
     genre !== (world.genre ?? "") ||
@@ -77,6 +115,7 @@ export function WorldSettingsDrawer({
     premise !== (world.premise ?? "");
 
   return (
+    <>
     <AnimatePresence>
       {open && (
         <>
@@ -217,6 +256,33 @@ export function WorldSettingsDrawer({
                         className="w-full resize-none rounded-[12px] border border-border bg-[rgba(255,255,255,0.03)] px-3 py-2 text-sm text-foreground placeholder:text-dim focus:border-[var(--violet)] focus:outline-none transition-colors"
                       />
                     </div>
+                    
+                    {/* Export Data */}
+                    <div className="pt-4 mt-6 border-t border-border">
+                      <label className="text-xs uppercase tracking-widest text-secondary mb-2 block">Data Portability</label>
+                      <button
+                        onClick={handleExport}
+                        disabled={exporting}
+                        className="w-full rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] px-3 py-2.5 text-sm transition hover:bg-[rgba(255,255,255,0.06)] flex justify-between items-center text-foreground disabled:opacity-50"
+                      >
+                        {exporting ? "Compiling Bible..." : "Export World Bible (JSON)"}
+                        <Download className="h-4 w-4 text-secondary" />
+                      </button>
+                    </div>
+                    
+                    {/* Danger Zone */}
+                    {!isDemo && (
+                      <div className="pt-6 mt-6 border-t border-red-900/20">
+                        <label className="text-xs uppercase tracking-widest text-red-500/80 mb-2 block">Danger Zone</label>
+                        <button
+                          onClick={() => setDeleteModalOpen(true)}
+                          className="w-full rounded-[12px] border border-red-500/20 bg-red-500/5 px-3 py-2.5 text-sm text-red-400 transition hover:bg-red-500/10 hover:border-red-500/30 text-left flex justify-between items-center"
+                        >
+                          Delete World
+                          <ChevronRight className="h-4 w-4 opacity-50" />
+                        </button>
+                      </div>
+                    )}
                   </motion.div>
                 )}
 
@@ -314,5 +380,15 @@ export function WorldSettingsDrawer({
         </>
       )}
     </AnimatePresence>
+    <DestructiveActionModal
+      open={deleteModalOpen}
+      onOpenChange={setDeleteModalOpen}
+      title="Delete World"
+      description={`Are you sure you want to delete ${world.name}? This will permanently destroy all underlying lore, souls, chat logs, and extracted entities. This action cannot be undone.`}
+      requireString={`delete ${world.name}`}
+      onConfirm={handleDeleteWorld}
+      isDemo={isDemo}
+    />
+    </>
   );
 }

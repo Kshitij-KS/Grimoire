@@ -23,11 +23,17 @@ export function EntityGrid({
   souls,
   worldId,
   onSoulCreated,
+  onEntityUpdate,
+  onEntityDelete,
+  isReadonly,
 }: {
   entities: Entity[];
   souls: Soul[];
   worldId?: string;
   onSoulCreated?: (soul: Soul) => void;
+  onEntityUpdate?: (updated: Entity) => void;
+  onEntityDelete?: (id: string) => void;
+  isReadonly?: boolean;
 }) {
   const { selectedEntity, setSelectedEntity } = useWorkspaceStore();
   const [soulModalOpen, setSoulModalOpen] = useState(false);
@@ -127,6 +133,15 @@ export function EntityGrid({
             onClose={() => setSelectedEntity(null)}
             canCreateSoul={createableSoulCount > 0}
             onCreateSoul={handleCreateSoulFromEntity}
+            onUpdate={(updated: Entity) => {
+              if (onEntityUpdate) onEntityUpdate(updated);
+              setSelectedEntity(updated);
+            }}
+            onDelete={(id: string) => {
+              if (onEntityDelete) onEntityDelete(id);
+              setSelectedEntity(null);
+            }}
+            isReadonly={isReadonly}
           />
         ) : null}
       </AnimatePresence>

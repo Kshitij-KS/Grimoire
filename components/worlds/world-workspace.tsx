@@ -18,6 +18,7 @@ import { TavernChat } from "@/components/tavern/tavern-chat";
 import { NarratorTools } from "@/components/narrator/narrator-tools";
 import { SoulCard } from "@/components/souls/soul-card";
 import { SoulCreationModal } from "@/components/souls/soul-creation-modal";
+import { DestructiveActionModal } from "@/components/shared/destructive-action-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useWorkspaceStore } from "@/lib/store";
@@ -72,10 +73,26 @@ export function WorldWorkspace({
   const [soulModalOpen, setSoulModalOpen] = useState(false);
   const [activeSoulId, setActiveSoulId] = useState<string | null>(null);
   const [souls, setSouls] = useState<Soul[]>(data.souls);
+  const [entities, setEntities] = useState<Entity[]>(data.entities);
+  const [deletingSoulId, setDeletingSoulId] = useState<string | null>(null);
 
   const activeSoul = souls.find((s) => s.id === activeSoulId) ?? null;
+  const deletingSoul = souls.find((s) => s.id === deletingSoulId) ?? null;
   const meta = SECTION_META[data.activeSection] ?? SECTION_META.lore;
   const structuredSection = data.activeSection === "lore" || data.activeSection === "consistency" || data.activeSection === "tapestry" || data.activeSection === "narrator";
+
+  const handleDeleteSoul = async () => {
+    if (!deletingSoulId) return;
+    try {
+      const res = await fetch(`/api/souls/${deletingSoulId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete soul.");
+      setSouls((prev) => prev.filter((s) => s.id !== deletingSoulId));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setDeletingSoulId(null);
+    }
+  };
 
   const isDemo = data.world.is_demo ?? false;
 
@@ -152,16 +169,19 @@ export function WorldWorkspace({
                     </p>
                   </div>
                 </div>
-                <ConstellationCanvas entities={data.entities} />
+                <ConstellationCanvas entities={entities} />
                 <AnimatePresence>
-                  <ConstellationDossier worldId={data.world.id} allEntities={data.entities} />
+                  <ConstellationDossier worldId={data.world.id} allEntities={entities} />
                 </AnimatePresence>
                 <div className="sr-only">
                   <EntityGrid
-                    entities={data.entities}
+                    entities={entities}
                     souls={souls}
                     worldId={data.world.id}
                     onSoulCreated={(newSoul) => setSouls((prev) => [...prev, newSoul])}
+                    onEntityUpdate={(updated) => setEntities(prev => prev.map(e => e.id === updated.id ? updated : e))}
+                    onEntityDelete={(id) => setEntities(prev => prev.filter(e => e.id !== id))}
+                    isReadonly={data.isReadonly}
                   />
                 </div>
               </div>
@@ -202,7 +222,9 @@ export function WorldWorkspace({
                           key={soul.id}
                           soul={soul}
                           worldId={data.world.id}
+                          isDemo={isDemo}
                           onView={() => setActiveSoulId(soul.id)}
+                          onDelete={setDeletingSoulId}
                         />
                       ))}
 
@@ -302,6 +324,15 @@ export function WorldWorkspace({
         entities={data.entities}
         souls={souls}
         loreEntries={data.loreEntries}
+      />
+      <DestructiveActionModal
+        open={!!deletingSoulId}
+        onOpenChange={(open) => !open && setDeletingSoulId(null)}
+        title="Destroy Soul"
+        description={`Are you sure you want to permanently delete the soul of ${deletingSoul?.name}? All their memories and chat history will be erased from the world.`}
+        requireString={`delete ${deletingSoul?.name}`}
+        onConfirm={handleDeleteSoul}
+        isDemo={isDemo}
       />
     </div>
   );

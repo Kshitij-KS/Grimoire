@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Send, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
+import { DestructiveActionModal } from "@/components/shared/destructive-action-modal";
 import { EchoesOrbDynamic } from "@/components/echoes/echoes-orb-dynamic";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,8 +34,22 @@ export function EchoesInterface({
   const [messagesLeft, setMessagesLeft] = useState(remaining);
   const [voiceText, setVoiceText] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
+  const [resetModalOpen, setResetModalOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleReset = async () => {
+    if (isDemo) return;
+    try {
+      const res = await fetch(`/api/souls/${soul.id}/chat`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to reset chat memory.");
+      setMessages([]);
+      setDisplayedWords([]);
+      toast.success("Memory wiped successfully.");
+    } catch (e) {
+      toast.error("Failed to reset memory.");
+    }
+  };
 
   const color = soul.avatar_color ?? "rgb(124,92,191)";
   const initials = soul.avatar_initials ?? initialsFromName(soul.name);
@@ -185,6 +200,17 @@ export function EchoesInterface({
               <Badge variant={messagesLeft < 10 ? "danger" : "gold"}>
                 {messagesLeft} remaining today
               </Badge>
+              {!isDemo && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setResetModalOpen(true)}
+                  className="text-red-400 hover:text-red-300 hover:bg-red-950/30"
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Wipe Memory
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -412,6 +438,16 @@ export function EchoesInterface({
           </div>
         </div>
       </div>
+
+      <DestructiveActionModal
+        open={resetModalOpen}
+        onOpenChange={setResetModalOpen}
+        title="Wipe Memory"
+        description={`Are you sure you want to permanently erase the conversation history with ${soul.name}? This will clear their short-term context. This action cannot be undone.`}
+        requireString={`wipe ${soul.name}`}
+        onConfirm={handleReset}
+        isDemo={isDemo}
+      />
     </div>
   );
 }
