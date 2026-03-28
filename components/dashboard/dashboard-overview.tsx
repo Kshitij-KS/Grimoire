@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   BookOpenText,
@@ -15,6 +16,30 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+
+// ── Count-up hook ──────────────────────────────────────────────────────────
+function useCountUp(target: number, duration = 800) {
+  const [count, setCount] = useState(0);
+  const startTime = useRef<number | null>(null);
+  const raf = useRef<number | null>(null);
+
+  useEffect(() => {
+    startTime.current = null;
+    const step = (ts: number) => {
+      if (!startTime.current) startTime.current = ts;
+      const elapsed = ts - startTime.current;
+      const progress = Math.min(elapsed / duration, 1);
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setCount(Math.round(eased * target));
+      if (progress < 1) raf.current = requestAnimationFrame(step);
+    };
+    raf.current = requestAnimationFrame(step);
+    return () => { if (raf.current) cancelAnimationFrame(raf.current); };
+  }, [target, duration]);
+
+  return count;
+}
 
 interface WorldWithStats {
   id: string;
@@ -55,6 +80,51 @@ const statCards = [
   { key: "totalSouls" as const, label: "Souls Bound", icon: Users, color: "#a594ff" },
   { key: "totalEntities" as const, label: "Entities Discovered", icon: Sparkles, color: "#6ecfbd" },
 ];
+
+function StatCard({
+  label,
+  icon: Icon,
+  color,
+  value,
+  delay,
+}: {
+  label: string;
+  icon: typeof Globe2;
+  color: string;
+  value: number;
+  delay: number;
+}) {
+  const count = useCountUp(value, 900);
+  return (
+    <motion.div
+      className="stat-card-hover glass-panel group relative overflow-hidden rounded-[14px] p-5"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay }}
+    >
+      {/* Top accent line */}
+      <div
+        className="absolute inset-x-0 top-0 h-[2px] rounded-t-[14px] opacity-60 transition-opacity duration-300 group-hover:opacity-100"
+        style={{ background: `linear-gradient(90deg, ${color}cc, ${color}44, transparent)` }}
+      />
+      {/* Inner ambient glow */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        style={{ background: `radial-gradient(ellipse 80% 60% at 20% 20%, ${color}12, transparent 60%)` }}
+      />
+      <div className="mb-3 flex items-center gap-2">
+        <div
+          className="flex h-9 w-9 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-110"
+          style={{ background: `${color}18` }}
+        >
+          <Icon className="h-4 w-4" style={{ color }} />
+        </div>
+        <span className="text-xs text-secondary">{label}</span>
+      </div>
+      <p className="font-heading text-5xl text-foreground tabular-nums">{count}</p>
+    </motion.div>
+  );
+}
 
 function formatRelative(dateStr: string) {
   const now = Date.now();
@@ -108,45 +178,15 @@ export function DashboardOverview({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
       >
-        {statCards.map(({ key, label, icon: Icon, color }, i) => (
-          <motion.div
+        {statCards.map(({ key, label, icon, color }, i) => (
+          <StatCard
             key={key}
-            className="stat-card-hover glass-panel group relative overflow-hidden rounded-[14px] p-5"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.1 + i * 0.07 }}
-          >
-            {/* Top accent line */}
-            <div
-              className="absolute inset-x-0 top-0 h-[2px] rounded-t-[24px] opacity-60 transition-opacity duration-300 group-hover:opacity-100"
-              style={{ background: `linear-gradient(90deg, ${color}cc, ${color}44, transparent)` }}
-            />
-            {/* Inner ambient glow */}
-            <div
-              className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-              style={{
-                background: `radial-gradient(ellipse 80% 60% at 20% 20%, ${color}12, transparent 60%)`,
-              }}
-            />
-            <div className="mb-3 flex items-center gap-2">
-              <div
-                className="flex h-9 w-9 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-110"
-                style={{ background: `${color}18` }}
-              >
-                <Icon className="h-4 w-4" style={{ color }} />
-              </div>
-              <span className="text-xs text-secondary">{label}</span>
-            </div>
-            <motion.p
-              className="font-heading text-5xl text-foreground"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, delay: 0.18 + i * 0.08 }}
-              style={{ ['--stat-color' as string]: color }}
-            >
-              {globalStats[key]}
-            </motion.p>
-          </motion.div>
+            label={label}
+            icon={icon}
+            color={color}
+            value={globalStats[key]}
+            delay={0.1 + i * 0.07}
+          />
         ))}
       </motion.div>
 

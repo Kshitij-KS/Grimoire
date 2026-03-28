@@ -31,10 +31,10 @@ export function SoulCard({
   return (
     <motion.div
       className="group"
-      whileHover={{ y: -6, scale: 1.01 }}
+      whileHover={{ y: -5 }}
       transition={{ type: "spring", stiffness: 340, damping: 24 }}
     >
-      <Card className="flex flex-col overflow-hidden rounded-[32px] p-0">
+      <Card className="relative flex flex-col overflow-hidden rounded-[16px] p-0">
         {/* ── Avatar section ── */}
         <div
           className="relative flex h-44 items-center justify-center overflow-hidden"
@@ -42,6 +42,11 @@ export function SoulCard({
             background: `radial-gradient(circle at 50% 60%, ${color}28, transparent 70%)`,
           }}
         >
+          {/* Color accent top line */}
+          <div
+            className="absolute inset-x-0 top-0 h-[2px] opacity-55 transition-opacity duration-300 group-hover:opacity-100"
+            style={{ background: `linear-gradient(90deg, ${color}dd, ${color}44, transparent)` }}
+          />
           {/* Subtle grid overlay */}
           <div className="pointer-events-none absolute inset-0 bg-grid opacity-15" />
 
@@ -94,10 +99,10 @@ export function SoulCard({
         </div>
 
         {/* ── Sample lines — revealed on group-hover ── */}
-        <div className="min-h-[52px] overflow-hidden px-5 pb-2">
-          <div className="translate-y-2 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+        <div className="min-h-[48px] overflow-hidden px-5 pb-2">
+          <div className="translate-y-1.5 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
             {sampleLines.slice(0, 2).map((line, i) => (
-              <p key={i} className="mb-1 truncate text-xs italic text-secondary">
+              <p key={i} className="mb-1 truncate text-xs italic text-secondary/70">
                 &ldquo;{line}&rdquo;
               </p>
             ))}
@@ -107,7 +112,7 @@ export function SoulCard({
         {/* ── Action buttons ── */}
         <div className="mt-auto border-t border-border px-5 py-4">
           {isGenerating ? (
-            <LoadingShimmer className="h-9 w-full rounded-[18px]" />
+            <LoadingShimmer className="h-9 w-full rounded-[10px]" />
           ) : (
             <div className="flex gap-2">
               <Button asChild size="sm" className="flex-1">

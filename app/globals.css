@@ -539,6 +539,11 @@ h4 {
   to   { background-position: 200% 0; }
 }
 
+@keyframes sectionEnter {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
@@ -640,5 +645,18 @@ h4 {
     background: rgba(165, 148, 255, 0.05);
     border-color: rgba(165, 148, 255, 0.22) !important;
     box-shadow: 0 0 24px rgba(126, 109, 242, 0.1);
+  }
+
+  /* One-shot section entrance — apply on mount */
+  .section-enter {
+    animation: sectionEnter 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* Subtle glow on interactive panels */
+  .hover-glow-violet {
+    transition: box-shadow 220ms ease;
+  }
+  .hover-glow-violet:hover {
+    box-shadow: 0 0 0 1px rgba(165, 148, 255, 0.2), 0 8px 32px rgba(126, 109, 242, 0.14);
   }
 }

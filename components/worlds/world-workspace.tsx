@@ -168,7 +168,7 @@ export function WorldWorkspace({
             isDemo={isDemo}
           />
           <main className="flex-1 min-w-0">
-        <header className="glass-panel mb-6 flex flex-col gap-4 rounded-[30px] px-6 py-6 lg:flex-row lg:items-center lg:justify-between border border-border/50 shadow-sm">
+        <header className="glass-panel mb-6 flex flex-col gap-4 rounded-[18px] px-6 py-5 lg:flex-row lg:items-center lg:justify-between border border-border/50">
           <div className="space-y-4 min-w-0">
             <Breadcrumbs items={breadcrumbs} className="opacity-80" />
             <div className="flex items-baseline gap-3">
@@ -200,7 +200,7 @@ export function WorldWorkspace({
                 </Link>
               </Button>
             ) : (
-              <Button variant="ghost" asChild className="rounded-2xl border border-border/50 bg-background/20 hover:bg-background/40">
+              <Button variant="ghost" asChild className="rounded-lg border border-border/50 bg-background/20 hover:bg-background/40">
                 <Link href="/dashboard">
                   <ArrowLeft className="h-4 w-4" />
                   Dashboard
@@ -208,7 +208,7 @@ export function WorldWorkspace({
               </Button>
             )}
             {data.activeSection === "souls" && !data.isReadonly && !activeSoul ? (
-              <Button onClick={() => setSoulModalOpen(true)} className="rounded-2xl shadow-lg shadow-arcane-glow/20">
+              <Button onClick={() => setSoulModalOpen(true)}>
                 <Sparkles className="h-4 w-4" />
                 Forge Soul
               </Button>
@@ -232,10 +232,10 @@ export function WorldWorkspace({
           ) : (
             <motion.div
               key={data.activeSection}
-              initial={{ opacity: 0, x: 20, filter: "blur(6px)" }}
-              animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-              exit={{ opacity: 0, x: -20, filter: "blur(6px)" }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
+              initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, y: -6, filter: "blur(4px)" }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
               className="relative z-10"
             >
             {data.activeSection === "lore" ? (

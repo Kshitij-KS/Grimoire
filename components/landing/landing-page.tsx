@@ -237,7 +237,7 @@ export function LandingPage() {
                 transition={{ duration: 0.5, delay: 0.84, ease: "easeOut" }}
                 className="flex flex-col gap-3 sm:flex-row"
               >
-                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                <motion.div whileHover={{ scale: 1.015 }} whileTap={{ scale: 0.97 }}>
                   <Button size="lg" asChild className="w-full sm:w-auto">
                     <Link href="/auth">
                       Begin Writing
@@ -245,7 +245,7 @@ export function LandingPage() {
                     </Link>
                   </Button>
                 </motion.div>
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+                <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.97 }}>
                   <Button size="lg" variant="secondary" asChild className="w-full sm:w-auto">
                     <Link href="/demo">Explore Ashveil</Link>
                   </Button>
@@ -408,22 +408,29 @@ export function LandingPage() {
                   One world on free tier, three souls, and enough daily room to test whether
                   Grimoire fits the way you think and write.
                 </p>
-                <div className="flex flex-wrap gap-3 pt-2">
-                  {["Free forever tier", "No credit card", "Cancel anytime"].map((perk) => (
-                    <span key={perk} className="flex items-center gap-1.5 text-xs text-secondary">
-                      <span className="text-[rgba(92,180,145,0.8)]">✓</span>
+                <div className="flex flex-wrap gap-x-5 gap-y-2 pt-2">
+                  {["Free forever tier", "No credit card", "Cancel anytime"].map((perk, i) => (
+                    <motion.span
+                      key={perk}
+                      className="flex items-center gap-1.5 text-xs text-secondary"
+                      initial={{ opacity: 0, x: -8 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.4, delay: 0.1 + i * 0.1, ease: "easeOut" }}
+                    >
+                      <span className="text-[rgba(92,180,145,0.85)]">✓</span>
                       {perk}
-                    </span>
+                    </motion.span>
                   ))}
                 </div>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row">
-                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                <motion.div whileHover={{ scale: 1.015 }} whileTap={{ scale: 0.97 }}>
                   <Button size="lg" asChild className="w-full sm:w-auto">
                     <Link href="/auth">Begin Writing</Link>
                   </Button>
                 </motion.div>
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+                <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.97 }}>
                   <Button size="lg" variant="secondary" asChild className="w-full sm:w-auto">
                     <Link href="/demo">Explore Ashveil</Link>
                   </Button>

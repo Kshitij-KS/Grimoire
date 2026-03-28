@@ -205,7 +205,7 @@ export function SoulCreationModal({
             {[0, 1].map((i) => (
               <div
                 key={i}
-                className="h-1 flex-1 rounded-full transition-all duration-300"
+                className="h-0.5 flex-1 rounded-sm transition-all duration-500"
                 style={{ background: i <= step ? "rgb(212,168,83)" : "rgba(255,255,255,0.08)" }}
               />
             ))}
@@ -225,7 +225,10 @@ export function SoulCreationModal({
               <>
                 {/* Avatar preview with soul-glow-ring */}
                 <div className="flex justify-center py-2">
-                  <div
+                  <motion.div
+                    initial={{ scale: 0.6, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 22, delay: 0.05 }}
                     className="soul-glow-ring flex h-20 w-20 items-center justify-center rounded-full border-2 font-heading text-3xl transition-all duration-300"
                     style={{
                       borderColor: watchedColor,
@@ -234,7 +237,7 @@ export function SoulCreationModal({
                     }}
                   >
                     {watchedName ? initialsFromName(watchedName) : "?"}
-                  </div>
+                  </motion.div>
                 </div>
 
                 <div className="space-y-2">

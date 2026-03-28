@@ -129,13 +129,7 @@ export function WorldCard({ world }: WorldCardProps) {
             className="group/cta flex w-full items-center justify-between rounded-lg border border-border bg-[rgba(165,148,255,0.05)] px-4 py-3 text-sm font-medium text-foreground transition-all duration-200 hover:border-[rgba(165,148,255,0.3)] hover:bg-[rgba(165,148,255,0.1)]"
           >
             <span>Enter World</span>
-            <motion.div
-              initial={{ x: -4, opacity: 0 }}
-              whileHover={{ x: 0, opacity: 1 }}
-              className="transition-all"
-            >
-              <ArrowRight className="h-4 w-4 translate-x-0 opacity-0 transition-all duration-200 group-hover/cta:translate-x-0 group-hover/cta:opacity-100" />
-            </motion.div>
+            <ArrowRight className="h-4 w-4 -translate-x-1 opacity-0 transition-all duration-200 group-hover/cta:translate-x-0 group-hover/cta:opacity-100" />
           </Link>
         </div>
       </div>

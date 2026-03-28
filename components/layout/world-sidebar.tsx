@@ -138,7 +138,7 @@ export function WorldSidebar({
                               background: "linear-gradient(180deg, rgba(196,168,106,0.9), rgba(165,148,255,0.7))",
                               boxShadow: "0 0 8px rgba(196,168,106,0.4)",
                             }}
-                            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                            transition={{ type: "spring", stiffness: 500, damping: 36 }}
                           />
                         )}
                         <Icon

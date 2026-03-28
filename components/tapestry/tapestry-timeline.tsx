@@ -107,7 +107,13 @@ export function TapestryTimeline({ worldId }: TapestryTimelineProps) {
       <div className="relative">
         {/* Vertical line */}
         {events.length > 0 && (
-          <div className="absolute left-6 top-0 bottom-0 w-px bg-gradient-to-b from-[var(--violet)] via-[var(--gold)] to-transparent" />
+          <motion.div
+            className="absolute left-6 top-0 bottom-0 w-px origin-top"
+            style={{ background: "linear-gradient(to bottom, var(--violet), var(--gold), transparent)" }}
+            initial={{ scaleY: 0 }}
+            animate={{ scaleY: 1 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+          />
         )}
 
         <AnimatePresence mode="wait">
@@ -140,12 +146,16 @@ export function TapestryTimeline({ worldId }: TapestryTimelineProps) {
                 >
                   {/* Node dot */}
                   <div className="relative z-10 mt-2 flex h-5 w-5 shrink-0 items-center justify-center">
-                    <div className="h-3 w-3 rounded-full bg-[var(--violet)] shadow-[0_0_12px_rgba(126,109,242,0.4)]" />
+                    <motion.div
+                      className="h-3 w-3 rounded-full bg-[var(--violet)]"
+                      animate={{ boxShadow: ["0 0 6px rgba(126,109,242,0.3)", "0 0 16px rgba(126,109,242,0.7)", "0 0 6px rgba(126,109,242,0.3)"] }}
+                      transition={{ duration: 2.4, repeat: Infinity, delay: (eventIndex % 4) * 0.3 }}
+                    />
                     <div className="absolute h-5 w-5 rounded-full border border-[var(--violet)]44" />
                   </div>
 
                   {/* Event card */}
-                  <div className="glass-panel flex-1 rounded-[20px] p-4 transition-all duration-200 hover:border-[rgba(165,148,255,0.22)]">
+                  <div className="glass-panel flex-1 rounded-xl p-4 transition-all duration-200 hover:border-[rgba(165,148,255,0.28)] hover:shadow-[0_4px_20px_rgba(4,6,12,0.4)]">
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-medium text-[var(--gold)] uppercase tracking-wider">
                         #{event.order}
