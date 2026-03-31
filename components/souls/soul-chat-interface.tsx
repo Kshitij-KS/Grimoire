@@ -199,12 +199,12 @@ export function SoulChatInterface({
                 <div
                   className={
                     message.role === "user"
-                      ? "max-w-[80%] rounded-[24px] bg-[linear-gradient(135deg,rgba(124,92,191,0.95),rgba(157,127,224,0.88))] px-4 py-3 text-white shadow-sm"
-                      : "max-w-[80%] rounded-[24px] border border-border border-l-[3px] border-l-[rgb(212,168,83)] bg-[rgba(18,18,26,0.94)] px-4 py-3"
+                      ? "max-w-[80%] rounded-[24px] bg-[linear-gradient(135deg,var(--ai-pulse),var(--ai-pulse-soft))] px-4 py-3 text-white shadow-sm"
+                      : "max-w-[80%] rounded-[24px] border border-border border-l-[3px] border-l-[var(--accent)] bg-[color-mix(in_srgb,var(--surface)_94%,transparent)] px-4 py-3"
                   }
                 >
                   {message.role === "assistant" ? (
-                    <p className="mb-2 text-xs uppercase tracking-[0.25em] text-[rgb(212,168,83)]">{soul.name}</p>
+                    <p className="mb-2 text-xs uppercase tracking-[0.25em] text-[var(--accent)]">{soul.name}</p>
                   ) : null}
                   <div className="prose-grimoire">
                     <ReactMarkdown>{message.content}</ReactMarkdown>
@@ -223,8 +223,8 @@ export function SoulChatInterface({
                 exit={{ opacity: 0, y: 8 }}
                 className="flex justify-start"
               >
-                <div className="rounded-[24px] border border-border border-l-[3px] border-l-[rgb(212,168,83)] bg-[rgba(18,18,26,0.94)] px-4 py-3">
-                  <p className="mb-2 text-xs uppercase tracking-[0.25em] text-[rgb(212,168,83)]">{soul.name}</p>
+                <div className="rounded-[24px] border border-border border-l-[3px] border-l-[var(--accent)] bg-[color-mix(in_srgb,var(--surface)_94%,transparent)] px-4 py-3">
+                  <p className="mb-2 text-xs uppercase tracking-[0.25em] text-[var(--accent)]">{soul.name}</p>
                   <TypingDots />
                 </div>
               </motion.div>
@@ -252,7 +252,7 @@ export function SoulChatInterface({
           <div className="mt-2 mb-3">
             <div className="h-0.5 w-full overflow-hidden rounded-full bg-[rgba(255,255,255,0.05)]">
               <div
-                className="h-full rounded-full bg-[rgba(124,92,191,0.5)] transition-all"
+                className="h-full rounded-full bg-[color-mix(in_srgb,var(--ai-pulse)_50%,transparent)] transition-all"
                 style={{ width: `${(messagesLeft / 50) * 100}%` }}
               />
             </div>
@@ -261,7 +261,7 @@ export function SoulChatInterface({
           <div className="flex items-center justify-between gap-3">
             <div className="text-xs text-secondary">
               {messagesLeft < 20 ? (
-                <span className={messagesLeft < 10 ? "text-[rgb(192,74,74)]" : "text-[rgb(212,168,83)]"}>
+                <span className={messagesLeft < 10 ? "text-[rgb(192,74,74)]" : "text-[var(--accent)]"}>
                   {messagesLeft} words of fate remain today
                 </span>
               ) : (

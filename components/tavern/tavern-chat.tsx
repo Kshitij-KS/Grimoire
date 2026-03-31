@@ -141,9 +141,10 @@ export function TavernChat({ worldId, souls }: TavernChatProps) {
                   }}
                   className={`flex items-center gap-3 rounded-[18px] border p-4 text-left transition-all ${
                     isSelected
-                      ? "border-[var(--violet)] bg-[rgba(126,109,242,0.12)]"
-                      : "border-border bg-[rgba(255,255,255,0.02)] hover:border-[rgba(165,148,255,0.2)]"
+                      ? "border-border bg-[rgba(255,255,255,0.02)]"
+                      : "border-border bg-[rgba(255,255,255,0.02)] hover:border-[rgba(90,72,52,0.45)]"
                   }`}
+                  style={isSelected ? { borderColor: soul.avatar_color, background: soul.avatar_color ? `${soul.avatar_color}1a` : "color-mix(in srgb, var(--ai-pulse) 10%, transparent)" } : {}}
                 >
                   <div
                     className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
@@ -160,7 +161,10 @@ export function TavernChat({ worldId, souls }: TavernChatProps) {
                     </p>
                   </div>
                   {isSelected && (
-                    <div className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-[var(--violet)]">
+                    <div
+                      className="ml-auto flex h-5 w-5 items-center justify-center rounded-full"
+                      style={{ background: soul.avatar_color }}
+                    >
                       <span className="text-[10px] text-white">✓</span>
                     </div>
                   )}
@@ -228,7 +232,7 @@ export function TavernChat({ worldId, souls }: TavernChatProps) {
                 <div
                   className={`max-w-[75%] rounded-[18px] px-4 py-3 ${
                     isDirector
-                      ? "bg-[rgba(126,109,242,0.18)] border border-[rgba(126,109,242,0.25)]"
+                      ? "bg-[rgba(90,72,52,0.22)] border border-[rgba(90,72,52,0.38)]"
                       : "glass-panel"
                   }`}
                 >
@@ -279,7 +283,7 @@ export function TavernChat({ worldId, souls }: TavernChatProps) {
           onClick={() => setDirectedTo(null)}
           className={`rounded-lg px-2 py-1 text-[10px] transition-colors ${
             !directedTo
-              ? "bg-[rgba(126,109,242,0.18)] text-[var(--violet-soft)]"
+              ? "bg-[rgba(90,72,52,0.25)] text-foreground"
               : "text-secondary hover:text-foreground"
           }`}
         >
@@ -291,7 +295,7 @@ export function TavernChat({ worldId, souls }: TavernChatProps) {
             onClick={() => setDirectedTo(soul.id)}
             className={`rounded-lg px-2 py-1 text-[10px] transition-colors ${
               directedTo === soul.id
-                ? "bg-[rgba(196,168,106,0.18)] text-[var(--gold)]"
+                ? "bg-[color-mix(in_srgb,var(--accent)_18%,transparent)] text-[var(--accent)]"
                 : "text-secondary hover:text-foreground"
             }`}
           >
@@ -317,7 +321,7 @@ export function TavernChat({ worldId, souls }: TavernChatProps) {
                 ? `Speak to ${souls.find((s) => s.id === directedTo)?.name ?? "soul"}...`
                 : "Address the tavern..."
             }
-            className="flex-1 rounded-[14px] border border-border bg-[rgba(255,255,255,0.03)] px-4 py-2.5 text-sm text-foreground placeholder:text-dim focus:border-[var(--violet)] focus:outline-none transition-colors"
+            className="flex-1 rounded-[14px] border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_70%,transparent)] px-4 py-2.5 text-sm text-foreground placeholder:text-dim focus:border-[var(--border-focus)] focus:outline-none transition-colors"
             disabled={sending}
           />
           <Button

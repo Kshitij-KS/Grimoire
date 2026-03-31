@@ -6,7 +6,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import CharacterCount from "@tiptap/extension-character-count";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bold, Heading2, Italic, List, Quote } from "lucide-react";
+import { Bold, Heading2, Italic, List, Maximize2, Minimize2, Quote } from "lucide-react";
 import { toast } from "sonner";
 import { LoreList } from "@/components/lore/lore-list";
 import { ProcessingStatus, type ProcessingStep } from "@/components/lore/processing-status";
@@ -44,6 +44,7 @@ export function LoomEditor({
   const [steps, setSteps] = useState(baseSteps);
   const [processing, setProcessing] = useState(false);
   const [deletingLore, setDeletingLore] = useState<{ id: string; title: string } | null>(null);
+  const [focusMode, setFocusMode] = useState(false);
 
   const handleDeleteLore = async () => {
     if (!deletingLore) return;
@@ -214,10 +215,14 @@ export function LoomEditor({
         e.preventDefault();
         if (!processing && !isReadonly) submit();
       }
+      if (e.key === "Escape" && focusMode) {
+        e.preventDefault();
+        setFocusMode(false);
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [submit, processing, isReadonly]);
+  }, [submit, processing, isReadonly, focusMode]);
 
   // Gold when active, not purple
   const toolbarButton = (active: boolean) =>
@@ -300,7 +305,7 @@ export function LoomEditor({
             </button>
           ))}
 
-          {/* Word count + reading time + SVG ring */}
+          {/* Word count + reading time + SVG ring + focus mode */}
           <div className="ml-auto flex shrink-0 items-center gap-2 text-xs text-secondary">
             {currentWordCount >= 50 ? (
               <span className="text-secondary">~{readingTimeMin} min read</span>
@@ -309,7 +314,6 @@ export function LoomEditor({
               {currentWordCount} words
             </motion.span>
             <svg width="28" height="28" viewBox="0 0 28 28" className="shrink-0 -rotate-90">
-              {/* Track */}
               <circle
                 cx="14"
                 cy="14"
@@ -318,7 +322,6 @@ export function LoomEditor({
                 stroke="rgba(255,255,255,0.07)"
                 strokeWidth="2.5"
               />
-              {/* Progress */}
               <circle
                 cx="14"
                 cy="14"
@@ -331,18 +334,28 @@ export function LoomEditor({
                 style={{ transition: "stroke-dasharray 0.3s ease, stroke 0.3s ease" }}
               />
             </svg>
+            {!isReadonly && (
+              <button
+                type="button"
+                onClick={() => setFocusMode(true)}
+                className="ml-1 shrink-0 rounded-xl px-2.5 py-2 text-secondary transition hover:bg-[var(--surface-raised)] hover:text-foreground"
+                title="Enter the Loom (focus mode)"
+              >
+                <Maximize2 className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
 
         {/* ── Editor surface ── */}
-        <div className="rounded-[28px] border border-border bg-[rgba(11,15,24,0.72)]">
+        <div className="rounded-[28px] border border-border bg-[color-mix(in_srgb,var(--bg)_72%,transparent)]">
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Entry title..."
             readOnly={isReadonly}
-            className="w-full border-b border-border bg-transparent px-6 py-5 font-heading text-3xl text-foreground outline-none placeholder:text-[rgba(160,168,195,0.35)] read-only:cursor-default read-only:opacity-60 sm:text-4xl"
+            className="w-full border-b border-border bg-transparent px-6 py-5 font-heading text-3xl text-foreground outline-none placeholder:text-[rgba(150,130,100,0.35)] read-only:cursor-default read-only:opacity-60 sm:text-4xl"
           />
           <div className="relative px-6 py-6">
             <AnimatePresence>
@@ -424,6 +437,60 @@ export function LoomEditor({
         onConfirm={handleDeleteLore}
         isDemo={isReadonly}
       />
+
+      {/* ── Focus / Distraction-free mode overlay ── */}
+      <AnimatePresence>
+        {focusMode && (
+          <motion.div
+            className="fixed inset-0 z-[60] flex flex-col"
+            style={{ background: "hsl(25 15% 4%)" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22 }}
+          >
+            {/* Minimal top bar */}
+            <div className="flex shrink-0 items-center justify-between border-b border-border/30 px-8 py-4">
+              <p className="chapter-label">— The Loom —</p>
+              <div className="flex items-center gap-4">
+                <span className="text-xs text-secondary">{currentWordCount} words</span>
+                <button
+                  type="button"
+                  onClick={() => setFocusMode(false)}
+                  className="rounded-lg p-2 text-secondary transition hover:text-foreground"
+                  title="Exit focus mode (Esc)"
+                >
+                  <Minimize2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Centred editor */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="mx-auto max-w-2xl px-8 py-10">
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Entry title..."
+                  className="mb-8 w-full border-b border-border/30 bg-transparent pb-4 font-heading text-4xl text-foreground outline-none placeholder:text-[rgba(150,130,100,0.35)]"
+                />
+                <EditorContent editor={editor} />
+              </div>
+            </div>
+
+            {/* Minimal bottom bar */}
+            <div className="flex shrink-0 items-center justify-center gap-4 border-t border-border/30 px-8 py-4">
+              {!isReadonly && (
+                <Button size="sm" onClick={submit} disabled={processing}>
+                  {processing ? "Inscribing..." : "Inscribe & Remember"}
+                </Button>
+              )}
+              <span className="text-xs text-dim">Esc to exit the Loom</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

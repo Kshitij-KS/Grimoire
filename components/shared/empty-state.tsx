@@ -1,11 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { BookOpen, Eye, Feather, Sparkles, Users } from "lucide-react";
+import { BookOpen, Clock, Eye, Feather, Sparkles, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
-export type EmptyStateVariant = "lore" | "archive" | "souls" | "consistency" | "default";
+export type EmptyStateVariant = "lore" | "archive" | "souls" | "consistency" | "tapestry" | "tavern" | "default";
 
 interface EmptyStateProps {
   title?: string;
@@ -39,6 +39,16 @@ const VARIANTS: Record<
     title: "The world holds.",
     description: "No contradictions have been flagged. The archive remembers clearly.",
   },
+  tapestry: {
+    Icon: Clock,
+    title: "The threads are unspun.",
+    description: "Write events into your lore and the Oracle will weave them into a timeline here.",
+  },
+  tavern: {
+    Icon: Users,
+    title: "The Tavern sits empty.",
+    description: "Forge at least two souls to gather them here and watch them speak.",
+  },
   default: {
     Icon: Sparkles,
     title: "Nothing here yet.",
@@ -65,11 +75,12 @@ export function EmptyState({
       transition={{ duration: 0.4, ease: "easeOut" }}
     >
       <Card className="flex min-h-[280px] flex-col items-center justify-center gap-5 text-center">
-        <div className="relative flex h-16 w-16 items-center justify-center rounded-full border border-[rgba(212,168,83,0.24)] bg-[rgba(124,92,191,0.1)]">
-          <Icon className="h-7 w-7 text-[rgb(212,168,83)]" />
+        <div className="relative flex h-16 w-16 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--accent)_24%,transparent)] bg-[color-mix(in_srgb,var(--ai-pulse)_10%,transparent)]">
+          <span className="pointer-events-none absolute select-none font-heading text-4xl opacity-[0.06] text-[var(--accent)]" aria-hidden>ᚷ</span>
+          <Icon className="relative z-10 h-7 w-7 text-[var(--accent)]" />
         </div>
         <div className="space-y-2">
-          <h3 className="font-heading text-3xl italic text-[rgb(240,234,216)]">{displayTitle}</h3>
+          <h3 className="font-heading text-3xl italic text-[var(--text-main)]">{displayTitle}</h3>
           <p className="max-w-lg text-sm leading-7 text-secondary">{displayDescription}</p>
         </div>
         {ctaLabel ? (

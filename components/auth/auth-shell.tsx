@@ -98,8 +98,8 @@ export function AuthShell() {
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 60% 70% at 15% 50%, rgba(126,109,242,0.1), transparent 55%), " +
-            "radial-gradient(ellipse 50% 60% at 85% 50%, rgba(196,168,106,0.06), transparent 50%)",
+            "radial-gradient(ellipse 60% 70% at 15% 50%, color-mix(in srgb, var(--ai-pulse) 8%, transparent), transparent 55%), " +
+            "radial-gradient(ellipse 50% 60% at 85% 50%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 50%)",
         }}
       />
 
@@ -113,7 +113,7 @@ export function AuthShell() {
             left: i % 2 === 0 ? `${6 + i * 2}%` : `${88 - i * 2}%`,
             fontSize: `${18 + i * 4}px`,
             opacity: 0.04 + i * 0.01,
-            color: i % 2 === 0 ? "rgba(165,148,255,0.7)" : "rgba(196,168,106,0.7)",
+            color: i % 2 === 0 ? "color-mix(in srgb, var(--ai-pulse) 60%, transparent)" : "color-mix(in srgb, var(--accent) 60%, transparent)",
           }}
           animate={{
             y: [0, i % 2 === 0 ? -10 : 10, 0],

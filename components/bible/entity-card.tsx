@@ -13,23 +13,14 @@ const iconMap: Record<EntityType, React.ComponentType<{ className?: string }>> =
   rule: ScrollText,
 };
 
-// Type-specific accent colors
-const typeGlow: Record<EntityType, string> = {
-  character: "rgba(212,168,83,",
-  location: "rgba(124,92,191,",
-  faction: "rgba(192,74,74,",
-  artifact: "rgba(157,127,224,",
-  event: "rgba(92,180,145,",
-  rule: "rgba(160,168,195,",
-};
-
-const typeColor: Record<EntityType, string> = {
-  character: "rgb(212,168,83)",
-  location: "rgb(157,127,224)",
-  faction: "rgb(210,90,90)",
-  artifact: "rgb(196,168,255)",
-  event: "rgb(92,180,145)",
-  rule: "rgb(160,168,195)",
+// Type-specific accent colors using CSS variables
+const typeColorVar: Record<EntityType, string> = {
+  character: "var(--accent)",
+  location: "var(--ai-pulse)",
+  faction: "var(--danger)",
+  artifact: "var(--ai-pulse-soft)",
+  event: "var(--success)",
+  rule: "var(--text-muted)",
 };
 
 export function EntityCard({
@@ -40,8 +31,7 @@ export function EntityCard({
   onClick: () => void;
 }) {
   const Icon = iconMap[entity.type];
-  const glow = typeGlow[entity.type] ?? "rgba(212,168,83,";
-  const color = typeColor[entity.type] ?? "rgb(212,168,83)";
+  const colorVar = typeColorVar[entity.type] ?? "var(--accent)";
 
   return (
     <motion.button
@@ -50,15 +40,15 @@ export function EntityCard({
       className="w-full text-left"
       whileHover={{
         y: -3,
-        boxShadow: `0 12px 32px ${glow}0.22), 0 0 0 1px ${glow}0.12)`,
+        boxShadow: `0 12px 32px color-mix(in srgb, ${colorVar} 22%, transparent), 0 0 0 1px color-mix(in srgb, ${colorVar} 12%, transparent)`,
       }}
       transition={{ type: "spring", stiffness: 340, damping: 24 }}
     >
       <Card className="h-full rounded-[28px] p-5 transition-colors duration-200">
-        <span style={{ color }}>
+        <span style={{ color: colorVar }}>
           <Icon className="mb-4 h-5 w-5" />
         </span>
-        <h3 className="font-heading text-3xl" style={{ color }}>
+        <h3 className="font-heading text-3xl" style={{ color: colorVar }}>
           {entity.name}
         </h3>
         <p className="mt-3 text-sm leading-7 text-secondary">{entity.summary}</p>

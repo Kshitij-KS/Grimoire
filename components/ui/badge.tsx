@@ -2,16 +2,24 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium tracking-wide",
+  "inline-flex items-center rounded border px-2 py-0.5 text-[0.65rem] font-medium font-sans tracking-wider uppercase",
   {
     variants: {
       variant: {
-        default: "border-border bg-[rgba(126,109,242,0.1)] text-foreground",
-        outline: "border-[rgba(196,205,242,0.18)] bg-[rgba(255,255,255,0.02)] text-secondary",
-        gold: "border-[rgba(196,168,106,0.28)] bg-[rgba(196,168,106,0.12)] text-[rgb(236,221,182)]",
-        success: "border-[rgba(92,180,145,0.28)] bg-[rgba(92,180,145,0.12)] text-[rgb(201,248,228)]",
-        danger: "border-[rgba(210,90,90,0.28)] bg-[rgba(210,90,90,0.12)] text-[rgb(255,214,214)]",
-        muted: "border-border bg-[rgba(255,255,255,0.03)] text-secondary",
+        default:
+          "border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)]",
+        outline:
+          "border-[var(--border)] bg-transparent text-[var(--text-muted)]",
+        gold:
+          "border-[color-mix(in_srgb,var(--accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-[var(--accent)]",
+        accent:
+          "border-[color-mix(in_srgb,var(--accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-[var(--accent)]",
+        success:
+          "border-[color-mix(in_srgb,var(--success)_30%,transparent)] bg-[color-mix(in_srgb,var(--success)_10%,transparent)] text-[var(--success)]",
+        danger:
+          "border-[color-mix(in_srgb,var(--danger)_30%,transparent)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] text-[var(--danger)]",
+        muted:
+          "border-transparent bg-[var(--surface)] text-[var(--text-muted)]",
       },
     },
     defaultVariants: {

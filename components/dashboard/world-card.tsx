@@ -22,9 +22,9 @@ interface WorldCardProps {
 }
 
 const statItems = [
-  { icon: BookOpenText, color: "rgb(196,168,106)", key: "loreEntries" as const, label: "lore entries", hoverColor: "rgba(196,168,106,0.12)" },
-  { icon: Users, color: "rgb(165,148,255)", key: "souls" as const, label: "bound souls", hoverColor: "rgba(165,148,255,0.12)" },
-  { icon: ShieldAlert, color: "rgb(210,90,90)", key: "contradictions" as const, label: "open tensions", hoverColor: "rgba(210,90,90,0.10)" },
+  { icon: BookOpenText, color: "var(--accent)", key: "loreEntries" as const, label: "lore entries", hoverColor: "color-mix(in srgb, var(--accent) 12%, transparent)" },
+  { icon: Users, color: "var(--ai-pulse)", key: "souls" as const, label: "bound souls", hoverColor: "color-mix(in srgb, var(--ai-pulse) 12%, transparent)" },
+  { icon: ShieldAlert, color: "var(--danger)", key: "contradictions" as const, label: "open tensions", hoverColor: "color-mix(in srgb, var(--danger) 10%, transparent)" },
 ];
 
 export function WorldCard({ world }: WorldCardProps) {
@@ -33,7 +33,7 @@ export function WorldCard({ world }: WorldCardProps) {
       whileHover={{ y: -5 }}
       transition={{ type: "spring", stiffness: 360, damping: 26 }}
     >
-      <div className="glass-panel group overflow-hidden rounded-[18px] transition-all duration-300 hover:border-[rgba(165,148,255,0.24)] hover:shadow-[0_20px_60px_rgba(4,6,12,0.55),0_0_36px_rgba(126,109,242,0.1)]">
+      <div className="glass-panel group overflow-hidden rounded-[18px] transition-all duration-300 hover:border-[color-mix(in_srgb,var(--ai-pulse)_24%,transparent)] hover:shadow-[0_20px_40px_color-mix(in_srgb,var(--ai-pulse)_10%,transparent)]">
         {/* ── Gradient header ── */}
         <div
           className="relative h-36 overflow-hidden rounded-t-[18px] transition-all duration-500"
@@ -126,7 +126,7 @@ export function WorldCard({ world }: WorldCardProps) {
           {/* CTA — arrow slides in on hover */}
           <Link
             href={`/worlds/${world.id}`}
-            className="group/cta flex w-full items-center justify-between rounded-lg border border-border bg-[rgba(165,148,255,0.05)] px-4 py-3 text-sm font-medium text-foreground transition-all duration-200 hover:border-[rgba(165,148,255,0.3)] hover:bg-[rgba(165,148,255,0.1)]"
+            className="group/cta flex w-full items-center justify-between rounded-lg border border-border bg-[color-mix(in_srgb,var(--ai-pulse)_5%,transparent)] px-4 py-3 text-sm font-medium text-foreground transition-all duration-200 hover:border-[color-mix(in_srgb,var(--ai-pulse)_30%,transparent)] hover:bg-[color-mix(in_srgb,var(--ai-pulse)_10%,transparent)]"
           >
             <span>Enter World</span>
             <ArrowRight className="h-4 w-4 -translate-x-1 opacity-0 transition-all duration-200 group-hover/cta:translate-x-0 group-hover/cta:opacity-100" />

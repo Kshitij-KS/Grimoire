@@ -17,6 +17,7 @@ import { GrimoireLogo } from "@/components/shared/grimoire-logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { SoulChatPreview } from "@/components/landing/soul-chat-preview";
 
 // ─── Static data ─────────────────────────────────────────────────────────────
@@ -27,8 +28,8 @@ const features = [
     title: "Lore that remembers",
     subtitle: "The Loom",
     description:
-      "Write scenes, rules, factions, and history in a calm editor that turns raw pages into searchable world memory — embedded and indexed as you type.",
-    accentColor: "rgba(196,168,106,",
+      "Write scenes, rules, factions, and history in a focused editor that turns raw pages into searchable world memory — chunked, embedded, and indexed automatically.",
+    accentVar: "var(--accent)",
   },
   {
     icon: MessagesSquare,
@@ -36,7 +37,7 @@ const features = [
     subtitle: "Echoes",
     description:
       "Forge characters into living personas whose voices, secrets, and blind spots come directly from the canon you have written — not from what you imagine.",
-    accentColor: "rgba(126,109,242,",
+    accentVar: "var(--ai-pulse)",
   },
   {
     icon: ShieldAlert,
@@ -44,14 +45,35 @@ const features = [
     subtitle: "Fracture Lens",
     description:
       "Check new writing against established lore. The archive flags contradictions before they become invisible mistakes that haunt your third act.",
-    accentColor: "rgba(192,74,74,",
+    accentVar: "var(--danger)",
   },
 ];
 
 const pillars = [
-  { icon: Sparkles, label: "Living memory",       value: "Vector-backed lore recall" },
-  { icon: MessagesSquare, label: "Character voice",    value: "Persona from your canon" },
-  { icon: Eye,       label: "Creative safety",    value: "Contradiction detection" },
+  { icon: Sparkles, label: "Living memory", value: "Vector-backed lore recall", context: "pgvector embeds every paragraph" },
+  { icon: MessagesSquare, label: "Character voice", value: "Persona from your canon", context: "bounded by what the archive knows" },
+  { icon: Eye, label: "Creative safety", value: "Contradiction detection", context: "checks new scenes before they root" },
+];
+
+const howItWorks = [
+  {
+    step: "01",
+    title: "Inscribe your lore",
+    body: "Write scenes, factions, rules, and history freely. The Loom processes every paragraph into structured world memory.",
+    colorVar: "var(--accent)",
+  },
+  {
+    step: "02",
+    title: "The archive remembers",
+    body: "Entities emerge automatically. Characters, locations, and factions become nodes in your constellation — connected, browsable, and searchable.",
+    colorVar: "var(--ai-pulse)",
+  },
+  {
+    step: "03",
+    title: "Speak with what you've built",
+    body: "Forge characters into bound souls. Chat with them — they answer only from canon, hold secrets, and grow with memory.",
+    colorVar: "var(--danger)",
+  },
 ];
 
 // ─── Animation variants ───────────────────────────────────────────────────────
@@ -83,44 +105,55 @@ function FeatureCard({
   const Icon = feature.icon;
   return (
     <motion.div
-      initial={{ opacity: 0, y: 40 }}
+      initial={{ opacity: 0, y: 32 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}
-      transition={{ duration: 0.45, delay: index * 0.1, ease: "easeOut" }}
-      whileHover={{ y: -5 }}
+      transition={{ duration: 0.4, delay: index * 0.09, ease: [0.22, 1, 0.36, 1] }}
     >
-      <Card
-        className="group h-full rounded-2xl p-7 transition-all duration-300"
+      <div
+        className="group h-full rounded-2xl p-7 border transition-[border-color,box-shadow,background] duration-250 relative overflow-hidden shimmer-sweep"
         style={{
-          borderColor: `${feature.accentColor}0.08)`,
+          borderColor: `color-mix(in srgb, ${feature.accentVar} 12%, transparent)`,
+          background: `var(--surface)`,
+          transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
         }}
         onMouseEnter={(e) => {
-          (e.currentTarget as HTMLElement).style.borderColor = `${feature.accentColor}0.28)`;
-          (e.currentTarget as HTMLElement).style.boxShadow = `0 12px 40px ${feature.accentColor}0.14)`;
+          const el = e.currentTarget as HTMLElement;
+          el.style.borderColor = `color-mix(in srgb, ${feature.accentVar} 36%, transparent)`;
+          el.style.boxShadow = `0 16px 48px color-mix(in srgb, ${feature.accentVar} 18%, transparent), 0 0 0 1px color-mix(in srgb, ${feature.accentVar} 20%, transparent)`;
+          el.style.background = `linear-gradient(180deg, color-mix(in srgb, ${feature.accentVar} 5%, var(--surface)) 0%, var(--surface) 35%)`;
         }}
         onMouseLeave={(e) => {
-          (e.currentTarget as HTMLElement).style.borderColor = `${feature.accentColor}0.08)`;
-          (e.currentTarget as HTMLElement).style.boxShadow = "";
+          const el = e.currentTarget as HTMLElement;
+          el.style.borderColor = `color-mix(in srgb, ${feature.accentVar} 12%, transparent)`;
+          el.style.boxShadow = "";
+          el.style.background = "var(--surface)";
         }}
       >
-        <motion.div
-          className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border"
+        {/* Top accent line that expands on hover */}
+        <div
+          className="absolute inset-x-0 top-0 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-300"
           style={{
-            borderColor: `${feature.accentColor}0.22)`,
-            background: `${feature.accentColor}0.1)`,
+            background: `linear-gradient(90deg, transparent, color-mix(in srgb, ${feature.accentVar} 60%, transparent), transparent)`,
           }}
-          whileHover={{ scale: 1.15, rotate: 5 }}
-          transition={{ type: "spring", stiffness: 320, damping: 18 }}
+        />
+        <div
+          className="mb-5 flex h-14 w-14 items-center justify-center rounded-[16px] border transition-[transform,box-shadow] duration-200 group-hover:scale-110 group-hover:-translate-y-0.5"
+          style={{
+            borderColor: `color-mix(in srgb, ${feature.accentVar} 24%, transparent)`,
+            background: `color-mix(in srgb, ${feature.accentVar} 10%, transparent)`,
+            boxShadow: `0 0 0 0 transparent`,
+          }}
         >
           <Icon
             className="h-5 w-5 transition-colors duration-200"
-            style={{ color: `${feature.accentColor}0.85)` }}
+            style={{ color: `color-mix(in srgb, ${feature.accentVar} 90%, transparent)` }}
           />
-        </motion.div>
+        </div>
         <p className="chapter-label">{feature.subtitle}</p>
-        <h3 className="mt-3 font-heading text-3xl text-foreground">{feature.title}</h3>
-        <p className="mt-4 text-sm leading-7 text-secondary">{feature.description}</p>
-      </Card>
+        <h3 className="mt-3 font-heading text-3xl text-[var(--text-main)]">{feature.title}</h3>
+        <p className="mt-4 text-sm leading-7 text-[var(--text-muted)]">{feature.description}</p>
+      </div>
     </motion.div>
   );
 }
@@ -137,13 +170,13 @@ export function LandingPage() {
       <div className="pointer-events-none absolute inset-0 bg-grid opacity-20" />
 
       {/* ── HERO ──────────────────────────────────────────────────────── */}
-      <section className="relative border-b border-border">
-        {/* Radial ambient behind hero */}
+      <section className="relative border-b border-[var(--border)]">
+        {/* Radial ambient behind hero — re-colored to ai-pulse */}
         <div
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              "radial-gradient(ellipse 70% 50% at 30% 40%, rgba(126,109,242,0.09), transparent 60%), radial-gradient(ellipse 50% 40% at 75% 30%, rgba(196,168,106,0.06), transparent 55%)",
+              "radial-gradient(ellipse 70% 50% at 30% 40%, color-mix(in srgb, var(--ai-pulse) 8%, transparent), transparent 60%), radial-gradient(ellipse 50% 40% at 75% 30%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 55%)",
           }}
         />
 
@@ -163,6 +196,7 @@ export function LandingPage() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
             >
+              <ThemeToggle />
               <Button variant="ghost" asChild className="hidden sm:flex">
                 <Link href="/demo">See Demo World</Link>
               </Button>
@@ -187,8 +221,8 @@ export function LandingPage() {
                 className="w-fit"
               >
                 <Badge variant="outline" className="gap-2 px-3 py-1.5">
-                  <Stars className="h-3.5 w-3.5 text-[rgb(196,168,106)]" />
-                  Premium worldbuilding for fiction writers and game masters
+                  <Stars className="h-3.5 w-3.5 text-[var(--accent)]" />
+                  Living lore · Bound souls · Canon memory
                 </Badge>
               </motion.div>
 
@@ -201,13 +235,13 @@ export function LandingPage() {
               >
                 <motion.h1
                   variants={lineVariants}
-                  className="font-heading text-6xl leading-[0.95] text-foreground md:text-7xl"
+                  className="font-heading text-6xl leading-[0.95] text-[var(--text-main)] md:text-7xl"
                 >
                   Your World
                 </motion.h1>
                 <motion.h1
                   variants={lineVariants}
-                  className="font-heading text-6xl leading-[0.95] text-foreground md:text-7xl"
+                  className="font-heading text-6xl leading-[0.95] text-[var(--text-main)] md:text-7xl"
                 >
                   Has Rules.
                 </motion.h1>
@@ -224,10 +258,9 @@ export function LandingPage() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.55, delay: 0.7, ease: "easeOut" }}
-                className="max-w-xl text-lg leading-8 text-secondary"
+                className="max-w-xl text-lg leading-8 text-[var(--text-muted)]"
               >
-                Grimoire is a creative worldbuilding platform for writers and game masters who
-                need lore, structure, and character voice to live together — without compromise.
+                Write your world&apos;s lore once. Every character, place, and faction becomes a searchable memory — and those characters can speak in their own voices, bounded by what the archive knows.
               </motion.p>
 
               {/* CTAs */}
@@ -259,20 +292,21 @@ export function LandingPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 1.0, ease: "easeOut" }}
               >
-                {pillars.map((pillar) => {
+                {pillars.map((pillar, i) => {
                   const Icon = pillar.icon;
                   return (
                     <motion.div
                       key={pillar.label}
-                      whileHover={{ y: -4, boxShadow: "0 16px 36px rgba(126,109,242,0.18)" }}
-                      transition={{ type: "spring", stiffness: 340, damping: 22 }}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: 1.05 + i * 0.07, ease: [0.22, 1, 0.36, 1] }}
                       className="group"
                     >
-                      <Card className="rounded-xl p-5 transition-all duration-200 hover:border-[rgba(165,148,255,0.28)]"
-                      >
-                        <Icon className="mb-2 h-4 w-4 text-[rgba(196,168,106,0.7)] transition-transform duration-300 group-hover:scale-110 group-hover:text-[rgba(196,168,106,1)]" />
+                      <Card className="rounded-xl p-5 transition-[border-color,box-shadow,transform] duration-200 hover:border-[var(--border-focus)] hover:-translate-y-0.5 hover:shadow-[0_8px_28px_color-mix(in_srgb,var(--ai-pulse)_10%,transparent)] active:scale-[0.98]">
+                        <Icon className="mb-2 h-4 w-4 text-[var(--accent)] opacity-70 transition-[transform,opacity] duration-200 group-hover:scale-110 group-hover:opacity-100" />
                         <p className="chapter-label">{pillar.label}</p>
-                        <p className="mt-2 font-heading text-xl text-foreground">{pillar.value}</p>
+                        <p className="mt-2 font-heading text-xl text-[var(--text-main)]">{pillar.value}</p>
+                        <p className="mt-1 text-[10px] text-[var(--text-muted)] opacity-65">{pillar.context}</p>
                       </Card>
                     </motion.div>
                   );
@@ -292,38 +326,38 @@ export function LandingPage() {
                 className="pointer-events-none absolute -inset-8 rounded-full opacity-40 blur-3xl"
                 style={{
                   background:
-                    "radial-gradient(circle, rgba(126,109,242,0.18), rgba(196,168,106,0.08), transparent 70%)",
+                    "radial-gradient(circle, color-mix(in srgb, var(--ai-pulse) 15%, transparent), color-mix(in srgb, var(--accent) 6%, transparent), transparent 70%)",
                 }}
               />
-              {/* Floating decorative rune */}
+              {/* Floating decorative rune — kept subtle */}
               <motion.span
-                className="pointer-events-none absolute -right-3 -top-4 font-heading text-3xl opacity-20 select-none"
+                className="pointer-events-none absolute -right-3 -top-4 font-heading text-3xl select-none"
                 animate={{ y: [-4, 4, -4], rotate: [-4, 4, -4] }}
                 transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-                style={{ color: "rgba(165,148,255,0.6)" }}
+                style={{ color: "var(--ai-pulse)", opacity: 0.08 }}
               >ᚦ</motion.span>
               <motion.span
-                className="pointer-events-none absolute -left-4 bottom-8 font-heading text-2xl opacity-15 select-none"
+                className="pointer-events-none absolute -left-4 bottom-8 font-heading text-2xl select-none"
                 animate={{ y: [4, -4, 4], rotate: [3, -3, 3] }}
                 transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
-                style={{ color: "rgba(196,168,106,0.5)" }}
+                style={{ color: "var(--accent)", opacity: 0.06 }}
               >ᚠ</motion.span>
 
               <div className="arcane-border glass-panel-elevated relative overflow-hidden rounded-2xl p-6">
-                <div className="pointer-events-none absolute inset-0 bg-grid opacity-[0.15]" />
+                <div className="pointer-events-none absolute inset-0 bg-grid opacity-[0.12]" />
                 <div className="relative space-y-5">
                   {/* World header */}
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="chapter-label">Demo world</p>
-                      <h2 className="font-heading text-5xl text-foreground">Ashveil</h2>
+                      <h2 className="font-heading text-5xl text-[var(--text-main)]">Ashveil</h2>
                     </div>
                     <motion.div
-                      className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[rgba(165,148,255,0.22)] bg-[rgba(126,109,242,0.14)]"
+                      className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[color-mix(in_srgb,var(--ai-pulse)_22%,transparent)] bg-[color-mix(in_srgb,var(--ai-pulse)_14%,transparent)]"
                       whileHover={{ scale: 1.08, rotate: 12 }}
                       transition={{ type: "spring", stiffness: 300, damping: 20 }}
                     >
-                      <Compass className="h-5 w-5 text-[rgb(196,205,242)]" />
+                      <Compass className="h-5 w-5 text-[var(--ai-pulse-soft)]" />
                     </motion.div>
                   </div>
 
@@ -341,7 +375,7 @@ export function LandingPage() {
                           animate={{ opacity: 1, scale: 1 }}
                           transition={{ duration: 0.3, delay: 1.2 + i * 0.1 }}
                         >
-                          <Badge className="text-[10px] transition-all duration-200 hover:border-[rgba(165,148,255,0.4)] hover:bg-[rgba(165,148,255,0.08)]">{item}</Badge>
+                          <Badge className="text-[10px] transition-all duration-200 hover:border-[color-mix(in_srgb,var(--ai-pulse)_40%,transparent)] hover:bg-[color-mix(in_srgb,var(--ai-pulse)_8%,transparent)]">{item}</Badge>
                         </motion.div>
                       ))}
                     </div>
@@ -363,11 +397,11 @@ export function LandingPage() {
           className="mb-14 max-w-3xl space-y-4"
         >
           <p className="chapter-label">Built for worldbuilders</p>
-          <h2 className="font-heading text-5xl text-foreground">
+          <h2 className="font-heading text-5xl text-[var(--text-main)]">
             Deep enough for a private canon.{" "}
-            <span className="text-secondary">Clear enough to write in every day.</span>
+            <span className="text-[var(--text-muted)]">Clear enough to write in every day.</span>
           </h2>
-          <p className="max-w-2xl text-sm leading-7 text-secondary">
+          <p className="max-w-2xl text-sm leading-7 text-[var(--text-muted)]">
             The product stays atmospheric, but the work stays legible — writing, browsing, chatting,
             and checking continuity all happen inside one coherent creative system.
           </p>
@@ -380,8 +414,63 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* ── HOW IT WORKS ──────────────────────────────────────────────── */}
+      <section className="border-t border-[var(--border)]">
+        <div className="mx-auto max-w-7xl px-6 py-24 lg:px-10">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-60px" }}
+            transition={{ duration: 0.5 }}
+            className="mb-16 space-y-3"
+          >
+            <p className="chapter-label">— How it works —</p>
+            <h2 className="font-heading text-5xl text-[var(--text-main)]">
+              Three steps. One living world.
+            </h2>
+          </motion.div>
+          <div className="grid gap-0 lg:grid-cols-3">
+            {howItWorks.map((step, i) => (
+              <motion.div
+                key={step.step}
+                initial={{ opacity: 0, y: 32 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-40px" }}
+                transition={{ duration: 0.45, delay: i * 0.12, ease: "easeOut" }}
+                className="relative px-8 py-10"
+                style={{
+                  borderLeft: i > 0 ? `1px solid var(--border)` : undefined,
+                }}
+              >
+                {/* Ordinal watermark */}
+                <span
+                  className="pointer-events-none absolute left-6 top-6 select-none font-heading text-8xl leading-none opacity-[0.055]"
+                  style={{ color: step.colorVar }}
+                  aria-hidden
+                >
+                  {step.step}
+                </span>
+                {/* Left accent bar */}
+                <div
+                  className="mb-6 h-0.5 w-10 rounded-full"
+                  style={{ background: `color-mix(in srgb, ${step.colorVar} 70%, transparent)` }}
+                />
+                <p
+                  className="chapter-label mb-3"
+                  style={{ color: `color-mix(in srgb, ${step.colorVar} 75%, transparent)` }}
+                >
+                  Step {step.step}
+                </p>
+                <h3 className="font-heading text-3xl text-[var(--text-main)]">{step.title}</h3>
+                <p className="mt-4 text-sm leading-7 text-[var(--text-muted)]">{step.body}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── CTA BLOCK ─────────────────────────────────────────────────── */}
-      <section className="border-t border-border">
+      <section className="border-t border-[var(--border)]">
         <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
@@ -390,21 +479,21 @@ export function LandingPage() {
             transition={{ duration: 0.5 }}
             className="relative overflow-hidden"
           >
-            {/* Radial glow from center */}
+            {/* Radial glow from center — re-colored */}
             <div
               className="pointer-events-none absolute inset-0 rounded-[36px]"
               style={{
                 background:
-                  "radial-gradient(circle at 50% 50%, rgba(126,109,242,0.12), rgba(196,168,106,0.04) 50%, transparent 70%)",
+                  "radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--ai-pulse) 10%, transparent), color-mix(in srgb, var(--accent) 3%, transparent) 50%, transparent 70%)",
               }}
             />
             <div className="glass-panel-elevated arcane-border relative flex flex-col gap-8 rounded-2xl p-10 lg:flex-row lg:items-end lg:justify-between">
               <div className="space-y-4">
                 <p className="chapter-label">Begin the first chapter</p>
-                <h2 className="max-w-xl font-heading text-5xl text-foreground">
+                <h2 className="max-w-xl font-heading text-5xl text-[var(--text-main)]">
                   Make your canon feel alive without losing control of it.
                 </h2>
-                <p className="max-w-md text-sm leading-7 text-secondary">
+                <p className="max-w-md text-sm leading-7 text-[var(--text-muted)]">
                   One world on free tier, three souls, and enough daily room to test whether
                   Grimoire fits the way you think and write.
                 </p>
@@ -412,13 +501,13 @@ export function LandingPage() {
                   {["Free forever tier", "No credit card", "Cancel anytime"].map((perk, i) => (
                     <motion.span
                       key={perk}
-                      className="flex items-center gap-1.5 text-xs text-secondary"
+                      className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]"
                       initial={{ opacity: 0, x: -8 }}
                       whileInView={{ opacity: 1, x: 0 }}
                       viewport={{ once: true }}
                       transition={{ duration: 0.4, delay: 0.1 + i * 0.1, ease: "easeOut" }}
                     >
-                      <span className="text-[rgba(92,180,145,0.85)]">✓</span>
+                      <span className="text-[var(--success)]">✓</span>
                       {perk}
                     </motion.span>
                   ))}
@@ -442,30 +531,30 @@ export function LandingPage() {
       </section>
 
       {/* ── FOOTER ────────────────────────────────────────────────────── */}
-      <footer className="relative border-t border-border overflow-hidden">
-        {/* subtle footer ambient */}
+      <footer className="relative border-t border-[var(--border)] overflow-hidden">
+        {/* subtle footer ambient — re-colored */}
         <div
           className="pointer-events-none absolute inset-0"
           style={{
-            background: "radial-gradient(ellipse 60% 80% at 50% 100%, rgba(126,109,242,0.06), transparent 70%)",
+            background: "radial-gradient(ellipse 60% 80% at 50% 100%, color-mix(in srgb, var(--ai-pulse) 4%, transparent), transparent 70%)",
           }}
         />
         <div className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-10 lg:flex-row lg:items-center lg:justify-between lg:px-10 relative">
           <div className="space-y-2">
             <GrimoireLogo className="origin-left scale-90" />
-            <p className="text-xs text-dim max-w-xs">
-              A living archive for worldbuilders who take their lore seriously.
+            <p className="text-xs text-[var(--text-muted)] opacity-65 max-w-xs">
+              Every word you write becomes structured memory. Every character you forge can speak.
             </p>
           </div>
-          <div className="flex items-center gap-6 text-sm text-secondary">
-            <Link href="/auth" className="link-underline transition-colors hover:text-foreground">
+          <div className="flex items-center gap-6 text-sm text-[var(--text-muted)]">
+            <Link href="/auth" className="link-underline transition-colors hover:text-[var(--text-main)]">
               Sign in
             </Link>
-            <Link href="/demo" className="link-underline transition-colors hover:text-foreground">
+            <Link href="/demo" className="link-underline transition-colors hover:text-[var(--text-main)]">
               Demo world
             </Link>
-            <span className="h-4 w-px bg-border" />
-            <span className="text-xs text-dim">
+            <span className="h-4 w-px bg-[var(--border)]" />
+            <span className="text-xs text-[var(--text-muted)] opacity-65">
               © {new Date().getFullYear()} Grimoire
             </span>
           </div>

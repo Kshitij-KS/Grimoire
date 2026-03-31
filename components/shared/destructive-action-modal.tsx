@@ -71,18 +71,18 @@ export function DestructiveActionModal({
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="glass-panel w-full max-w-md overflow-hidden rounded-[32px] border-red-500/20 bg-[rgba(15,18,25,0.95)]"
+              className="glass-panel w-full max-w-md overflow-hidden rounded-[32px] border-[var(--danger)]/20 bg-[var(--surface)] shadow-2xl"
             >
               <div className="flex items-start justify-between border-b border-red-500/10 p-6">
                 <div className="flex flex-col gap-2">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/10">
                     <AlertCircle className="h-5 w-5 text-red-500" />
                   </div>
-                  <h2 className="mt-2 font-heading text-2xl text-red-50">{title}</h2>
+                  <h2 className="mt-2 font-heading text-2xl text-[var(--danger)]">{title}</h2>
                 </div>
                 <button
                   onClick={handleClose}
-                  className="rounded-xl p-2 text-secondary transition hover:bg-white/5 hover:text-foreground"
+                  className="rounded-xl p-2 text-secondary transition hover:bg-[var(--danger)]/10 hover:text-[var(--text-main)]"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -108,14 +108,14 @@ export function DestructiveActionModal({
                     <input
                       value={confirmValue}
                       onChange={(e) => setConfirmValue(e.target.value)}
-                      className="w-full rounded-xl border border-red-500/20 bg-black/40 px-3 py-2 text-sm text-foreground focus:border-red-500/50 focus:outline-none focus:ring-1 focus:ring-red-500/50 transition-all font-mono"
+                      className="w-full rounded-xl border border-[var(--danger)]/20 bg-[var(--bg)]/80 px-3 py-2 text-sm text-[var(--text-main)] focus:border-[var(--danger)]/50 focus:outline-none focus:ring-1 focus:ring-[var(--danger)]/50 transition-all font-mono"
                       placeholder={requireString}
                     />
                   </div>
                 )}
               </div>
 
-              <div className="flex items-center justify-end gap-3 border-t border-red-500/10 bg-black/20 p-6">
+              <div className="flex items-center justify-end gap-3 border-t border-[var(--danger)]/10 bg-[var(--bg)]/50 p-6">
                 <Button variant="ghost" onClick={handleClose} disabled={loading}>
                   Cancel
                 </Button>

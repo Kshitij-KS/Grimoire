@@ -45,9 +45,9 @@ export function RateLimitModal({ open, onOpenChange, action, limit }: RateLimitM
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 400, delay: 0.1 }}
-            className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-[rgba(212,168,83,0.22)] bg-[rgba(124,92,191,0.12)]"
+            className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-[color-mix(in_srgb,var(--accent)_22%,transparent)] bg-[color-mix(in_srgb,var(--ai-pulse)_12%,transparent)]"
           >
-            <Hourglass className="h-6 w-6 text-[rgb(212,168,83)]" />
+            <Hourglass className="h-6 w-6 text-[var(--accent)]" />
           </motion.div>
           <DialogTitle className="font-heading text-4xl">The inkwell runs dry.</DialogTitle>
           <DialogDescription className="text-base leading-7">

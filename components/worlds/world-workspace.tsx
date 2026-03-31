@@ -80,6 +80,7 @@ export function WorldWorkspace({
   const [activeSoulCardId, setActiveSoulCardId] = useState<string | null>(null);
   const [souls, setSouls] = useState<Soul[]>(data.souls);
   const [entities, setEntities] = useState<Entity[]>(data.entities);
+  const [relationships, setRelationships] = useState<EntityRelationship[]>(data.relationships);
   const [deletingSoulId, setDeletingSoulId] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isRefreshingArchive, setIsRefreshingArchive] = useState(false);
@@ -259,12 +260,12 @@ export function WorldWorkspace({
                       <button
                         onClick={refreshArchive}
                         disabled={isRefreshingArchive}
-                        className="flex items-center gap-2 rounded-[18px] border border-border/60 bg-[rgba(13,11,8,0.82)] px-4 py-2.5 text-xs text-secondary backdrop-blur-sm transition-all hover:border-[rgba(124,92,191,0.5)] hover:text-foreground disabled:opacity-50"
+                        className="flex items-center gap-2 rounded-[18px] border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_82%,transparent)] px-4 py-2.5 text-xs text-secondary backdrop-blur-sm transition-all hover:border-[color-mix(in_srgb,var(--ai-pulse)_50%,transparent)] hover:text-foreground disabled:opacity-50"
                         title={`Last refreshed: ${new Date(lastRefreshed).toLocaleTimeString()}`}
                       >
                         <RefreshCw
                           className={`h-3.5 w-3.5 ${
-                            isRefreshingArchive ? "animate-spin text-[rgb(124,92,191)]" : "text-secondary"
+                            isRefreshingArchive ? "animate-spin text-[var(--ai-pulse)]" : "text-secondary"
                           }`}
                         />
                         {isRefreshingArchive
@@ -276,9 +277,18 @@ export function WorldWorkspace({
                     </div>
                   )}
                 </div>
-                <ConstellationCanvas entities={entities} />
+                <ConstellationCanvas 
+                  entities={entities} 
+                  relationships={relationships}
+                  onForgeRelationship={(newRel) => setRelationships(prev => [...prev, newRel])}
+                />
                 <AnimatePresence>
-                  <ConstellationDossier worldId={data.world.id} allEntities={entities} />
+                  <ConstellationDossier 
+                    worldId={data.world.id} 
+                    allEntities={entities} 
+                    relationships={relationships}
+                    onDeleteRelationship={(relId) => setRelationships(prev => prev.filter(r => r.id !== relId))}
+                  />
                 </AnimatePresence>
                 <div className="sr-only">
                   <EntityGrid
@@ -341,7 +351,7 @@ export function WorldWorkspace({
                           onClick={() => setSoulModalOpen(true)}
                           whileHover={{ y: -4, scale: 1.01 }}
                           transition={{ type: "spring", stiffness: 340, damping: 24 }}
-                          className="glass-panel relative flex min-h-[240px] flex-col items-center justify-center overflow-hidden rounded-[30px] border border-dashed border-[rgba(124,92,191,0.35)] text-center transition-shadow hover:border-[rgba(124,92,191,0.55)] hover:shadow-arcane-glow"
+                          className="glass-panel relative flex min-h-[240px] flex-col items-center justify-center overflow-hidden rounded-[30px] border border-dashed border-[color-mix(in_srgb,var(--ai-pulse)_35%,transparent)] text-center transition-shadow hover:border-[color-mix(in_srgb,var(--ai-pulse)_55%,transparent)] hover:shadow-arcane-glow"
                         >
                           {/* Rotating rune glyphs at corners */}
                           {["ᚠ", "ᚢ", "ᚦ", "ᚨ"].map((rune, i) => (

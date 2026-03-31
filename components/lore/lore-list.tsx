@@ -42,16 +42,16 @@ export function LoreList({
               className={[
                 "group relative overflow-hidden rounded-[14px] p-4 transition-all duration-250 cursor-pointer",
                 isSelected
-                  ? "border-l-[3px] border-l-[rgb(212,168,83)] pl-[calc(1rem-3px)] shadow-[0_0_24px_rgba(196,168,106,0.12),-2px_0_12px_rgba(196,168,106,0.15)]"
-                  : "hover:border-[rgba(212,168,83,0.24)] hover:shadow-[0_8px_32px_rgba(4,6,12,0.4),0_0_20px_rgba(196,168,106,0.06)]",
+                  ? "border-l-[3px] border-l-[var(--accent)] pl-[calc(1rem-3px)] shadow-[0_0_24px_color-mix(in_srgb,var(--accent)_12%,transparent),-2px_0_12px_color-mix(in_srgb,var(--accent)_15%,transparent)]"
+                  : "hover:border-[color-mix(in_srgb,var(--accent)_24%,transparent)] hover:shadow-[0_8px_24px_color-mix(in_srgb,var(--accent)_6%,transparent)]",
               ].join(" ")}
               onClick={() => onSelect(entry)}
             >
               {/* Ambient top-left glow on hover */}
-              <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 rounded-[24px]"  style={{ background: "radial-gradient(ellipse 60% 40% at 10% 10%, rgba(196,168,106,0.06), transparent 60%)" }} />
+              <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 rounded-[24px]" style={{ background: "radial-gradient(ellipse 60% 40% at 10% 10%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 60%)" }} />
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="min-w-0 flex-1">
-                  <p className="font-heading text-2xl text-foreground transition-colors duration-200 group-hover:text-[var(--silver)]">
+                  <p className="font-heading text-2xl text-foreground transition-colors duration-200 group-hover:text-[var(--accent)]">
                     {entry.title ?? "Untitled Scroll"}
                   </p>
                   {preview ? (

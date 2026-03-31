@@ -9,9 +9,9 @@ import { formatRelativeTime, initialsFromName } from "@/lib/utils";
 import type { ConsistencyFlag, Entity, Soul, WorldStats } from "@/lib/types";
 
 const SEVERITY_COLORS: Record<string, string> = {
-  high: "text-[rgb(255,180,180)] border-[rgba(192,74,74,0.3)] bg-[rgba(192,74,74,0.08)]",
-  medium: "text-[rgb(248,226,179)] border-[rgba(212,168,83,0.3)] bg-[rgba(212,168,83,0.08)]",
-  low: "text-[rgb(200,190,240)] border-[rgba(124,92,191,0.3)] bg-[rgba(124,92,191,0.08)]",
+  high: "text-[var(--danger)] border-[color-mix(in_srgb,var(--danger)_30%,transparent)] bg-[color-mix(in_srgb,var(--danger)_8%,transparent)]",
+  medium: "text-[var(--accent)] border-[color-mix(in_srgb,var(--accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--accent)_8%,transparent)]",
+  low: "text-[var(--ai-pulse-soft)] border-[color-mix(in_srgb,var(--ai-pulse)_30%,transparent)] bg-[color-mix(in_srgb,var(--ai-pulse)_8%,transparent)]",
 };
 
 export function WorldRightPanel({

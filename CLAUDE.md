@@ -226,6 +226,22 @@ All hues are warm (25-35° range), NOT cold blue (240°):
 - **Body:** `font-sans` → Inter
 - **Chapter labels:** "— Section Title —" with dashes, small caps
 
+### Interaction & Animation (Design Engineering)
+
+Grimoire strictly follows "Emil Kowalski" design engineering principles:
+1. **Never animate layout:** Only transition `transform`, `opacity`, `background-color`, `border-color`, and `box-shadow`.
+2. **Tactile Feedback:** Apply `active:scale-[0.97] active:transition-none` to all interactive buttons and cards to mimic physical weight.
+3. **Custom Easing:** Never use default linear edges. Use defined custom CSS variables:
+   - `--ease-snap`: Intended for snappy spring-like menus (`cubic-bezier(0.23, 1, 0.32, 1)`)
+   - `--ease-strong-out`: Large distance reveals (`cubic-bezier(0.22, 1, 0.36, 1)`)
+   - `--ease-drawer`: Smooth, elegant sweeps like global theme transitions (`cubic-bezier(0.32, 0.72, 0, 1)`)
+
+### Theme Toggle & CSS Variables
+
+- Grimoire natively supports both **Dark Parchment** (default) and **Light Mode**.
+- **Never hardcode hex values or `text-white`/`bg-black` in components.** Always use semantic `--text-main`, `--bg`, `--surface`, or `--border` to ensure contrast in both themes.
+- Global theme transitions are smoothed dynamically in `globals.css` taking 0.45s using `--ease-drawer` rather than instantly flashing.
+
 ### Decorative Classes
 
 | Class | Usage |
@@ -420,3 +436,5 @@ supabase db reset              # Reset local DB and run all migrations
 21. **Archive incremental refresh**: `GET /api/entities?worldId=<id>&since=<ISO>` returns only entities with `updated_at > since`. The `WorldWorkspace` tracks `lastRefreshed` state and merges returned entities by `id` into the existing `entities` state — the `ConstellationCanvas` reacts automatically. The refresh button is hidden for demo worlds.
 
 22. **`SectionLoadingScreen`** exported from `components/shared/loading-shimmer.tsx` — accepts `label` and `subtitle` props. Renders an animated arcane loading animation (orbiting runes, pulsing orb, Framer Motion) used during section tab transitions in `WorldWorkspace`. The legacy `LoadingShimmer` component is also still exported from the same file.
+
+23. **Global Theme Provider**: Inside `app/layout.tsx`, `<ThemeProvider>` operates without the `disableTransitionOnChange` prop. This deliberate omission allows `globals.css` to orchestrate a beautifully eased `0.45` second color transition (`var(--ease-drawer)`) between user theme preferences rather than jarring frame snaps.

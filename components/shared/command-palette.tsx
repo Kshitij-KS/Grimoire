@@ -122,7 +122,7 @@ export function CommandPalette({
                   placeholder="Search lore, entities, souls... or type > for commands"
                   className="w-full bg-transparent py-3.5 text-sm text-foreground placeholder:text-dim outline-none"
                 />
-                <kbd className="hidden sm:inline-flex h-5 items-center gap-1 rounded border border-border bg-[rgba(255,255,255,0.04)] px-1.5 text-[10px] text-dim">
+                <kbd className="hidden sm:inline-flex h-5 items-center gap-1 rounded border border-[var(--border)] bg-[var(--surface-raised)] px-1.5 text-[10px] text-dim">
                   ESC
                 </kbd>
               </div>
@@ -137,7 +137,7 @@ export function CommandPalette({
                   <Command.Item
                     value="/dashboard"
                     onSelect={handleSelect}
-                    className="flex items-center gap-2 rounded-[12px] px-3 py-2.5 text-sm text-foreground cursor-pointer transition-colors data-[selected=true]:bg-[rgba(126,109,242,0.14)]"
+                    className="flex items-center gap-2 rounded-[12px] px-3 py-2.5 text-sm text-foreground cursor-pointer transition-colors data-[selected=true]:bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] data-[selected=true]:border-l-2 data-[selected=true]:border-[color-mix(in_srgb,var(--accent)_50%,transparent)] data-[selected=true]:pl-[calc(0.75rem-2px)]"
                   >
                     <Globe2 className="h-3.5 w-3.5 text-secondary" />
                     Dashboard
@@ -147,7 +147,7 @@ export function CommandPalette({
                       <Command.Item
                         value={`/worlds/${worldId}?section=lore`}
                         onSelect={() => { setOpen(false); router.push(`/worlds/${worldId}?section=lore`); }}
-                        className="flex items-center gap-2 rounded-[12px] px-3 py-2.5 text-sm text-foreground cursor-pointer transition-colors data-[selected=true]:bg-[rgba(126,109,242,0.14)]"
+                        className="flex items-center gap-2 rounded-[12px] px-3 py-2.5 text-sm text-foreground cursor-pointer transition-colors data-[selected=true]:bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] data-[selected=true]:border-l-2 data-[selected=true]:border-[color-mix(in_srgb,var(--accent)_50%,transparent)] data-[selected=true]:pl-[calc(0.75rem-2px)]"
                       >
                         <BookOpenText className="h-3.5 w-3.5 text-[var(--gold)]" />
                         Lore Scribe
@@ -155,7 +155,7 @@ export function CommandPalette({
                       <Command.Item
                         value={`/worlds/${worldId}?section=bible`}
                         onSelect={() => { setOpen(false); router.push(`/worlds/${worldId}?section=bible`); }}
-                        className="flex items-center gap-2 rounded-[12px] px-3 py-2.5 text-sm text-foreground cursor-pointer transition-colors data-[selected=true]:bg-[rgba(126,109,242,0.14)]"
+                        className="flex items-center gap-2 rounded-[12px] px-3 py-2.5 text-sm text-foreground cursor-pointer transition-colors data-[selected=true]:bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] data-[selected=true]:border-l-2 data-[selected=true]:border-[color-mix(in_srgb,var(--accent)_50%,transparent)] data-[selected=true]:pl-[calc(0.75rem-2px)]"
                       >
                         <Sparkles className="h-3.5 w-3.5 text-[var(--violet-soft)]" />
                         The Archive
@@ -174,7 +174,7 @@ export function CommandPalette({
                           key={entity.id}
                           value={`entity:${entity.id} ${entity.name} ${entity.type}`}
                           onSelect={handleSelect}
-                          className="flex items-center gap-2 rounded-[12px] px-3 py-2 text-sm text-foreground cursor-pointer transition-colors data-[selected=true]:bg-[rgba(126,109,242,0.14)]"
+                          className="flex items-center gap-2 rounded-[12px] px-3 py-2 text-sm text-foreground cursor-pointer transition-colors data-[selected=true]:bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] data-[selected=true]:border-l-2 data-[selected=true]:border-[color-mix(in_srgb,var(--accent)_50%,transparent)] data-[selected=true]:pl-[calc(0.75rem-2px)]"
                         >
                           <Icon className="h-3 w-3 text-secondary" />
                           <span>{entity.name}</span>
@@ -195,7 +195,7 @@ export function CommandPalette({
                         key={soul.id}
                         value={`chat:${soul.id} Chat ${soul.name}`}
                         onSelect={handleSelect}
-                        className="flex items-center gap-2 rounded-[12px] px-3 py-2 text-sm text-foreground cursor-pointer transition-colors data-[selected=true]:bg-[rgba(126,109,242,0.14)]"
+                        className="flex items-center gap-2 rounded-[12px] px-3 py-2 text-sm text-foreground cursor-pointer transition-colors data-[selected=true]:bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] data-[selected=true]:border-l-2 data-[selected=true]:border-[color-mix(in_srgb,var(--accent)_50%,transparent)] data-[selected=true]:pl-[calc(0.75rem-2px)]"
                       >
                         <MessageSquare className="h-3 w-3 text-[var(--violet-soft)]" />
                         <span>Chat with {soul.name}</span>
@@ -212,7 +212,7 @@ export function CommandPalette({
                         key={entry.id}
                         value={`lore:${entry.id} ${entry.title ?? "Untitled"}`}
                         onSelect={handleSelect}
-                        className="flex items-center gap-2 rounded-[12px] px-3 py-2 text-sm text-foreground cursor-pointer transition-colors data-[selected=true]:bg-[rgba(126,109,242,0.14)]"
+                        className="flex items-center gap-2 rounded-[12px] px-3 py-2 text-sm text-foreground cursor-pointer transition-colors data-[selected=true]:bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] data-[selected=true]:border-l-2 data-[selected=true]:border-[color-mix(in_srgb,var(--accent)_50%,transparent)] data-[selected=true]:pl-[calc(0.75rem-2px)]"
                       >
                         <BookOpenText className="h-3 w-3 text-[var(--gold)]" />
                         <span className="truncate">{entry.title ?? "Untitled"}</span>
@@ -226,6 +226,7 @@ export function CommandPalette({
                 <span>↑↓ Navigate</span>
                 <span>↵ Select</span>
                 <span>Esc Close</span>
+                <span className="ml-auto text-[var(--text-muted)] opacity-50">ᚷ Grimoire</span>
               </div>
             </Command>
           </motion.div>

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { useWorkspaceStore } from "@/lib/store";
-import type { Entity, EntityType } from "@/lib/types";
+import type { Entity, EntityType, EntityRelationship } from "@/lib/types";
+import { ForgeRelationshipModal } from "./forge-relationship-modal";
 
 const TYPE_COLORS: Record<EntityType, string> = {
   character: "#C4A86A",
@@ -120,7 +121,15 @@ function drawNodeShape(
   }
 }
 
-export function ConstellationCanvas({ entities }: { entities: Entity[] }) {
+export function ConstellationCanvas({ 
+  entities, 
+  relationships = [], 
+  onForgeRelationship 
+}: { 
+  entities: Entity[];
+  relationships?: EntityRelationship[];
+  onForgeRelationship?: (rel: EntityRelationship) => void;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const nodesRef = useRef<CanvasNode[]>([]);
@@ -133,7 +142,20 @@ export function ConstellationCanvas({ entities }: { entities: Entity[] }) {
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const dragOffsetStartRef = useRef({ x: 0, y: 0 });
+  const relationshipsRef = useRef(relationships);
+  const isForgingLinkRef = useRef(false);
+  const forgeSourceRef = useRef<CanvasNode | null>(null);
+  const forgeCurrentPosRef = useRef<{ x: number; y: number } | null>(null);
+  
+  const [forgeModalOpen, setForgeModalOpen] = useState(false);
+  const [forgeSourceEntity, setForgeSourceEntity] = useState<Entity | null>(null);
+  const [forgeTargetEntity, setForgeTargetEntity] = useState<Entity | null>(null);
+  
   const { setSelectedEntity } = useWorkspaceStore();
+
+  useEffect(() => {
+    relationshipsRef.current = relationships;
+  }, [relationships]);
 
   const buildNodes = useCallback(
     (width: number, height: number): CanvasNode[] => {
@@ -352,6 +374,60 @@ export function ConstellationCanvas({ entities }: { entities: Entity[] }) {
         }
       }
 
+      // Draw explicitly forged relationships
+      relationshipsRef.current.forEach((rel) => {
+        const sourceNode = nodes.find((n) => n.entity.id === rel.source_entity_id);
+        const targetNode = nodes.find((n) => n.entity.id === rel.target_entity_id);
+        
+        if (sourceNode && targetNode && sourceNode.visible && targetNode.visible) {
+          ctx.beginPath();
+          ctx.moveTo(sourceNode.x, sourceNode.y);
+          ctx.setLineDash([4, 4]);
+          ctx.lineTo(targetNode.x, targetNode.y);
+          ctx.strokeStyle = "rgba(212, 168, 83, 0.4)"; // Gold color
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          ctx.setLineDash([]);
+          
+          // Tiny diamond in middle
+          const midX = (sourceNode.x + targetNode.x) / 2;
+          const midY = (sourceNode.y + targetNode.y) / 2;
+          ctx.beginPath();
+          ctx.save();
+          ctx.translate(midX, midY);
+          ctx.rotate(Math.PI / 4);
+          ctx.rect(-2, -2, 4, 4);
+          ctx.fillStyle = "rgba(212, 168, 83, 0.8)";
+          ctx.fill();
+          ctx.restore();
+        }
+      });
+
+      // Draw active forging link
+      if (isForgingLinkRef.current && forgeSourceRef.current && forgeCurrentPosRef.current) {
+        const sx = forgeSourceRef.current.x;
+        const sy = forgeSourceRef.current.y;
+        const ex = forgeCurrentPosRef.current.x;
+        const ey = forgeCurrentPosRef.current.y;
+        
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(ex, ey);
+        ctx.strokeStyle = "rgba(212, 168, 83, 0.8)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Add outer glow
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(ex, ey);
+        ctx.shadowColor = "rgba(212, 168, 83, 0.6)";
+        ctx.shadowBlur = 8;
+        ctx.stroke();
+        ctx.restore();
+      }
+
       // Draw nodes
       for (const node of nodes) {
         if (node.opacity < 0.01 && node.scale < 0.01) continue;
@@ -468,6 +544,20 @@ export function ConstellationCanvas({ entities }: { entities: Entity[] }) {
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
+      if (isForgingLinkRef.current && forgeSourceRef.current) {
+        const { x, y } = toWorld(e.clientX, e.clientY);
+        forgeCurrentPosRef.current = { x, y };
+        
+        const targetNode = findNode(x, y);
+        hoveredNodeRef.current = targetNode;
+        if (targetNode && targetNode !== forgeSourceRef.current) {
+          if (canvasRef.current) canvasRef.current.style.cursor = "alias";
+        } else {
+          if (canvasRef.current) canvasRef.current.style.cursor = "crosshair";
+        }
+        return;
+      }
+      
       if (isDraggingRef.current) {
         offsetRef.current = {
           x: dragOffsetStartRef.current.x + (e.clientX - dragStartRef.current.x),
@@ -484,19 +574,48 @@ export function ConstellationCanvas({ entities }: { entities: Entity[] }) {
   );
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    isDraggingRef.current = true;
+    const { x, y } = toWorld(e.clientX, e.clientY);
+    const node = findNode(x, y);
+    
     dragStartRef.current = { x: e.clientX, y: e.clientY };
-    dragOffsetStartRef.current = { ...offsetRef.current };
-    if (canvasRef.current) canvasRef.current.style.cursor = "grabbing";
-  }, []);
+    
+    if (node) {
+      isForgingLinkRef.current = true;
+      forgeSourceRef.current = node;
+      forgeCurrentPosRef.current = { x, y };
+      if (canvasRef.current) canvasRef.current.style.cursor = "crosshair";
+    } else {
+      isDraggingRef.current = true;
+      dragOffsetStartRef.current = { ...offsetRef.current };
+      if (canvasRef.current) canvasRef.current.style.cursor = "grabbing";
+    }
+  }, [toWorld, findNode]);
 
   const handleMouseUp = useCallback(() => {
+    if (isForgingLinkRef.current && forgeSourceRef.current) {
+      const source = forgeSourceRef.current;
+      const target = hoveredNodeRef.current;
+      
+      if (target && target !== source) {
+        setForgeSourceEntity(source.entity);
+        setForgeTargetEntity(target.entity);
+        setForgeModalOpen(true);
+      }
+      
+      isForgingLinkRef.current = false;
+      forgeSourceRef.current = null;
+      forgeCurrentPosRef.current = null;
+    }
+    
     isDraggingRef.current = false;
     if (canvasRef.current) canvasRef.current.style.cursor = "default";
   }, []);
 
   const handleMouseLeave = useCallback(() => {
     isDraggingRef.current = false;
+    isForgingLinkRef.current = false;
+    forgeSourceRef.current = null;
+    forgeCurrentPosRef.current = null;
     hoveredNodeRef.current = null;
     if (canvasRef.current) canvasRef.current.style.cursor = "default";
   }, []);
@@ -587,7 +706,8 @@ export function ConstellationCanvas({ entities }: { entities: Entity[] }) {
   }
 
   return (
-    <div ref={containerRef} className="absolute inset-0">
+    <>
+      <div ref={containerRef} className="absolute inset-0">
       <canvas
         ref={canvasRef}
         onMouseMove={handleMouseMove}
@@ -624,5 +744,16 @@ export function ConstellationCanvas({ entities }: { entities: Entity[] }) {
         </p>
       </div>
     </div>
+    <ForgeRelationshipModal
+        open={forgeModalOpen}
+        onOpenChange={setForgeModalOpen}
+        worldId={entities[0]?.world_id || ""}
+        sourceEntity={forgeSourceEntity}
+        targetEntity={forgeTargetEntity}
+        onSuccess={(newRel) => {
+          if (onForgeRelationship) onForgeRelationship(newRel);
+        }}
+      />
+    </>
   );
 }

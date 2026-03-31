@@ -3,9 +3,9 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Sparkles, X } from "lucide-react";
+import { Sparkles, X, Trash2, Link as LinkIcon } from "lucide-react";
 import { useWorkspaceStore } from "@/lib/store";
-import type { Entity, EntityType } from "@/lib/types";
+import type { Entity, EntityType, EntityRelationship } from "@/lib/types";
 
 const TYPE_COLORS: Record<EntityType, string> = {
   character: "#C4A86A",
@@ -28,9 +28,13 @@ const TYPE_LABELS: Record<EntityType, string> = {
 export function ConstellationDossier({
   worldId: _worldId, // eslint-disable-line @typescript-eslint/no-unused-vars
   allEntities = [],
+  relationships = [],
+  onDeleteRelationship,
 }: {
   worldId: string;
   allEntities?: Entity[];
+  relationships?: EntityRelationship[];
+  onDeleteRelationship?: (id: string) => void;
 }) {
   const { selectedEntity, setSelectedEntity, setForgeSoulName } = useWorkspaceStore();
   const router = useRouter();
@@ -59,6 +63,10 @@ export function ConstellationDossier({
               (selectedEntity.summary ?? "").toLowerCase().includes(e.name.toLowerCase())),
         )
       : [];
+
+  const explicitRelationships = relationships.filter(
+    (r) => r.source_entity_id === selectedEntity.id || r.target_entity_id === selectedEntity.id
+  );
 
   const handleForgeSoul = () => {
     setForgeSoulName(selectedEntity.name);
@@ -114,11 +122,64 @@ export function ConstellationDossier({
           </p>
         ) : null}
 
+        {/* Web of Influence */}
+        {explicitRelationships.length > 0 ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <LinkIcon className="h-3.5 w-3.5 text-[var(--accent)]" />
+              <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--accent)] font-bold">
+                Web of Influence
+              </p>
+            </div>
+            <div className="flex flex-col gap-2">
+              {explicitRelationships.map((rel) => {
+                const isSource = rel.source_entity_id === selectedEntity.id;
+                const otherId = isSource ? rel.target_entity_id : rel.source_entity_id;
+                const otherEntity = allEntities.find((e) => e.id === otherId);
+                if (!otherEntity) return null;
+
+                return (
+                  <div key={rel.id} className="group relative flex items-center justify-between rounded-xl border border-border/60 bg-black/20 px-4 py-3 hover:border-[var(--accent)]/50 transition duration-300">
+                    <div className="flex items-center gap-3">
+                      <span className="h-2 w-2 rounded-full shadow-[0_0_8px_currentColor]" style={{ background: TYPE_COLORS[otherEntity.type], color: TYPE_COLORS[otherEntity.type] }} />
+                      <div>
+                        <p className="text-xs text-secondary opacity-70 mb-0.5 uppercase tracking-wider">{isSource ? "You → " : "← "}{rel.label}</p>
+                        <button 
+                          onClick={() => setSelectedEntity(otherEntity)}
+                          className="font-heading text-lg hover:text-[var(--accent)] transition text-foreground"
+                        >
+                          {otherEntity.name}
+                        </button>
+                      </div>
+                    </div>
+                    {onDeleteRelationship && (
+                      <button 
+                         onClick={async () => {
+                           try {
+                             await fetch(`/api/relationships`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete", id: rel.id }) });
+                             onDeleteRelationship(rel.id);
+                           } catch (err) {
+                             console.error("Failed to delete", err);
+                           }
+                         }}
+                         className="opacity-0 group-hover:opacity-100 p-2 transition text-red-400 hover:bg-red-400/10 hover:text-red-300 rounded-lg outline-none cursor-pointer"
+                         title="Sever Link"
+                      >
+                         <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+
         {/* Related members for faction/location */}
         {relatedMembers.length > 0 ? (
-          <div className="space-y-2">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-secondary">
-              Associated Characters
+          <div className="space-y-3 pt-2">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-secondary font-bold">
+              Implicit Members
             </p>
             <div className="flex flex-wrap gap-2">
               {relatedMembers.map((m) => (
@@ -126,7 +187,7 @@ export function ConstellationDossier({
                   key={m.id}
                   type="button"
                   onClick={() => setSelectedEntity(m)}
-                  className="rounded-full border px-3 py-1 text-xs transition-colors hover:opacity-80"
+                  className="rounded-full border px-3 py-1.5 text-xs transition-colors hover:scale-105"
                   style={{
                     borderColor: accentColor + "44",
                     color: accentColor,
@@ -162,7 +223,7 @@ export function ConstellationDossier({
           <button
             type="button"
             onClick={handleForgeSoul}
-            className="mt-2 flex w-full items-center justify-center gap-2 rounded-full border border-[rgba(196,168,106,0.28)] bg-[rgba(196,168,106,0.1)] py-2.5 text-sm text-[rgb(236,221,182)] transition-colors hover:bg-[rgba(196,168,106,0.14)]"
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--accent)_28%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] py-2.5 text-sm text-[var(--accent)] transition-colors hover:bg-[color-mix(in_srgb,var(--accent)_14%,transparent)]"
           >
             <Sparkles className="h-3.5 w-3.5" />
             Forge Soul from {selectedEntity.name}

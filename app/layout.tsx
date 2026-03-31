@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Crimson_Pro, Inter } from "next/font/google";
+import { ThemeProvider } from "next-themes";
 import "./globals.css";
 import { AppProviders } from "@/components/providers/app-providers";
 import { AetherBackground } from "@/components/aether/aether-background";
@@ -33,11 +34,16 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${crimson.variable} ${inter.variable} antialiased`}>
-        <AetherBackground />
-        <AppProviders>
-          <AmbientAudioProvider />
-          {children}
-        </AppProviders>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+        >
+          <AetherBackground />
+          <AppProviders>
+            <AmbientAudioProvider />
+            {children}
+          </AppProviders>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -9,28 +9,27 @@ import type { ConsistencyFlag } from "@/lib/types";
 const SEVERITY_CONFIG = {
   high: {
     label: "High tension",
-    labelClass: "text-[rgb(255,202,202)] bg-[rgba(192,74,74,0.12)] border-[rgba(192,74,74,0.3)]",
-    // HIGH: animated pulsing left border via CSS animation class
+    labelClass: "text-[var(--danger)] bg-[color-mix(in_srgb,var(--danger)_12%,transparent)] border-[color-mix(in_srgb,var(--danger)_30%,transparent)]",
     borderStyle: {
-      borderLeftColor: "rgba(192,74,74,0.5)",
+      borderLeftColor: "color-mix(in srgb, var(--danger) 50%, transparent)",
       animation: "flagPulseHigh 2s ease-in-out infinite",
     },
     Icon: AlertTriangle,
-    iconClass: "text-[rgb(192,74,74)]",
+    iconClass: "text-[var(--danger)]",
   },
   medium: {
     label: "Medium tension",
-    labelClass: "text-[rgb(248,226,179)] bg-[rgba(212,168,83,0.12)] border-[rgba(212,168,83,0.3)]",
-    borderStyle: { borderLeftColor: "rgba(212,168,83,0.5)" },
+    labelClass: "text-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] border-[color-mix(in_srgb,var(--accent)_30%,transparent)]",
+    borderStyle: { borderLeftColor: "color-mix(in srgb, var(--accent) 50%, transparent)" },
     Icon: AlertCircle,
-    iconClass: "text-[rgb(212,168,83)]",
+    iconClass: "text-[var(--accent)]",
   },
   low: {
     label: "Low tension",
-    labelClass: "text-[rgb(206,220,255)] bg-[rgba(124,92,191,0.12)] border-[rgba(124,92,191,0.3)]",
-    borderStyle: { borderLeftColor: "rgba(124,92,191,0.4)" },
+    labelClass: "text-[var(--ai-pulse-soft)] bg-[color-mix(in_srgb,var(--ai-pulse)_12%,transparent)] border-[color-mix(in_srgb,var(--ai-pulse)_30%,transparent)]",
+    borderStyle: { borderLeftColor: "color-mix(in srgb, var(--ai-pulse) 40%, transparent)" },
     Icon: Info,
-    iconClass: "text-[rgb(157,127,224)]",
+    iconClass: "text-[var(--ai-pulse-soft)]",
   },
 };
 

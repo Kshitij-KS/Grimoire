@@ -37,10 +37,17 @@ interface BlankSpot {
 type Tab = "impact" | "blank-spots";
 
 const severityColors: Record<string, string> = {
-  low: "rgba(110,207,189,0.8)",
-  medium: "rgba(196,168,106,0.8)",
-  high: "rgba(210,90,90,0.8)",
-  critical: "rgba(255,60,60,0.9)",
+  low: "var(--success)",
+  medium: "var(--accent)",
+  high: "var(--danger)",
+  critical: "var(--danger)",
+};
+
+const severityBgColors: Record<string, string> = {
+  low: "color-mix(in srgb, var(--success) 15%, transparent)",
+  medium: "color-mix(in srgb, var(--accent) 15%, transparent)",
+  high: "color-mix(in srgb, var(--danger) 15%, transparent)",
+  critical: "color-mix(in srgb, var(--danger) 15%, transparent)",
 };
 
 export function NarratorTools({ worldId }: NarratorToolsProps) {
@@ -103,7 +110,7 @@ export function NarratorTools({ worldId }: NarratorToolsProps) {
           onClick={() => setTab("impact")}
           className={`rounded-[14px] px-4 py-2 text-sm transition-all ${
             tab === "impact"
-              ? "bg-[rgba(126,109,242,0.18)] text-[var(--violet-soft)] border border-[rgba(126,109,242,0.3)]"
+              ? "bg-[color-mix(in_srgb,var(--ai-pulse)_15%,transparent)] text-[var(--ai-pulse-soft)] border border-[color-mix(in_srgb,var(--ai-pulse)_30%,transparent)]"
               : "text-secondary hover:text-foreground border border-transparent"
           }`}
         >
@@ -114,7 +121,7 @@ export function NarratorTools({ worldId }: NarratorToolsProps) {
           onClick={() => setTab("blank-spots")}
           className={`rounded-[14px] px-4 py-2 text-sm transition-all ${
             tab === "blank-spots"
-              ? "bg-[rgba(196,168,106,0.18)] text-[var(--gold)] border border-[rgba(196,168,106,0.3)]"
+              ? "bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] text-[var(--accent)] border border-[color-mix(in_srgb,var(--accent)_30%,transparent)]"
               : "text-secondary hover:text-foreground border border-transparent"
           }`}
         >
@@ -138,7 +145,7 @@ export function NarratorTools({ worldId }: NarratorToolsProps) {
                 value={scenario}
                 onChange={(e) => setScenario(e.target.value)}
                 placeholder="What if the Ember Cult was destroyed? What if Kael discovered the truth?"
-                className="w-full resize-none rounded-[14px] border border-border bg-[rgba(255,255,255,0.03)] p-3 text-sm text-foreground placeholder:text-dim focus:border-[var(--violet)] focus:outline-none transition-colors"
+                className="w-full resize-none rounded-[14px] border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_70%,transparent)] p-3 text-sm text-foreground placeholder:text-dim focus:border-[var(--border-focus)] focus:outline-none transition-colors"
                 rows={3}
               />
               <Button
@@ -174,14 +181,16 @@ export function NarratorTools({ worldId }: NarratorToolsProps) {
                           transition={{ delay: i * 0.05 }}
                           className="flex items-start gap-3 rounded-[14px] border border-border p-3"
                         >
-                          <div
-                            className="mt-0.5 h-2 w-2 shrink-0 rounded-full"
+                          <span
+                            className="shrink-0 rounded px-1.5 py-0.5 text-[9px] uppercase tracking-wide font-bold"
                             style={{
-                              background:
-                                severityColors[entity.severity] ??
-                                severityColors.medium,
+                              background: severityBgColors[entity.severity] ?? severityBgColors.medium,
+                              color: severityColors[entity.severity] ?? severityColors.medium,
+                              borderLeft: `2px solid ${severityColors[entity.severity] ?? severityColors.medium}`,
                             }}
-                          />
+                          >
+                            {entity.severity}
+                          </span>
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium text-foreground">
@@ -204,14 +213,14 @@ export function NarratorTools({ worldId }: NarratorToolsProps) {
                 {/* Orphaned */}
                 {(impactResult.orphaned?.length ?? 0) > 0 && (
                   <div className="glass-panel rounded-[24px] p-5">
-                    <p className="chapter-label mb-3 text-[rgb(var(--danger-rgb))]">
+                    <p className="chapter-label mb-3 text-[var(--danger)]">
                       — Orphaned Characters —
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {impactResult.orphaned?.map((name, i) => (
                         <span
                           key={i}
-                          className="rounded-lg bg-[rgba(210,90,90,0.12)] px-2.5 py-1 text-xs text-[rgb(var(--danger-rgb))]"
+                          className="rounded-lg bg-[color-mix(in_srgb,var(--danger)_12%,transparent)] px-2.5 py-1 text-xs text-[var(--danger)]"
                         >
                           {name}
                         </span>
@@ -283,11 +292,12 @@ export function NarratorTools({ worldId }: NarratorToolsProps) {
                         {hole.entity}
                       </span>
                     </div>
-                    <p className="text-xs text-[rgb(var(--danger-rgb))] mb-1">
+                    <p className="text-xs text-[var(--danger)] mb-1">
                       Missing: {hole.missing}
                     </p>
                     <p className="text-xs text-secondary">
-                      💡 {hole.suggestion}
+                      <span className="text-[var(--accent)] text-[10px] uppercase tracking-wide mr-1.5 opacity-70">Oracle</span>
+                      <span className="italic">{hole.suggestion}</span>
                     </p>
                   </motion.div>
                 ))}

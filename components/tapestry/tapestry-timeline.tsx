@@ -109,7 +109,7 @@ export function TapestryTimeline({ worldId }: TapestryTimelineProps) {
         {events.length > 0 && (
           <motion.div
             className="absolute left-6 top-0 bottom-0 w-px origin-top"
-            style={{ background: "linear-gradient(to bottom, var(--violet), var(--gold), transparent)" }}
+            style={{ background: "linear-gradient(to bottom, color-mix(in srgb, var(--accent) 60%, transparent), color-mix(in srgb, var(--ai-pulse) 40%, transparent), transparent)" }}
             initial={{ scaleY: 0 }}
             animate={{ scaleY: 1 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
@@ -128,9 +128,13 @@ export function TapestryTimeline({ worldId }: TapestryTimelineProps) {
             >
               {/* Era label */}
               <div className="mb-4 flex items-center gap-3 pl-14">
-                <div className="h-px flex-1 bg-gradient-to-r from-[var(--violet)]22 to-transparent" />
-                <span className="chapter-label text-[var(--gold)]">— {era} —</span>
-                <div className="h-px flex-1 bg-gradient-to-l from-[var(--violet)]22 to-transparent" />
+                <div className="h-px flex-1 bg-gradient-to-r from-[color-mix(in_srgb,var(--accent)_22%,transparent)] to-transparent" />
+                <span className="chapter-label text-[var(--gold)] flex items-center gap-1.5">
+                  <span className="text-[10px] opacity-40">ᚦ</span>
+                  {era}
+                  <span className="text-[10px] opacity-40">ᚦ</span>
+                </span>
+                <div className="h-px flex-1 bg-gradient-to-l from-[color-mix(in_srgb,var(--accent)_22%,transparent)] to-transparent" />
               </div>
 
               {eraEvents.map((event, eventIndex) => (
@@ -147,15 +151,15 @@ export function TapestryTimeline({ worldId }: TapestryTimelineProps) {
                   {/* Node dot */}
                   <div className="relative z-10 mt-2 flex h-5 w-5 shrink-0 items-center justify-center">
                     <motion.div
-                      className="h-3 w-3 rounded-full bg-[var(--violet)]"
-                      animate={{ boxShadow: ["0 0 6px rgba(126,109,242,0.3)", "0 0 16px rgba(126,109,242,0.7)", "0 0 6px rgba(126,109,242,0.3)"] }}
+                      className="h-3 w-3 rotate-45 bg-[var(--gold)]"
+                      animate={{ boxShadow: ["0 0 5px color-mix(in srgb, var(--accent) 35%, transparent)", "0 0 14px color-mix(in srgb, var(--accent) 75%, transparent)", "0 0 5px color-mix(in srgb, var(--accent) 35%, transparent)"] }}
                       transition={{ duration: 2.4, repeat: Infinity, delay: (eventIndex % 4) * 0.3 }}
                     />
-                    <div className="absolute h-5 w-5 rounded-full border border-[var(--violet)]44" />
+                    <div className="absolute h-5 w-5 rotate-45 border border-[color-mix(in_srgb,var(--accent)_30%,transparent)]" />
                   </div>
 
                   {/* Event card */}
-                  <div className="glass-panel flex-1 rounded-xl p-4 transition-all duration-200 hover:border-[rgba(165,148,255,0.28)] hover:shadow-[0_4px_20px_rgba(4,6,12,0.4)]">
+                  <div className="glass-panel flex-1 rounded-xl p-4 transition-all duration-200 hover:border-[rgba(90,72,52,0.55)] hover:shadow-[0_4px_20px_rgba(2,1,0,0.45)]">
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-medium text-[var(--gold)] uppercase tracking-wider">
                         #{event.order}

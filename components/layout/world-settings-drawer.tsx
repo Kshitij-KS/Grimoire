@@ -145,7 +145,7 @@ export function WorldSettingsDrawer({
               </div>
               <button
                 onClick={onClose}
-                className="rounded-xl p-1.5 text-secondary transition hover:bg-[rgba(54,44,34,0.4)] hover:text-foreground"
+                className="rounded-xl p-1.5 text-secondary transition hover:bg-[var(--surface-raised)] hover:text-foreground"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -181,7 +181,7 @@ export function WorldSettingsDrawer({
                     className="space-y-4"
                   >
                     {isDemo && (
-                      <div className="rounded-[14px] border border-[rgba(196,168,106,0.3)] bg-[rgba(196,168,106,0.08)] px-3 py-2.5 text-xs text-[var(--gold)]">
+                      <div className="rounded-[14px] border border-[color-mix(in_srgb,var(--accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] px-3 py-2.5 text-xs text-[var(--gold)]">
                         Demo world — settings are read-only.
                       </div>
                     )}
@@ -193,7 +193,7 @@ export function WorldSettingsDrawer({
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         readOnly={isDemo}
-                        className="w-full rounded-[12px] border border-border bg-[rgba(255,255,255,0.03)] px-3 py-2 text-sm text-foreground placeholder:text-dim focus:border-[var(--violet)] focus:outline-none transition-colors"
+                        className="w-full rounded-[12px] border border-border bg-[color-mix(in_srgb,var(--surface)_80%,transparent)] px-3 py-2 text-sm text-foreground placeholder:text-dim focus:border-[var(--border-focus)] focus:outline-none transition-colors"
                       />
                     </div>
 
@@ -210,8 +210,8 @@ export function WorldSettingsDrawer({
                               onClick={() => setGenre(g === genre ? "" : g)}
                               className={`rounded-[10px] px-2.5 py-1 text-xs transition-all border ${
                                 genre === g
-                                  ? "border-[var(--violet)] bg-[rgba(126,109,242,0.18)] text-[var(--violet-soft)]"
-                                  : "border-border text-secondary hover:border-[var(--violet)]33 hover:text-foreground"
+                                  ? "border-[var(--ai-pulse)] bg-[color-mix(in_srgb,var(--ai-pulse)_18%,transparent)] text-[var(--ai-pulse-soft)]"
+                                  : "border-border text-secondary hover:border-[color-mix(in_srgb,var(--ai-pulse)_30%,transparent)] hover:text-foreground"
                               }`}
                             >
                               {g}
@@ -234,8 +234,8 @@ export function WorldSettingsDrawer({
                               onClick={() => setTone(t === tone ? "" : t)}
                               className={`rounded-[10px] px-2.5 py-1 text-xs transition-all border ${
                                 tone === t
-                                  ? "border-[var(--gold)] bg-[rgba(196,168,106,0.18)] text-[var(--gold)]"
-                                  : "border-border text-secondary hover:border-[var(--gold)]33 hover:text-foreground"
+                                  ? "border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_18%,transparent)] text-[var(--accent)]"
+                                  : "border-border text-secondary hover:border-[color-mix(in_srgb,var(--accent)_30%,transparent)] hover:text-foreground"
                               }`}
                             >
                               {t}
@@ -254,7 +254,7 @@ export function WorldSettingsDrawer({
                         readOnly={isDemo}
                         rows={4}
                         placeholder="The world's core premise and setting..."
-                        className="w-full resize-none rounded-[12px] border border-border bg-[rgba(255,255,255,0.03)] px-3 py-2 text-sm text-foreground placeholder:text-dim focus:border-[var(--violet)] focus:outline-none transition-colors"
+                        className="w-full resize-none rounded-[12px] border border-border bg-[color-mix(in_srgb,var(--surface)_80%,transparent)] px-3 py-2 text-sm text-foreground placeholder:text-dim focus:border-[var(--border-focus)] focus:outline-none transition-colors"
                       />
                     </div>
                     
@@ -312,7 +312,7 @@ export function WorldSettingsDrawer({
                         <Button
                           asChild
                           variant="ghost"
-                          className="mt-3 flex w-full items-center justify-between rounded-[12px] border border-[rgba(196,168,106,0.3)] bg-[rgba(196,168,106,0.08)] px-3 py-2.5 text-xs text-[var(--gold)] transition hover:border-[var(--gold)]55 hover:bg-[rgba(196,168,106,0.12)]"
+                          className="mt-3 flex w-full items-center justify-between rounded-[12px] border border-[color-mix(in_srgb,var(--accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] px-3 py-2.5 text-xs text-[var(--accent)] transition hover:border-[color-mix(in_srgb,var(--accent)_50%,transparent)] hover:bg-[color-mix(in_srgb,var(--accent)_12%,transparent)]"
                         >
                           <Link href="/dashboard/settings#billing">
                             <span>Upgrade to Pro</span>

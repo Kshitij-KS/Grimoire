@@ -31,8 +31,8 @@ export function ProcessingStatus({ steps }: { steps: ProcessingStep[] }) {
                 step.status === "complete"
                   ? "border-[rgba(74,156,109,0.35)] bg-[rgba(74,156,109,0.12)] text-[rgb(183,247,208)]"
                   : step.status === "active"
-                    ? "border-[rgba(157,127,224,0.35)] bg-[rgba(124,92,191,0.15)] text-foreground"
-                    : "border-border bg-[rgba(28,22,14,0.5)] text-secondary",
+                    ? "border-[color-mix(in_srgb,var(--ai-pulse)_35%,transparent)] bg-[color-mix(in_srgb,var(--ai-pulse)_15%,transparent)] text-foreground"
+                    : "border-border bg-[color-mix(in_srgb,var(--surface)_50%,transparent)] text-secondary",
               )}
             >
               <AnimatePresence mode="wait">

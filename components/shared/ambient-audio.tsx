@@ -140,8 +140,8 @@ export function AmbientToggle() {
       onClick={handleToggle}
       className={`flex h-8 w-8 items-center justify-center rounded-xl border transition-all duration-200 ${
         enabled
-          ? "border-[var(--gold)]33 bg-[rgba(196,168,106,0.12)] text-[var(--gold)]"
-          : "border-border bg-[rgba(255,255,255,0.03)] text-dim hover:text-secondary"
+          ? "border-[color-mix(in_srgb,var(--accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] text-[var(--accent)]"
+          : "border-border bg-[color-mix(in_srgb,var(--surface)_50%,transparent)] text-dim hover:text-secondary"
       }`}
       title={enabled ? "Disable atmosphere" : "Enable atmosphere"}
     >

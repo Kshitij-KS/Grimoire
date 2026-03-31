@@ -24,12 +24,24 @@ export function AetherBackground() {
   }, []);
 
   return (
-    <div
-      className="pointer-events-none fixed inset-0 z-0 transition-[background] duration-300"
-      style={{
-        background:
-          "radial-gradient(540px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(165,148,255,0.06), transparent 34%)",
-      }}
-    />
+    <>
+      {/* Mouse-follow spotlight — ai-pulse tinted */}
+      <div
+        className="pointer-events-none fixed inset-0 z-0"
+        style={{
+          background:
+            "radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), color-mix(in srgb, var(--ai-pulse) 6%, transparent), transparent 38%)",
+          transition: "opacity 0.3s ease",
+        }}
+      />
+      {/* Ambient base layer — static atmospheric glow at bottom */}
+      <div
+        className="pointer-events-none fixed inset-0 z-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 50% at 50% 110%, color-mix(in srgb, var(--ai-pulse) 4%, transparent), transparent 60%), radial-gradient(ellipse 40% 30% at 20% -10%, color-mix(in srgb, var(--accent) 3%, transparent), transparent 55%)",
+        }}
+      />
+    </>
   );
 }

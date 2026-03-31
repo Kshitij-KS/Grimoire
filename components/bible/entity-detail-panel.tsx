@@ -126,7 +126,7 @@ export function EntityDetailPanel({
                 <select
                   value={editType}
                   onChange={(e) => setEditType(e.target.value as EntityType)}
-                  className="w-full rounded-xl border border-border bg-[rgba(11,15,24,0.72)] px-3 py-2 text-xs uppercase tracking-[0.25em] text-secondary outline-none focus:border-[rgba(124,92,191,0.5)]"
+                  className="w-full rounded-xl border border-border bg-[color-mix(in_srgb,var(--surface)_72%,transparent)] px-3 py-2 text-xs uppercase tracking-[0.25em] text-secondary outline-none focus:border-[var(--border-focus)]"
                 >
                   {ENTITY_TYPES.map((t) => (
                     <option key={t.value} value={t.value}>
@@ -139,13 +139,13 @@ export function EntityDetailPanel({
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   placeholder="Entity Name"
-                  className="w-full rounded-xl border border-border bg-[rgba(11,15,24,0.72)] px-3 py-2 font-heading text-xl text-[rgb(212,168,83)] outline-none focus:border-[rgba(124,92,191,0.5)]"
+                  className="w-full rounded-xl border border-border bg-[color-mix(in_srgb,var(--surface)_72%,transparent)] px-3 py-2 font-heading text-xl text-[var(--accent)] outline-none focus:border-[var(--border-focus)]"
                 />
               </div>
             ) : (
               <>
                 <p className="text-xs uppercase tracking-[0.25em] text-secondary">{entity.type}</p>
-                <h3 className="truncate font-heading text-4xl text-[rgb(212,168,83)]" title={entity.name}>
+                <h3 className="truncate font-heading text-4xl text-[var(--accent)]" title={entity.name}>
                   {entity.name}
                 </h3>
               </>
@@ -182,7 +182,7 @@ export function EntityDetailPanel({
             onChange={(e) => setEditSummary(e.target.value)}
             placeholder="Entity summary or description..."
             rows={4}
-            className="mb-5 w-full rounded-xl border border-border bg-[rgba(11,15,24,0.72)] px-4 py-3 text-sm leading-7 text-secondary outline-none focus:border-[rgba(124,92,191,0.5)]"
+            className="mb-5 w-full rounded-xl border border-border bg-[color-mix(in_srgb,var(--surface)_72%,transparent)] px-4 py-3 text-sm leading-7 text-secondary outline-none focus:border-[var(--border-focus)]"
           />
         ) : entity.summary ? (
           <p className="mb-5 text-sm leading-7 text-secondary">{entity.summary}</p>
@@ -204,7 +204,7 @@ export function EntityDetailPanel({
                   title="Copy to clipboard"
                 >
                   {copiedId === chunk.id ? (
-                    <Check className="h-3.5 w-3.5 text-[rgb(212,168,83)]" />
+                    <Check className="h-3.5 w-3.5 text-[var(--accent)]" />
                   ) : (
                     <Copy className="h-3.5 w-3.5 text-secondary" />
                   )}

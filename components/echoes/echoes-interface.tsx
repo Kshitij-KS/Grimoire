@@ -176,9 +176,9 @@ export function EchoesInterface({
     isStreaming && messages[messages.length - 1]?.role !== "assistant";
 
   return (
-    <div className="relative overflow-hidden rounded-[34px] border border-border bg-[rgba(12,16,26,0.72)]">
+    <div className="relative overflow-hidden rounded-[34px] border border-border bg-[color-mix(in_srgb,var(--surface)_72%,transparent)]">
       <div className="pointer-events-none absolute inset-0 bg-grid opacity-10" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(165,148,255,0.14),transparent_24%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,color-mix(in_srgb,var(--ai-pulse)_12%,transparent),transparent_24%)]" />
 
       <div className="relative flex min-h-[72vh] flex-col">
         {/* ── Header ── */}
@@ -292,7 +292,7 @@ export function EchoesInterface({
                         transition={{ type: "spring", stiffness: 340, damping: 26 }}
                         className="flex justify-end"
                       >
-                        <div className="max-w-[80%] rounded-[22px] rounded-tr-[6px] bg-[linear-gradient(135deg,rgba(126,109,242,0.96),rgba(165,148,255,0.86))] px-4 py-3 text-sm leading-7 text-white shadow-message-soul">
+                        <div className="max-w-[80%] rounded-[22px] rounded-tr-[6px] bg-[linear-gradient(135deg,var(--ai-pulse),var(--ai-pulse-soft))] px-4 py-3 text-sm leading-7 text-white shadow-message-soul">
                           {message.content}
                         </div>
                       </motion.div>
@@ -390,12 +390,12 @@ export function EchoesInterface({
             {/* ── Input ── */}
             <div className="border-t border-border px-5 py-4">
               <div
-                className="rounded-[26px] border bg-[rgba(11,15,24,0.7)] p-4 transition-all duration-200"
+                className="rounded-[26px] border bg-[color-mix(in_srgb,var(--surface)_70%,transparent)] p-4 transition-all duration-200"
                 style={{
                   borderColor: inputFocused
-                    ? "rgba(124,92,191,0.45)"
-                    : "var(--border-subtle)",
-                  boxShadow: inputFocused ? "0 0 0 1px rgba(124,92,191,0.15)" : "none",
+                    ? "color-mix(in srgb, var(--border-focus) 70%, transparent)"
+                    : "var(--border)",
+                  boxShadow: inputFocused ? "0 0 0 1px color-mix(in srgb, var(--border-focus) 15%, transparent)" : "none",
                 }}
               >
                 <textarea
@@ -424,7 +424,7 @@ export function EchoesInterface({
                       disabled={sending || !input.trim()}
                       style={
                         !sending && input.trim()
-                          ? { boxShadow: "0 0 14px rgba(196,168,106,0.2)" }
+                          ? { boxShadow: "0 0 14px color-mix(in srgb, var(--accent) 20%, transparent)" }
                           : {}
                       }
                     >

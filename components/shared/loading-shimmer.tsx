@@ -22,13 +22,12 @@ export function LoadingShimmer({ className, variant = "line" }: LoadingShimmerPr
   return (
     <div
       className={cn(
-        "bg-[rgba(212,168,83,0.04)]",
         "shimmer",
         VARIANT_CLASSES[variant],
         className
       )}
       style={{
-        background: "linear-gradient(90deg, rgba(212,168,83,0.03) 0%, rgba(212,168,83,0.09) 40%, rgba(180,120,50,0.07) 60%, rgba(212,168,83,0.03) 100%)",
+        background: `linear-gradient(90deg, color-mix(in srgb, var(--accent) 3%, transparent) 0%, color-mix(in srgb, var(--accent) 9%, transparent) 40%, color-mix(in srgb, var(--accent) 6%, transparent) 60%, color-mix(in srgb, var(--accent) 3%, transparent) 100%)`,
         backgroundSize: "200% 100%",
         animation: "shimmerWarm 2.1s linear infinite",
       }}
@@ -59,14 +58,14 @@ export function SectionLoadingScreen({
       <div className="relative flex items-center justify-center">
         {/* Outer slow pulse ring */}
         <motion.div
-          className="absolute rounded-full border border-[rgba(124,92,191,0.22)]"
+          className="absolute rounded-full border border-[color-mix(in_srgb,var(--ai-pulse)_22%,transparent)]"
           style={{ width: 130, height: 130 }}
           animate={{ scale: [1, 1.12, 1], opacity: [0.35, 0.55, 0.35] }}
           transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
         />
         {/* Middle glow ring */}
         <motion.div
-          className="absolute rounded-full border border-[rgba(212,168,83,0.18)]"
+          className="absolute rounded-full border border-[color-mix(in_srgb,var(--accent)_18%,transparent)]"
           style={{ width: 90, height: 90 }}
           animate={{ scale: [1, 1.14, 1], opacity: [0.2, 0.45, 0.2] }}
           transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
@@ -80,7 +79,7 @@ export function SectionLoadingScreen({
             <motion.span
               key={i}
               className="pointer-events-none absolute font-heading text-sm select-none"
-              style={{ color: i % 2 === 0 ? "rgba(124,92,191,0.7)" : "rgba(212,168,83,0.55)" }}
+              style={{ color: i % 2 === 0 ? "color-mix(in srgb, var(--ai-pulse) 70%, transparent)" : "color-mix(in srgb, var(--accent) 55%, transparent)" }}
               animate={{ rotate: 360 }}
               transition={{
                 duration: 16 + i * 0.8,
@@ -104,19 +103,19 @@ export function SectionLoadingScreen({
         <motion.div
           className="relative z-10 flex h-14 w-14 items-center justify-center rounded-full"
           style={{
-            background: "radial-gradient(circle, rgba(124,92,191,0.28) 0%, rgba(13,11,8,0.6) 70%)",
-            border: "1px solid rgba(124,92,191,0.35)",
+            background: `radial-gradient(circle, color-mix(in srgb, var(--ai-pulse) 28%, transparent) 0%, color-mix(in srgb, var(--bg) 60%, transparent) 70%)`,
+            border: "1px solid color-mix(in srgb, var(--ai-pulse) 35%, transparent)",
           }}
           animate={{
             boxShadow: [
-              "0 0 22px rgba(124,92,191,0.25), inset 0 0 14px rgba(124,92,191,0.12)",
-              "0 0 44px rgba(124,92,191,0.45), inset 0 0 24px rgba(124,92,191,0.22)",
-              "0 0 22px rgba(124,92,191,0.25), inset 0 0 14px rgba(124,92,191,0.12)",
+              "0 0 22px color-mix(in srgb, var(--ai-pulse) 25%, transparent), inset 0 0 14px color-mix(in srgb, var(--ai-pulse) 12%, transparent)",
+              "0 0 44px color-mix(in srgb, var(--ai-pulse) 45%, transparent), inset 0 0 24px color-mix(in srgb, var(--ai-pulse) 22%, transparent)",
+              "0 0 22px color-mix(in srgb, var(--ai-pulse) 25%, transparent), inset 0 0 14px color-mix(in srgb, var(--ai-pulse) 12%, transparent)",
             ],
           }}
           transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
         >
-          <span className="font-heading text-2xl text-[rgba(212,168,83,0.7)]">ᚷ</span>
+          <span className="font-heading text-2xl text-[var(--accent)]" style={{ opacity: 0.7 }}>ᚷ</span>
         </motion.div>
       </div>
 
@@ -134,8 +133,7 @@ export function SectionLoadingScreen({
           {[0, 1, 2].map((i) => (
             <motion.span
               key={i}
-              className="h-1 w-1 rounded-full"
-              style={{ background: "rgba(124,92,191,0.6)" }}
+              className="h-1 w-1 rounded-full bg-[color-mix(in_srgb,var(--ai-pulse)_60%,transparent)]"
               animate={{ opacity: [0.2, 1, 0.2], scale: [0.8, 1.2, 0.8] }}
               transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.2 }}
             />
@@ -147,7 +145,7 @@ export function SectionLoadingScreen({
       <motion.div
         className="h-px w-40 rounded-full"
         style={{
-          background: "linear-gradient(90deg, transparent, rgba(212,168,83,0.35), transparent)",
+          background: "linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 35%, transparent), transparent)",
         }}
         animate={{ scaleX: [0.4, 1, 0.4], opacity: [0.3, 0.7, 0.3] }}
         transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}

@@ -81,6 +81,29 @@ export function SoulCard({
               style={{ borderColor: color }}
             />
           )}
+
+          {/* Delete button — top-right corner, appears on hover */}
+          {!isDemo && onDelete && (
+            <button
+              className="absolute right-3 top-3 z-20 rounded-lg p-1.5 opacity-0 transition-all duration-200 group-hover:opacity-100"
+              style={{
+                background: "rgba(192,74,74,0.12)",
+                color: "rgba(192,74,74,0.70)",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.background = "rgba(192,74,74,0.22)";
+                (e.currentTarget as HTMLElement).style.color = "rgb(192,74,74)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.background = "rgba(192,74,74,0.12)";
+                (e.currentTarget as HTMLElement).style.color = "rgba(192,74,74,0.70)";
+              }}
+              onClick={(e) => { e.preventDefault(); onDelete(soul.id); }}
+              title="Release this soul"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
 
         {/* ── Name + voice ── */}
@@ -98,9 +121,9 @@ export function SoulCard({
           )}
         </div>
 
-        {/* ── Sample lines — revealed on group-hover ── */}
+        {/* ── Sample lines — softly visible at rest, fully revealed on hover ── */}
         <div className="min-h-[48px] overflow-hidden px-5 pb-2">
-          <div className="translate-y-1.5 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+          <div className="translate-y-0.5 opacity-40 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-90">
             {sampleLines.slice(0, 2).map((line, i) => (
               <p key={i} className="mb-1 truncate text-xs italic text-secondary/70">
                 &ldquo;{line}&rdquo;
@@ -118,22 +141,9 @@ export function SoulCard({
               <Button asChild size="sm" className="flex-1">
                 <Link href={`/worlds/${worldId}/souls/${soul.id}/chat`}>Chat</Link>
               </Button>
-              <Button variant="secondary" size="sm" onClick={onView}>
+              <Button variant="secondary" size="sm" className="flex-1" onClick={onView}>
                 Soul Card
               </Button>
-              {!isDemo && onDelete && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onDelete(soul.id);
-                  }}
-                  className="px-2 text-secondary hover:text-red-400 hover:bg-red-500/10"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
             </div>
           )}
         </div>
