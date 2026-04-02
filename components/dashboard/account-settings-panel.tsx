@@ -175,12 +175,14 @@ export function AccountSettingsPanel({ email, profile }: AccountSettingsPanelPro
         </Card>
 
         <Card className="rounded-[32px] border-[rgba(196,168,106,0.24)] bg-[rgba(196,168,106,0.06)] p-6">
-          <p className="chapter-label">Notes</p>
-          <h2 className="mt-2 font-heading text-2xl text-foreground">Account safety</h2>
+          <p className="chapter-label">Session</p>
+          <h2 className="mt-2 font-heading text-2xl text-foreground">Security</h2>
           <p className="mt-3 text-sm leading-7 text-secondary">
-            If you need deeper identity management later, we can expand this page with password reset, email verification
-            status, or account deletion flows without changing the navigation again.
+            Email changes require verification before taking effect. Password changes apply immediately after saving.
           </p>
+          <div className="mt-4 rounded-[14px] bg-[rgba(196,168,106,0.1)] px-3 py-2 text-xs text-[rgb(212,168,83)]">
+            Changes are handled securely via Supabase Auth — no passwords are stored in plain text.
+          </div>
         </Card>
       </div>
     </div>

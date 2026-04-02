@@ -3,12 +3,10 @@
 import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, RefreshCw, Sparkles } from "lucide-react";
+import { ArrowLeft, Sparkles } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { WorldSidebar } from "@/components/layout/world-sidebar";
-import { ConstellationCanvas } from "@/components/bible/constellation-canvas";
-import { ConstellationDossier } from "@/components/bible/constellation-dossier";
-import { EntityGrid } from "@/components/bible/entity-grid";
+import { ArchiveWorkspace } from "@/components/bible/archive-workspace";
 import { FractureLens } from "@/components/consistency/fracture-lens";
 import { EchoesInterface } from "@/components/echoes/echoes-interface";
 import { LoomEditor } from "@/components/lore/loom-editor";
@@ -26,7 +24,7 @@ import { Breadcrumbs, type BreadcrumbItem } from "@/components/shared/breadcrumb
 import { Skeleton } from "@/components/ui/skeleton";
 import { SectionLoadingScreen } from "@/components/shared/loading-shimmer";
 import { useWorkspaceStore } from "@/lib/store";
-import type { ConsistencyCheck, Entity, Soul, WorldWorkspaceData } from "@/lib/types";
+import type { ConsistencyCheck, Entity, EntityRelationship, Soul, WorldWorkspaceData } from "@/lib/types";
 
 const SECTION_META: Record<string, { label: string; subtitle: string; description: string }> = {
   lore: {
@@ -246,61 +244,29 @@ export function WorldWorkspace({
             ) : null}
 
             {data.activeSection === "bible" ? (
-              <div className="relative h-[calc(100vh-230px)] overflow-hidden rounded-[34px] border border-border bg-[rgba(17,21,33,0.52)]">
-                <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-between px-6 py-5">
-                  <div className="glass-panel rounded-[22px] px-4 py-3">
-                    <p className="chapter-label">World Bible</p>
-                    <p className="mt-1 text-sm text-secondary">
-                      Explore the constellation, then open a dossier to read the archive.
-                    </p>
-                  </div>
-                  {/* Refresh Archive button — only for non-demo worlds */}
-                  {!isDemo && (
-                    <div className="pointer-events-auto">
-                      <button
-                        onClick={refreshArchive}
-                        disabled={isRefreshingArchive}
-                        className="flex items-center gap-2 rounded-[18px] border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_82%,transparent)] px-4 py-2.5 text-xs text-secondary backdrop-blur-sm transition-all hover:border-[color-mix(in_srgb,var(--ai-pulse)_50%,transparent)] hover:text-foreground disabled:opacity-50"
-                        title={`Last refreshed: ${new Date(lastRefreshed).toLocaleTimeString()}`}
-                      >
-                        <RefreshCw
-                          className={`h-3.5 w-3.5 ${
-                            isRefreshingArchive ? "animate-spin text-[var(--ai-pulse)]" : "text-secondary"
-                          }`}
-                        />
-                        {isRefreshingArchive
-                          ? "Consulting the archive…"
-                          : archiveRefreshCount > 0
-                          ? `Refresh Archive (+${archiveRefreshCount})`
-                          : "Refresh Archive"}
-                      </button>
-                    </div>
-                  )}
-                </div>
-                <ConstellationCanvas 
-                  entities={entities} 
+              <div className="relative h-[calc(100vh-230px)]">
+                <ArchiveWorkspace
+                  worldId={data.world.id}
+                  entities={entities}
                   relationships={relationships}
+                  souls={souls}
+                  isReadonly={data.isReadonly}
+                  isDemo={isDemo}
+                  isRefreshing={isRefreshingArchive}
+                  refreshCount={archiveRefreshCount}
+                  lastRefreshed={lastRefreshed}
+                  onRefresh={refreshArchive}
                   onForgeRelationship={(newRel) => setRelationships(prev => [...prev, newRel])}
+                  onDeleteRelationship={(relId) => setRelationships(prev => prev.filter(r => r.id !== relId))}
+                  onCreateSoul={(name) => {
+                    setForgeSoulName(name);
+                    // Navigate to souls section
+                    const url = new URL(window.location.href);
+                    url.searchParams.set("section", "souls");
+                    window.history.pushState({}, "", url.toString());
+                  }}
+                  canCreateSoul={souls.length < 3}
                 />
-                <AnimatePresence>
-                  <ConstellationDossier 
-                    worldId={data.world.id} 
-                    allEntities={entities} 
-                    relationships={relationships}
-                    onDeleteRelationship={(relId) => setRelationships(prev => prev.filter(r => r.id !== relId))}
-                  />
-                </AnimatePresence>
-                <div className="sr-only">
-                  <EntityGrid
-                    entities={entities}
-                    souls={souls}
-                    worldId={data.world.id}
-                    onSoulCreated={(newSoul) => setSouls((prev) => [...prev, newSoul])}
-                    onEntityUpdate={(updated) => setEntities(prev => prev.map(e => e.id === updated.id ? updated : e))}
-                    onEntityDelete={(id) => setEntities(prev => prev.filter(e => e.id !== id))}
-                    isReadonly={data.isReadonly}
-                  />
-                </div>
               </div>
             ) : null}
 
@@ -340,6 +306,7 @@ export function WorldWorkspace({
                           soul={soul}
                           worldId={data.world.id}
                           isDemo={isDemo}
+                          onChat={() => setActiveSoulId(soul.id)}
                           onView={() => setActiveSoulCardId(soul.id)}
                           onDelete={setDeletingSoulId}
                         />

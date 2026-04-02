@@ -1,10 +1,37 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from "react";
+import { Search, X } from "lucide-react";
 import { useWorkspaceStore } from "@/lib/store";
 import type { Entity, EntityType, EntityRelationship } from "@/lib/types";
 import { ForgeRelationshipModal } from "./forge-relationship-modal";
 
+// ── Theme-aware color resolution ──────────────────────────────────────────
+// Canvas cannot read CSS variables directly; we resolve them from computed style.
+function resolveThemeColors(): Record<EntityType, string> {
+  if (typeof window === "undefined") {
+    return {
+      character: "#C4A86A",
+      location: "#A594FF",
+      faction: "#D25A5A",
+      artifact: "#C3CBEC",
+      event: "#7E6DF2",
+      rule: "#7C86A8",
+    };
+  }
+  const style = getComputedStyle(document.documentElement);
+  const get = (v: string) => style.getPropertyValue(v).trim();
+  return {
+    character: get("--accent") || "#C4A86A",
+    location:  get("--ai-pulse") || "#A594FF",
+    faction:   get("--danger") || "#D25A5A",
+    artifact:  get("--accent-soft") || "#C3CBEC",
+    event:     get("--success") || "#7E6DF2",
+    rule:      get("--text-muted") || "#7C86A8",
+  };
+}
+
+// Fallback static colors (still rendered on first frame before theme resolves)
 const TYPE_COLORS: Record<EntityType, string> = {
   character: "#C4A86A",
   location: "#A594FF",
@@ -121,17 +148,32 @@ function drawNodeShape(
   }
 }
 
-export function ConstellationCanvas({ 
-  entities, 
-  relationships = [], 
-  onForgeRelationship 
-}: { 
+export function ConstellationCanvas({
+  entities,
+  relationships = [],
+  onForgeRelationship,
+  spotlightEntityId,
+  canvasExportRef,
+}: {
   entities: Entity[];
   relationships?: EntityRelationship[];
   onForgeRelationship?: (rel: EntityRelationship) => void;
+  spotlightEntityId?: string | null;
+  canvasExportRef?: React.RefObject<HTMLCanvasElement | null>;
 }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const internalCanvasRef = useRef<HTMLCanvasElement>(null);
+  // Expose canvas to parent for screenshot via canvasExportRef
+  const canvasRef = (canvasExportRef ?? internalCanvasRef) as React.RefObject<HTMLCanvasElement>;
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Search & filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTypes, setActiveTypes] = useState<Set<EntityType>>(
+    new Set(["character", "location", "faction", "artifact", "event", "rule"] as EntityType[])
+  );
+  const [hoverTooltip, setHoverTooltip] = useState<{ x: number; y: number; label: string } | null>(null);
+  const searchQueryRef = useRef("");
+  const activeTypesRef = useRef(activeTypes);
   const nodesRef = useRef<CanvasNode[]>([]);
   const membershipsRef = useRef<Map<string, Set<string>>>(new Map());
   const hoveredNodeRef = useRef<CanvasNode | null>(null);
@@ -156,6 +198,23 @@ export function ConstellationCanvas({
   useEffect(() => {
     relationshipsRef.current = relationships;
   }, [relationships]);
+
+  // Sync search/filter refs
+  useEffect(() => { searchQueryRef.current = searchQuery; }, [searchQuery]);
+  useEffect(() => { activeTypesRef.current = activeTypes; }, [activeTypes]);
+
+  // Spotlight: pan to entity when spotlightEntityId changes
+  useEffect(() => {
+    if (!spotlightEntityId) return;
+    const node = nodesRef.current.find((n) => n.entity.id === spotlightEntityId);
+    if (!node) return;
+    const w = containerRef.current?.offsetWidth ?? 600;
+    const h = containerRef.current?.offsetHeight ?? 400;
+    offsetRef.current = {
+      x: w / 2 - node.x * scaleRef.current,
+      y: h / 2 - node.y * scaleRef.current,
+    };
+  }, [spotlightEntityId]);
 
   const buildNodes = useCallback(
     (width: number, height: number): CanvasNode[] => {
@@ -294,6 +353,8 @@ export function ConstellationCanvas({
       const h = container.offsetHeight;
       ctx.clearRect(0, 0, w, h);
       t += 0.007;
+      // Resolve theme-accurate colors each frame (cheap CSS var read)
+      const themeColors = resolveThemeColors();
 
       const scale = scaleRef.current;
       const off = offsetRef.current;
@@ -323,9 +384,18 @@ export function ConstellationCanvas({
           node.y += (node.homeY - node.y) * 0.1;
         }
 
+        const sq = searchQueryRef.current.toLowerCase();
+        const atypes = activeTypesRef.current;
+        const matchesSearch = !sq || node.entity.name.toLowerCase().includes(sq) || (node.entity.summary ?? "").toLowerCase().includes(sq);
+        const matchesType = atypes.has(node.entity.type);
+
         let targetOpacity: number;
         if (!node.visible) {
           targetOpacity = 0;
+        } else if (!matchesType) {
+          targetOpacity = 0.04;
+        } else if (sq && !matchesSearch) {
+          targetOpacity = 0.06;
         } else if (expandedId && !node.isMember && node.entity.id !== expandedId) {
           targetOpacity = 0.18;
         } else if (hovered && !node.isMember) {
@@ -432,7 +502,7 @@ export function ConstellationCanvas({
       for (const node of nodes) {
         if (node.opacity < 0.01 && node.scale < 0.01) continue;
 
-        const color = TYPE_COLORS[node.entity.type] ?? "#E0E0E0";
+        const color = themeColors[node.entity.type] ?? TYPE_COLORS[node.entity.type] ?? "#E0E0E0";
         const isHov = node === hovered;
         const baseR = TYPE_RADIUS[node.entity.type] ?? 5;
         const r = (isHov ? baseR + 2.5 : baseR) * node.scale;
@@ -458,7 +528,7 @@ export function ConstellationCanvas({
           const isExpanded = expandedIdRef.current === node.entity.id;
           ctx.font = "bold 8px Inter, sans-serif";
           ctx.textAlign = "center";
-          ctx.fillStyle = color + "CC";
+          ctx.fillStyle = (themeColors[node.entity.type] ?? color) + "CC";
           ctx.fillText(isExpanded ? "▾" : `+${memberCount}`, node.x, node.y - 28 * node.scale);
         }
 
@@ -496,11 +566,11 @@ export function ConstellationCanvas({
 
         ctx.restore();
 
-        // Label
-        if (node.opacity > 0.25 && node.scale > 0.3) {
+        // Label — always show for hovered nodes, threshold 0.25 for others
+        if ((node.opacity > 0.25 || isHov) && node.scale > 0.3) {
           const raw = node.entity.name;
-          const label = raw.length > 16 ? raw.slice(0, 14) + "…" : raw;
-          const labelAlpha = node.opacity * (isHov ? 1 : 0.78);
+          const label = raw.length > 20 ? raw.slice(0, 18) + "…" : raw;
+          const labelAlpha = isHov ? 1 : node.opacity * 0.78;
           ctx.save();
           ctx.globalAlpha = labelAlpha;
           const isBold = node.entity.type === "faction" || node.entity.type === "location";
@@ -569,6 +639,16 @@ export function ConstellationCanvas({
       const found = findNode(x, y);
       hoveredNodeRef.current = found;
       if (canvasRef.current) canvasRef.current.style.cursor = found ? "pointer" : "default";
+      if (found) {
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (rect) {
+          const screenX = found.x * scaleRef.current + offsetRef.current.x;
+          const screenY = found.y * scaleRef.current + offsetRef.current.y;
+          setHoverTooltip({ x: screenX, y: screenY - 44, label: "Drag to forge a link" });
+        }
+      } else {
+        setHoverTooltip(null);
+      }
     },
     [toWorld, findNode],
   );
@@ -698,52 +778,115 @@ export function ConstellationCanvas({
   if (entities.length === 0) {
     return (
       <div className="absolute inset-0 flex items-center justify-center">
-        <p className="font-heading text-2xl italic text-secondary">
+        <p className="font-heading text-2xl italic text-[var(--text-muted)]">
           Write lore to populate the constellation.
         </p>
       </div>
     );
   }
 
+  const ALL_ENTITY_TYPES: EntityType[] = ["character", "location", "faction", "artifact", "event", "rule"];
+  const TYPE_SHAPE_LABELS: Record<EntityType, string> = {
+    faction: "Faction ⬡",
+    location: "Location ◆",
+    character: "Character ●",
+    artifact: "Artifact ■",
+    event: "Event ▲",
+    rule: "Rule ◎",
+  };
+
   return (
     <>
       <div ref={containerRef} className="absolute inset-0">
-      <canvas
-        ref={canvasRef}
-        onMouseMove={handleMouseMove}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseLeave}
-        onWheel={handleWheel}
-        onDoubleClick={handleDoubleClick}
-        onClick={handleClick}
-        className="block h-full w-full select-none"
-      />
-      {/* Legend */}
-      <div className="pointer-events-none absolute bottom-4 right-4 flex flex-col gap-1.5 rounded-[16px] bg-[rgba(13,11,8,0.72)] px-3 py-2.5 backdrop-blur-sm">
-        {(
-          [
-            ["faction", "Faction ⬡ — click to expand"],
-            ["location", "Location ◆"],
-            ["character", "Character ●"],
-            ["artifact", "Artifact ■"],
-            ["event", "Event ▲"],
-            ["rule", "Rule ◎"],
-          ] as [EntityType, string][]
-        ).map(([type, label]) => (
-          <div key={type} className="flex items-center gap-2">
-            <span
-              className="h-2 w-2 shrink-0 rounded-full"
-              style={{ background: TYPE_COLORS[type] }}
+        <canvas
+          ref={canvasRef as React.RefObject<HTMLCanvasElement>}
+          onMouseMove={handleMouseMove}
+          onMouseDown={handleMouseDown}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
+          onWheel={handleWheel}
+          onDoubleClick={handleDoubleClick}
+          onClick={handleClick}
+          className="block h-full w-full select-none"
+        />
+
+        {/* Search input overlay */}
+        <div className="pointer-events-auto absolute left-4 top-4 z-10 flex flex-col gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--text-muted)]" />
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search entities…"
+              className="glass-panel w-52 rounded-[16px] py-2 pl-9 pr-8 text-sm text-[var(--text-main)] placeholder:text-[var(--text-muted)] focus:border-[var(--border-focus)] focus:outline-none"
             />
-            <span className="text-[10px] text-secondary">{label}</span>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-main)]"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
-        ))}
-        <p className="mt-1 border-t border-[rgba(255,255,255,0.06)] pt-1.5 text-[9px] text-secondary opacity-60">
-          Scroll to zoom · Drag to pan · Double-click to reset
-        </p>
+
+          {/* Type filter chips */}
+          <div className="flex flex-wrap gap-1">
+            {ALL_ENTITY_TYPES.map((t) => {
+              const active = activeTypes.has(t);
+              const count = entities.filter((e) => e.type === t).length;
+              if (count === 0) return null;
+              return (
+                <button
+                  key={t}
+                  onClick={() => {
+                    setActiveTypes((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(t)) next.delete(t);
+                      else next.add(t);
+                      return next;
+                    });
+                  }}
+                  className="glass-panel rounded-full px-2.5 py-1 text-[10px] capitalize transition-colors"
+                  style={{
+                    opacity: active ? 1 : 0.4,
+                    borderColor: active ? TYPE_COLORS[t] : undefined,
+                    color: active ? TYPE_COLORS[t] : "var(--text-muted)",
+                  }}
+                >
+                  {t} {count}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Hover tooltip */}
+        {hoverTooltip && !isForgingLinkRef.current && (
+          <div
+            className="pointer-events-none absolute z-20 whitespace-nowrap rounded-[10px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-[11px] text-[var(--text-muted)] shadow-md"
+            style={{ left: hoverTooltip.x - 60, top: hoverTooltip.y }}
+          >
+            {hoverTooltip.label}
+          </div>
+        )}
+
+        {/* Legend */}
+        <div className="pointer-events-none absolute bottom-4 right-4 flex flex-col gap-1.5 rounded-[16px] border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_85%,transparent)] px-3 py-2.5 backdrop-blur-sm">
+          {ALL_ENTITY_TYPES.map((type) => (
+            <div key={type} className="flex items-center gap-2">
+              <span
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{ background: TYPE_COLORS[type] }}
+              />
+              <span className="text-[10px] text-[var(--text-muted)]">{TYPE_SHAPE_LABELS[type]}</span>
+            </div>
+          ))}
+          <p className="mt-1 border-t border-[var(--border)] pt-1.5 text-[9px] text-[var(--text-muted)] opacity-60">
+            Scroll to zoom · Drag to pan · Drag node to forge link
+          </p>
+        </div>
       </div>
-    </div>
     <ForgeRelationshipModal
         open={forgeModalOpen}
         onOpenChange={setForgeModalOpen}

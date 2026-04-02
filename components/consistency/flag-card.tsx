@@ -12,6 +12,7 @@ const SEVERITY_CONFIG = {
     labelClass: "text-[var(--danger)] bg-[color-mix(in_srgb,var(--danger)_12%,transparent)] border-[color-mix(in_srgb,var(--danger)_30%,transparent)]",
     borderStyle: {
       borderLeftColor: "color-mix(in srgb, var(--danger) 50%, transparent)",
+      borderLeftWidth: "6px",
       animation: "flagPulseHigh 2s ease-in-out infinite",
     },
     Icon: AlertTriangle,
@@ -20,14 +21,14 @@ const SEVERITY_CONFIG = {
   medium: {
     label: "Medium tension",
     labelClass: "text-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] border-[color-mix(in_srgb,var(--accent)_30%,transparent)]",
-    borderStyle: { borderLeftColor: "color-mix(in srgb, var(--accent) 50%, transparent)" },
+    borderStyle: { borderLeftColor: "color-mix(in srgb, var(--accent) 50%, transparent)", borderLeftWidth: "4px" },
     Icon: AlertCircle,
     iconClass: "text-[var(--accent)]",
   },
   low: {
     label: "Low tension",
     labelClass: "text-[var(--ai-pulse-soft)] bg-[color-mix(in_srgb,var(--ai-pulse)_12%,transparent)] border-[color-mix(in_srgb,var(--ai-pulse)_30%,transparent)]",
-    borderStyle: { borderLeftColor: "color-mix(in srgb, var(--ai-pulse) 40%, transparent)" },
+    borderStyle: { borderLeftColor: "color-mix(in srgb, var(--ai-pulse) 40%, transparent)", borderLeftWidth: "2px" },
     Icon: Info,
     iconClass: "text-[var(--ai-pulse-soft)]",
   },
@@ -55,10 +56,7 @@ export function FlagCard({
       transition={{ duration: 0.22, ease: "easeOut" }}
     >
       <Card
-        className={[
-          "rounded-[28px] border-l-[3px] p-5",
-          flag.resolved ? "opacity-50" : "",
-        ].join(" ")}
+        className={["rounded-[28px] border-l p-5", flag.resolved ? "opacity-50" : ""].join(" ")}
         style={config.borderStyle}
       >
         <div className="flex flex-wrap items-start justify-between gap-4">

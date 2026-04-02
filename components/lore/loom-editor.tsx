@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import CharacterCount from "@tiptap/extension-character-count";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bold, Heading2, Italic, List, Maximize2, Minimize2, Quote } from "lucide-react";
+import { AlignCenter, Bold, Heading2, Italic, List, Maximize2, Minimize2, Quote, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { LoreList } from "@/components/lore/lore-list";
 import { ProcessingStatus, type ProcessingStep } from "@/components/lore/processing-status";
@@ -45,6 +45,10 @@ export function LoomEditor({
   const [processing, setProcessing] = useState(false);
   const [deletingLore, setDeletingLore] = useState<{ id: string; title: string } | null>(null);
   const [focusMode, setFocusMode] = useState(false);
+  const [typewriterMode, setTypewriterMode] = useState(false);
+  const [editorHasFocus, setEditorHasFocus] = useState(false);
+  const [oracleWhispering, setOracleWhispering] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const handleDeleteLore = async () => {
     if (!deletingLore) return;
@@ -115,11 +119,79 @@ export function LoomEditor({
           ? "rgb(212,168,83)"
           : "rgb(124,92,191)";
 
+  // Track editor focus for Oracle CTA visibility
+  useEffect(() => {
+    if (!editor) return;
+    const onFocus = () => setEditorHasFocus(true);
+    const onBlur = () => setEditorHasFocus(false);
+    editor.on("focus", onFocus);
+    editor.on("blur", onBlur);
+    return () => { editor.off("focus", onFocus); editor.off("blur", onBlur); };
+  }, [editor]);
+
+  // Writing stats derived from content
+  const writingStats = useMemo(() => {
+    const text = stripHtml(editor?.getHTML() ?? "").trim();
+    if (!text) return null;
+    const sentences = text.split(/[.!?]+/).filter((s) => s.trim().length > 3).length;
+    const paragraphs = (editor?.getHTML() ?? "").split(/<\/p>|<\/h[1-6]>/).filter(Boolean).length;
+    const avgSentenceLen = sentences > 0 ? Math.round(currentWordCount / sentences) : 0;
+    return { paragraphs, sentences, avgSentenceLen };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor, editor?.state, currentWordCount]);
+
   const updateStep = (id: ProcessingStep["id"], status: ProcessingStep["status"]) => {
     setSteps((current) => current.map((step) => (step.id === id ? { ...step, status } : step)));
   };
 
   const resetSteps = () => setSteps(baseSteps);
+
+  // Typewriter scroll: keep cursor at 55% from top of the scroll container
+  useEffect(() => {
+    if (!typewriterMode || !editor) return;
+    const handler = () => {
+      const sel = window.getSelection();
+      if (!sel || !sel.rangeCount) return;
+      const range = sel.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      const container = scrollContainerRef.current;
+      if (!container) {
+        const targetY = rect.bottom - window.innerHeight * 0.55;
+        window.scrollBy({ top: targetY, behavior: "smooth" });
+      } else {
+        const containerRect = container.getBoundingClientRect();
+        const targetY = rect.bottom - containerRect.top - container.clientHeight * 0.55;
+        container.scrollBy({ top: targetY, behavior: "smooth" });
+      }
+    };
+    editor.on("update", handler);
+    return () => { editor.off("update", handler); };
+  }, [typewriterMode, editor]);
+
+  const handleOracleWhisper = useCallback(async () => {
+    if (!editor || isReadonly || oracleWhispering) return;
+    const text = stripHtml(editor.getHTML());
+    if (!text.trim()) return;
+    setOracleWhispering(true);
+    try {
+      const res = await fetch("/api/lore/autocomplete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ worldId, content: text }),
+      });
+      if (!res.ok) throw new Error("Oracle is silent.");
+      const data = await res.json();
+      const suggestion = data.suggestion ?? data.continuation ?? "";
+      if (suggestion) {
+        editor.chain().focus().insertContent(" " + suggestion).run();
+        toast.success("The Oracle whispers into your quill.");
+      }
+    } catch {
+      toast.error("The Oracle is silent right now.");
+    } finally {
+      setOracleWhispering(false);
+    }
+  }, [editor, isReadonly, oracleWhispering, worldId]);
 
   const submit = useCallback(async () => {
     if (!editor || isReadonly) return;
@@ -347,6 +419,34 @@ export function LoomEditor({
           </div>
         </div>
 
+        {/* ── Writing stats strip ── */}
+        <AnimatePresence>
+          {writingStats && currentWordCount > 10 && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              className="mb-4 flex flex-wrap items-center gap-2"
+            >
+              {[
+                { label: "Paragraphs", value: writingStats.paragraphs },
+                { label: "Sentences", value: writingStats.sentences },
+                { label: "Avg length", value: `${writingStats.avgSentenceLen}w` },
+                { label: "Read time", value: `~${readingTimeMin}m` },
+              ].map(({ label, value }) => (
+                <span
+                  key={label}
+                  className="glass-panel rounded-lg px-3 py-1 text-[11px] text-[var(--text-muted)]"
+                >
+                  <span className="mr-1.5 text-[var(--text-main)]">{value}</span>
+                  {label}
+                </span>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* ── Editor surface ── */}
         <div className="rounded-[28px] border border-border bg-[color-mix(in_srgb,var(--bg)_72%,transparent)]">
           <input
@@ -438,26 +538,65 @@ export function LoomEditor({
         isDemo={isReadonly}
       />
 
+      {/* ── Oracle's Whisper floating CTA ── */}
+      <AnimatePresence>
+        {editorHasFocus && currentWordCount > 20 && !isReadonly && !focusMode && (
+          <motion.button
+            type="button"
+            onClick={handleOracleWhisper}
+            disabled={oracleWhispering}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="glass-panel-elevated fixed bottom-6 right-6 z-30 flex items-center gap-2 rounded-full px-5 py-3 text-sm text-[var(--accent)] transition-colors hover:text-[var(--text-main)] disabled:opacity-50 active:scale-[0.97] active:transition-none"
+          >
+            <Sparkles className={`h-4 w-4 ${oracleWhispering ? "animate-spin" : ""}`} />
+            {oracleWhispering ? "Oracle speaks…" : "Oracle whispers…"}
+          </motion.button>
+        )}
+      </AnimatePresence>
+
       {/* ── Focus / Distraction-free mode overlay ── */}
       <AnimatePresence>
         {focusMode && (
           <motion.div
             className="fixed inset-0 z-[60] flex flex-col"
-            style={{ background: "hsl(25 15% 4%)" }}
+            style={{ background: "var(--bg)" }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.22 }}
           >
+            {/* Atmospheric depth gradient layers */}
+            <div
+              className="pointer-events-none absolute inset-0 z-0"
+              style={{
+                backgroundImage: [
+                  "radial-gradient(ellipse 100% 60% at 50% 100%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 60%)",
+                  "radial-gradient(ellipse 70% 50% at 10% 20%, color-mix(in srgb, var(--ai-pulse) 4%, transparent), transparent 55%)",
+                  "radial-gradient(ellipse 60% 40% at 90% 10%, color-mix(in srgb, var(--accent-soft) 3%, transparent), transparent 50%)",
+                ].join(", "),
+              }}
+            />
+
             {/* Minimal top bar */}
-            <div className="flex shrink-0 items-center justify-between border-b border-border/30 px-8 py-4">
+            <div className="relative z-10 flex shrink-0 items-center justify-between border-b border-[var(--border)] px-8 py-4">
               <p className="chapter-label">— The Loom —</p>
-              <div className="flex items-center gap-4">
-                <span className="text-xs text-secondary">{currentWordCount} words</span>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-[var(--text-muted)]">{currentWordCount} words</span>
+                <button
+                  type="button"
+                  onClick={() => setTypewriterMode((v) => !v)}
+                  title={typewriterMode ? "Disable typewriter scroll" : "Enable typewriter scroll"}
+                  className={`rounded-lg p-2 transition ${typewriterMode ? "text-[var(--accent)]" : "text-[var(--text-muted)] hover:text-[var(--text-main)]"}`}
+                >
+                  <AlignCenter className="h-4 w-4" />
+                </button>
                 <button
                   type="button"
                   onClick={() => setFocusMode(false)}
-                  className="rounded-lg p-2 text-secondary transition hover:text-foreground"
+                  className="rounded-lg p-2 text-[var(--text-muted)] transition hover:text-[var(--text-main)]"
                   title="Exit focus mode (Esc)"
                 >
                   <Minimize2 className="h-4 w-4" />
@@ -466,27 +605,27 @@ export function LoomEditor({
             </div>
 
             {/* Centred editor */}
-            <div className="flex-1 overflow-y-auto">
+            <div ref={scrollContainerRef} className="relative z-10 flex-1 overflow-y-auto">
               <div className="mx-auto max-w-2xl px-8 py-10">
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Entry title..."
-                  className="mb-8 w-full border-b border-border/30 bg-transparent pb-4 font-heading text-4xl text-foreground outline-none placeholder:text-[rgba(150,130,100,0.35)]"
+                  className="mb-8 w-full border-b border-[var(--border)] bg-transparent pb-4 font-heading text-4xl text-[var(--text-main)] outline-none placeholder:text-[var(--text-muted)] placeholder:opacity-40"
                 />
                 <EditorContent editor={editor} />
               </div>
             </div>
 
             {/* Minimal bottom bar */}
-            <div className="flex shrink-0 items-center justify-center gap-4 border-t border-border/30 px-8 py-4">
+            <div className="relative z-10 flex shrink-0 items-center justify-center gap-4 border-t border-[var(--border)] px-8 py-4">
               {!isReadonly && (
                 <Button size="sm" onClick={submit} disabled={processing}>
                   {processing ? "Inscribing..." : "Inscribe & Remember"}
                 </Button>
               )}
-              <span className="text-xs text-dim">Esc to exit the Loom</span>
+              <span className="text-xs text-[var(--text-muted)]">Esc to exit the Loom</span>
             </div>
           </motion.div>
         )}

@@ -4,24 +4,24 @@
 
 /* ─────────────────────────────────────────────────────────────
    Editorial Cartography — CSS Token System
-   Light mode: Alabaster & Charcoal
+   Light mode: Illuminated Manuscript — warm parchment & iron gall ink
    Dark mode:  Obsidian & Brass
    ───────────────────────────────────────────────────────────── */
 
 :root {
-  --bg: #F7F7F5;
-  --surface: #FFFFFF;
-  --surface-raised: #F0F0EE;
-  --text-main: #18181B;
-  --text-muted: #71717A;
-  --border: #E4E4E1;
-  --border-focus: #A1A1AA;
-  --accent: #B46B31;
-  --accent-soft: #D4924A;
-  --ai-pulse: #4A6D8C;
-  --ai-pulse-soft: #6B8FAD;
-  --danger: #C04A4A;
-  --success: #3D8A6E;
+  --bg: #F5F0E8;              /* warm parchment — aged vellum, never bright white */
+  --surface: #FAF7F2;         /* lighter vellum — card surfaces */
+  --surface-raised: #F0EBE0;  /* manuscript board — elevated panels */
+  --text-main: #1C1410;       /* iron gall ink — warm near-black */
+  --text-muted: #6B5E4E;      /* faded sepia — warm, never cold gray */
+  --border: #DDD4C4;          /* aged paper crease — warm ochre-tan */
+  --border-focus: #9E8A74;    /* burnished leather — focus rings */
+  --accent: #8B4513;          /* saddle brown — ink and leather */
+  --accent-soft: #B5651D;     /* antique bronze — softer accent */
+  --ai-pulse: #3D5A7A;        /* woad blue / monastic lapis lazuli */
+  --ai-pulse-soft: #5A7A9E;   /* cerulean ink */
+  --danger: #8B2020;          /* crimson wax seal */
+  --success: #2D6A4F;         /* verdigris / aged copper green */
   --radius: 0.5rem;
 
   /* Easing curves — precise, intentional, never generic */
@@ -46,7 +46,7 @@
   --gold: var(--accent);
   --gold-soft: var(--accent-soft);
   --silver: var(--text-main);
-  --danger-rgb: 192, 74, 74;
+  --danger-rgb: 139, 32, 32; /* matches light mode --danger: #8B2020 */
 }
 
 .dark {
@@ -89,6 +89,18 @@ body {
   cursor: auto;
 }
 
+/* Light mode — warm parchment ambient gradients */
+:root body {
+  background-image:
+    radial-gradient(ellipse 120% 80% at 10% 0%, color-mix(in srgb, var(--accent) 3%, transparent), transparent 40%),
+    radial-gradient(ellipse 80% 60% at 90% 100%, color-mix(in srgb, var(--ai-pulse) 2%, transparent), transparent 50%);
+}
+
+/* Dark mode resets the ambient gradients */
+.dark body {
+  background-image: none;
+}
+
 /* Universal active/press feedback — the single most impactful micro-interaction */
 button:not(:disabled),
 [role="button"]:not(:disabled) {
@@ -96,7 +108,7 @@ button:not(:disabled),
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
   color: var(--text-main);
 }
 
@@ -140,7 +152,7 @@ button:not(:disabled),
   border: 1px solid var(--border);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 16px color-mix(in srgb, var(--accent) 5%, color-mix(in srgb, var(--text-main) 4%, transparent));
 }
 
 .dark .glass-panel,
@@ -303,9 +315,23 @@ button:not(:disabled),
 
 .bg-grid {
   background-image:
+    linear-gradient(color-mix(in srgb, var(--border) 70%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--border) 70%, transparent) 1px, transparent 1px);
+  background-size: 72px 72px;
+}
+
+/* Light mode: use warmer, manuscript ruling-line grid */
+:root .bg-grid {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px);
+}
+
+/* Dark mode: restore sharp grid */
+.dark .bg-grid {
+  background-image:
     linear-gradient(var(--border) 1px, transparent 1px),
     linear-gradient(90deg, var(--border) 1px, transparent 1px);
-  background-size: 72px 72px;
 }
 
 /* ─────────────────────────────────────────────────────────────

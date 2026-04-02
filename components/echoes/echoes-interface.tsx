@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Send, RotateCcw } from "lucide-react";
+import { ArrowLeft, BrainCircuit, Send, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { DestructiveActionModal } from "@/components/shared/destructive-action-modal";
 import { EchoesOrbDynamic } from "@/components/echoes/echoes-orb-dynamic";
@@ -256,12 +256,32 @@ export function EchoesInterface({
               {/* Soul avatar badge below quote */}
               <div className="mt-5 flex items-center gap-2 rounded-full border border-border px-3 py-1.5">
                 <div
-                  className="h-5 w-5 rounded-full border text-[9px] font-bold flex items-center justify-center"
+                  className="flex h-5 w-5 items-center justify-center rounded-full border text-[9px] font-bold"
                   style={{ borderColor: color, background: `${color}22`, color }}
                 >
                   {initials.slice(0, 1)}
                 </div>
                 <span className="text-[10px] uppercase tracking-[0.18em] text-secondary">Bound Soul</span>
+              </div>
+
+              {/* Memory depth bar */}
+              <div className="mt-5 w-full space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">
+                    <BrainCircuit className="h-3 w-3" style={{ color }} />
+                    Memory depth
+                  </div>
+                  <span className="text-[10px] text-[var(--text-muted)]">{messages.length}/50</span>
+                </div>
+                <div className="h-1 overflow-hidden rounded-full bg-[var(--border)]">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${Math.min(100, (messages.length / 50) * 100)}%`,
+                      background: `linear-gradient(90deg, ${color}, ${color}88)`,
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </aside>
@@ -306,7 +326,7 @@ export function EchoesInterface({
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ type: "spring", stiffness: 300, damping: 26 }}
-                      className="flex items-start gap-2 justify-start"
+                      className="group/msg flex items-start gap-2 justify-start"
                     >
                       {/* Mini soul avatar */}
                       <div
@@ -315,32 +335,70 @@ export function EchoesInterface({
                       >
                         {initials.slice(0, 1)}
                       </div>
-                      <div
-                        className="max-w-[82%] rounded-[22px] rounded-tl-[6px] border border-border px-4 py-3"
-                        style={{
-                          background: "rgba(20,24,38,0.88)",
-                          borderLeft: `2px solid ${color}55`,
-                        }}
-                      >
-                        <p
-                          className="mb-1.5 text-[10px] uppercase tracking-[0.22em]"
-                          style={{ color: "rgb(196,168,106)" }}
+                      <div className="flex max-w-[82%] flex-col gap-1">
+                        <div
+                          className="rounded-[22px] rounded-tl-[6px] border border-border px-4 py-3"
+                          style={{
+                            background: "rgba(20,24,38,0.88)",
+                            borderLeft: `2px solid ${color}55`,
+                          }}
                         >
-                          {soul.name}
-                        </p>
-                        <div className="font-heading text-lg leading-8 text-foreground">
-                          {words !== null
-                            ? words.map((word, index) => (
-                                <motion.span
-                                  key={index}
-                                  initial={{ opacity: 0 }}
-                                  animate={{ opacity: 1 }}
-                                  transition={{ duration: 0.14 }}
-                                >
-                                  {word}
-                                </motion.span>
-                              ))
-                            : message.content}
+                          <p
+                            className="mb-1.5 text-[10px] uppercase tracking-[0.22em]"
+                            style={{ color: "rgb(196,168,106)" }}
+                          >
+                            {soul.name}
+                          </p>
+                          <div className="font-heading text-lg leading-8 text-foreground">
+                            {words !== null
+                              ? words.map((word, index) => (
+                                  <motion.span
+                                    key={index}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ duration: 0.14 }}
+                                  >
+                                    {word}
+                                  </motion.span>
+                                ))
+                              : message.content}
+                          </div>
+                        </div>
+                        {/* Reaction toolbar — appears on hover */}
+                        <div className="flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover/msg:opacity-100">
+                          <button
+                            onClick={async () => {
+                              try {
+                                await fetch("/api/lore/ingest", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    worldId,
+                                    title: `${soul.name} — spoken word`,
+                                    content: message.content,
+                                  }),
+                                });
+                                toast.success("Saved to your lore.");
+                              } catch {
+                                toast.error("Could not save to lore.");
+                              }
+                            }}
+                            className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-[11px] text-[var(--text-muted)] transition-colors hover:border-[color-mix(in_srgb,var(--accent)_40%,transparent)] hover:text-[var(--accent)]"
+                          >
+                            📖 Save to Lore
+                          </button>
+                          <button
+                            onClick={() => toast.info("Coming soon.")}
+                            className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-[11px] text-[var(--text-muted)] transition-colors hover:text-[var(--text-main)]"
+                          >
+                            🔖
+                          </button>
+                          <button
+                            onClick={() => toast.info("Coming soon.")}
+                            className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-[11px] text-[var(--text-muted)] transition-colors hover:text-[var(--text-main)]"
+                          >
+                            ✨
+                          </button>
                         </div>
                       </div>
                     </motion.div>

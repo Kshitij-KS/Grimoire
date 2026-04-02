@@ -68,6 +68,7 @@ export function SoulCreationModal({
 }) {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [forging, setForging] = useState(false);
   const [particles, setParticles] = useState<Particle[]>([]);
   const forgeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -129,6 +130,7 @@ export function SoulCreationModal({
   const submit = form.handleSubmit(async (values) => {
     spawnParticles();
     setLoading(true);
+    setForging(true);
     try {
       const response = await fetch("/api/souls/generate", {
         method: "POST",
@@ -144,11 +146,16 @@ export function SoulCreationModal({
       if (response.status === 429) throw new Error("RATE_LIMIT");
       if (!response.ok) throw new Error(payload.error || "Soul forging failed.");
       toast.success("Soul forged. The archive has a new voice.");
-      onOpenChange(false);
-      setStep(0);
-      form.reset();
-      onCreated(payload.soul as Soul);
+      // Three-beat ritual: dim → pulse → close
+      setTimeout(() => {
+        setForging(false);
+        onOpenChange(false);
+        setStep(0);
+        form.reset();
+        onCreated(payload.soul as Soul);
+      }, 800);
     } catch (error) {
+      setForging(false);
       toast.error(error instanceof Error ? error.message : "Soul forging failed.");
     } finally {
       setLoading(false);
@@ -166,6 +173,28 @@ export function SoulCreationModal({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="relative pb-4 max-w-lg overflow-x-hidden">
+        {/* Three-beat forge ritual overlay */}
+        <AnimatePresence>
+          {forging && (
+            <motion.div
+              className="absolute inset-0 z-50 flex items-center justify-center rounded-[inherit]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              style={{ background: "color-mix(in srgb, var(--bg) 70%, transparent)", backdropFilter: "blur(4px)" }}
+            >
+              <motion.div
+                animate={{ scale: [1, 1.18, 1, 1.18, 1], opacity: [0.6, 1, 0.6, 1, 0.6] }}
+                transition={{ duration: 0.9, ease: "easeInOut" }}
+                className="font-heading text-5xl"
+                style={{ color: "var(--accent)" }}
+              >
+                ᚷ
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* ── Decorative rune corners ── */}
         {RUNES.map((rune, i) => (
           <span
@@ -308,7 +337,9 @@ export function SoulCreationModal({
                 <div className="space-y-2">
                   <Label>Character Description</Label>
                   <Textarea
-                    placeholder="Mira is a former cult enforcer who speaks in clipped sentences, carries ritual guilt like armor, and knows the back-paths of Ashveil better than she knows her own name..."
+                    placeholder={watchedName
+                      ? `Describe ${watchedName}'s history, motivations, secrets, and voice. The more specific, the more alive they become…`
+                      : "Describe their history, motivations, secrets, and voice. The more specific, the more alive they become…"}
                     className="min-h-[200px]"
                     {...form.register("description")}
                   />

@@ -113,13 +113,26 @@ export function ConsistencyChecker({
           className="mt-4 min-h-[220px] disabled:cursor-not-allowed disabled:opacity-60"
           value={text}
           onChange={(event) => setText(event.target.value)}
-          placeholder="Paste a passage you've written. The archive will check it for contradictions with established lore..."
-          disabled={isReadonly}
+          placeholder="Paste a passage you've written. The archive will check it for contradictions with established lore… or drag a .txt / .md file here."
+          disabled={isReadonly && !isDemo}
+          onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = "var(--border-focus)"; }}
+          onDragLeave={(e) => { e.currentTarget.style.borderColor = ""; }}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.currentTarget.style.borderColor = "";
+            const file = e.dataTransfer.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+              if (typeof ev.target?.result === "string") setText(ev.target.result);
+            };
+            reader.readAsText(file);
+          }}
         />
         {text.length > 0 ? (
           <p className="mt-1 text-right text-xs text-secondary">{text.length} characters</p>
         ) : null}
-        {!isReadonly ? (
+        {(!isReadonly || isDemo) ? (
           <div className="mt-4 flex items-center justify-end gap-4">
             <Button onClick={runCheck} disabled={loading || !text.trim()}>
               {loading ? "Consulting the archive..." : "Scan the Archive"}

@@ -104,22 +104,25 @@ export function AuthShell() {
       />
 
       {/* Floating background runes */}
-      {["ᚠ","ᚱ","ᚷ","ᚦ","ᚨ"].map((rune, i) => (
+      {["ᚠ","ᚱ","ᚷ","ᚦ","ᚨ","ᚲ","ᛏ"].map((rune, i) => (
         <motion.span
           key={i}
           className="pointer-events-none absolute select-none font-heading"
           style={{
-            top: `${15 + i * 16}%`,
-            left: i % 2 === 0 ? `${6 + i * 2}%` : `${88 - i * 2}%`,
-            fontSize: `${18 + i * 4}px`,
-            opacity: 0.04 + i * 0.01,
+            top: i < 5 ? `${15 + i * 16}%` : "auto",
+            bottom: i >= 5 ? `${(i - 5) * 12 + 6}%` : "auto",
+            left: i % 2 === 0 ? `${6 + (i % 5) * 2}%` : undefined,
+            right: i % 2 === 1 ? `${6 + (i % 5) * 2}%` : undefined,
+            fontSize: `${18 + (i % 5) * 4}px`,
+            opacity: 0.04 + (i % 5) * 0.01,
             color: i % 2 === 0 ? "color-mix(in srgb, var(--ai-pulse) 60%, transparent)" : "color-mix(in srgb, var(--accent) 60%, transparent)",
+            animationDelay: `${i * 3}s`,
           }}
           animate={{
             y: [0, i % 2 === 0 ? -10 : 10, 0],
             rotate: [0, i % 2 === 0 ? 5 : -5, 0],
           }}
-          transition={{ duration: 8 + i * 2, repeat: Infinity, ease: "easeInOut" }}
+          transition={{ duration: 8 + i * 2, repeat: Infinity, ease: "easeInOut", delay: i * 1.5 }}
         >
           {rune}
         </motion.span>

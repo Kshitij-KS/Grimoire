@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Loader2, Users, Plus } from "lucide-react";
+import { Check, Copy, Pencil, Send, Loader2, Users, Plus } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { Soul, TavernMessage } from "@/lib/types";
 
@@ -24,6 +25,9 @@ export function TavernChat({ worldId, souls }: TavernChatProps) {
   const [sending, setSending] = useState(false);
   const [selectedSouls, setSelectedSouls] = useState<string[]>([]);
   const [directedTo, setDirectedTo] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState(false);
+  const [sessionName, setSessionName] = useState("");
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -52,6 +56,7 @@ export function TavernChat({ worldId, souls }: TavernChatProps) {
           name: data.session.name,
           soulIds: data.session.soul_ids,
         });
+        setSessionName(data.session.name ?? "The Tavern");
       }
     } catch (e) {
       console.error("Failed to create tavern session:", e);
@@ -103,6 +108,35 @@ export function TavernChat({ worldId, souls }: TavernChatProps) {
       setSending(false);
       setDirectedTo(null);
     }
+  };
+
+  const saveSessionName = async () => {
+    setEditingName(false);
+    if (!session || !sessionName.trim()) return;
+    try {
+      await fetch("/api/tavern", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: session.id, name: sessionName.trim() }),
+      });
+    } catch {
+      // non-critical, name update can fail silently
+    }
+  };
+
+  const exportScene = () => {
+    if (messages.length === 0) return;
+    const lines = messages.map((msg) => {
+      if (msg.role === "director") return `[Director]: ${msg.content}`;
+      const soul = souls.find((s) => s.id === msg.soul_id);
+      return `${soul?.name ?? "Soul"}: ${msg.content}`;
+    });
+    const text = `# ${sessionName || "The Tavern"}\n\n` + lines.join("\n\n");
+    navigator.clipboard.writeText(text).then(() => {
+      toast.success("Scene copied to clipboard.");
+    }).catch(() => {
+      toast.error("Could not copy scene.");
+    });
   };
 
   const activeSouls = souls.filter((s) =>
@@ -196,10 +230,48 @@ export function TavernChat({ worldId, souls }: TavernChatProps) {
   return (
     <div className="flex h-[calc(100vh-120px)] flex-col">
       {/* Header */}
-      <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-        <Users className="h-4 w-4 text-[var(--violet-soft)]" />
-        <h3 className="font-heading text-lg text-foreground">The Tavern</h3>
-        <div className="ml-auto flex gap-1">
+      <div className="flex items-center gap-2 border-b border-[var(--border)] px-4 py-3">
+        <Users className="h-4 w-4 text-[var(--ai-pulse-soft)]" />
+
+        {/* Inline editable session name */}
+        {editingName ? (
+          <div className="flex items-center gap-1.5">
+            <input
+              ref={nameInputRef}
+              value={sessionName}
+              onChange={(e) => setSessionName(e.target.value)}
+              onBlur={saveSessionName}
+              onKeyDown={(e) => e.key === "Enter" && saveSessionName()}
+              className="font-heading text-lg text-[var(--text-main)] bg-transparent outline-none border-b border-[var(--border-focus)]"
+              autoFocus
+            />
+            <button onClick={saveSessionName} className="text-[var(--accent)]">
+              <Check className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : (
+          <div className="group flex items-center gap-1.5">
+            <h3 className="font-heading text-lg text-[var(--text-main)]">{sessionName || "The Tavern"}</h3>
+            <button
+              onClick={() => { setEditingName(true); setTimeout(() => nameInputRef.current?.focus(), 30); }}
+              className="opacity-0 transition-opacity group-hover:opacity-60 hover:!opacity-100"
+            >
+              <Pencil className="h-3 w-3 text-[var(--text-muted)]" />
+            </button>
+          </div>
+        )}
+
+        <div className="ml-auto flex items-center gap-2">
+          {/* Scene export */}
+          <button
+            onClick={exportScene}
+            disabled={messages.length === 0}
+            title="Export scene to clipboard"
+            className="flex items-center gap-1.5 rounded-[10px] border border-[var(--border)] px-2.5 py-1.5 text-[11px] text-[var(--text-muted)] transition-colors hover:border-[var(--border-focus)] hover:text-[var(--text-main)] disabled:opacity-40"
+          >
+            <Copy className="h-3 w-3" />
+            Export
+          </button>
           {activeSouls.map((soul) => (
             <div
               key={soul.id}

@@ -19,6 +19,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { SoulChatPreview } from "@/components/landing/soul-chat-preview";
+import { SocialProofStrip } from "@/components/landing/social-proof-strip";
+import { useScrollY } from "@/lib/hooks/use-scroll-y";
 
 // ─── Static data ─────────────────────────────────────────────────────────────
 
@@ -163,6 +165,8 @@ function FeatureCard({
 export function LandingPage() {
   const heroRef = useRef<HTMLDivElement>(null);
   const heroInView = useInView(heroRef, { once: true });
+  const scrollY = useScrollY();
+  const headerScrolled = scrollY > 60;
 
   return (
     <main className="relative overflow-hidden">
@@ -171,18 +175,27 @@ export function LandingPage() {
 
       {/* ── HERO ──────────────────────────────────────────────────────── */}
       <section className="relative border-b border-[var(--border)]">
-        {/* Radial ambient behind hero — re-colored to ai-pulse */}
+        {/* Three-layer atmospheric depth fog */}
         <div
           className="pointer-events-none absolute inset-0"
           style={{
-            background:
-              "radial-gradient(ellipse 70% 50% at 30% 40%, color-mix(in srgb, var(--ai-pulse) 8%, transparent), transparent 60%), radial-gradient(ellipse 50% 40% at 75% 30%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 55%)",
+            backgroundImage: [
+              "radial-gradient(ellipse 70% 50% at 30% 40%, color-mix(in srgb, var(--ai-pulse) 8%, transparent), transparent 60%)",
+              "radial-gradient(ellipse 50% 40% at 75% 30%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 55%)",
+              "radial-gradient(ellipse 90% 40% at 50% 100%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 55%)",
+            ].join(", "),
           }}
         />
 
         <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-6 pb-16 pt-6 lg:px-10">
-          {/* Nav */}
-          <header className="flex items-center justify-between">
+          {/* Nav — sticky with blur on scroll */}
+          <header
+            className="sticky top-0 z-50 -mx-6 flex items-center justify-between border-b border-[var(--border)] px-6 py-2.5 transition-[background,backdrop-filter] duration-300 lg:-mx-10 lg:px-10"
+            style={headerScrolled ? {
+              background: "color-mix(in srgb, var(--bg) 88%, transparent)",
+              backdropFilter: "blur(14px)",
+            } : {}}
+          >
             <motion.div
               initial={{ opacity: 0, x: -12 }}
               animate={{ opacity: 1, x: 0 }}
@@ -414,6 +427,9 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* ── SOCIAL PROOF STRIP ───────────────────────────────────────── */}
+      <SocialProofStrip />
+
       {/* ── HOW IT WORKS ──────────────────────────────────────────────── */}
       <section className="border-t border-[var(--border)]">
         <div className="mx-auto max-w-7xl px-6 py-24 lg:px-10">
@@ -429,7 +445,12 @@ export function LandingPage() {
               Three steps. One living world.
             </h2>
           </motion.div>
-          <div className="grid gap-0 lg:grid-cols-3">
+          {/* Connector line — desktop only, drawn behind the step columns */}
+          <div className="relative grid gap-0 lg:grid-cols-3">
+            <div
+              className="pointer-events-none absolute left-[16.67%] right-[16.67%] top-8 hidden h-px lg:block"
+              style={{ background: "linear-gradient(90deg, transparent, color-mix(in srgb, var(--border) 80%, transparent) 20%, color-mix(in srgb, var(--border) 80%, transparent) 80%, transparent)" }}
+            />
             {howItWorks.map((step, i) => (
               <motion.div
                 key={step.step}

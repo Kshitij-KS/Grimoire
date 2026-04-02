@@ -54,17 +54,22 @@ The aesthetic is **dark parchment, warm candlelight, arcane purple** — NOT col
 
 ### 2. The Archive (World Bible) — Entity Memory
 
-**What it does:** Automatically extracts and organizes entities from lore into a browsable archive with an interactive constellation map.
+**What it does:** Automatically extracts and organizes entities from lore into a browsable archive with four view modes: Constellation, Codex, Web, and Scroll.
 
 **Implementation:**
 - Entities in `entities` table: type, name, summary, mention_count, entity_tags
-- Tab-based grid (character, location, faction, artifact, event, rule)
-- `ConstellationCanvas` — interactive canvas (zoom/pan, type-specific shapes, faction membership hierarchy)
-- `ConstellationDossier` — side panel: summary, lore fragments, associated characters, "Forge Soul from X" CTA
+- `ArchiveWorkspace` — top-level orchestrator with 4 view modes + Oracle reveal + PNG export
+- `ConstellationCanvas` — interactive canvas (zoom/pan, type-specific shapes, search overlay, type filter chips, theme-aware colors via `resolveThemeColors()`)
+- `ConstellationDossier` — side panel: navigation history breadcrumbs, inline name edit, expandable lore fragments, "Forge Soul" CTA, soul-bound check
+- `ArchiveCodex` — enhanced entity grid with type sidebar, sort controls, ink-drop mention counts, relationship badges
+- `ArchiveWeb` — SVG force-directed relationship visualization (custom `useForceLayout` hook, no external library)
+- `ArchiveScroll` — compendium reading mode (scrollable articles with expandable lore fragments)
 - Entity relationships stored in `entity_relationships` table via POST `/api/relationships`
-- **Incremental Refresh**: GET `/api/entities?worldId=<id>&since=<ISO>` returns only entities updated after `since`. A "Refresh Archive" button in the Bible overlay calls this endpoint and merges new/updated entities into the live constellation without a full page reload. Hidden on demo worlds.
+- **Incremental Refresh**: GET `/api/entities?worldId=<id>&since=<ISO>` — hidden on demo worlds
 
 **Entity types:** character, location, faction, artifact, event, rule
+
+**Archive view modes:** `"constellation" | "codex" | "web" | "scroll"` — state owned by `ArchiveWorkspace`, transitions use `AnimatePresence mode="wait"` + opacity/blur over 200ms.
 
 ---
 
@@ -220,6 +225,24 @@ All hues are warm (25-35° range), NOT cold blue (240°):
 | accent | 41 59% 58% | #d4a853 | Gold |
 | danger | 0 48% 52% | #c04a4a | Error/danger |
 
+### Light Theme — "Illuminated Manuscript"
+
+The light theme uses warm parchment/ink tokens (NOT cold alabaster):
+
+| Token | Value | Description |
+|-------|-------|-------------|
+| `--bg` | `#F5F0E8` | Aged vellum parchment |
+| `--surface` | `#FAF7F2` | Lighter vellum (card surfaces) |
+| `--surface-raised` | `#F0EBE0` | Manuscript board (elevated panels) |
+| `--text-main` | `#1C1410` | Iron gall ink (warm near-black) |
+| `--text-muted` | `#6B5E4E` | Faded sepia (warm, never cold gray) |
+| `--border` | `#DDD4C4` | Aged paper crease |
+| `--accent` | `#8B4513` | Saddle brown (ink and leather) |
+| `--ai-pulse` | `#3D5A7A` | Woad blue / monastic lapis lazuli |
+| `--danger` | `#8B2020` | Crimson wax seal |
+
+Also adds warm body gradient (`:root` block), warm `.bg-grid` ruling lines, and `::selection` at 28% accent tint.
+
 ### Typography
 
 - **Headings:** `font-heading` → Crimson Pro (serif)
@@ -265,7 +288,7 @@ Defined in `lib/constants.ts` as `WORLD_SECTIONS`:
 | Key | Label | Component |
 |-----|-------|-----------|
 | `lore` | Lore Scribe | `LoomEditor` |
-| `bible` | The Archive | `ConstellationCanvas` + `ConstellationDossier` |
+| `bible` | The Archive | `ArchiveWorkspace` (orchestrates Constellation/Codex/Web/Scroll views) |
 | `souls` | Bound Souls | `SoulCard` grid + `EchoesInterface` |
 | `consistency` | Narrator's Eye | `FractureLens` |
 | `tapestry` | The Tapestry | `TapestryTimeline` |
@@ -337,6 +360,13 @@ User sends message
 | `app/api/entities/route.ts` | GET `/api/entities?worldId=&since=<ISO>` — incremental entity fetch for archive refresh |
 | `components/worlds/world-workspace.tsx` | Main workspace; renders all 7 sections + CommandPalette + archive refresh logic |
 | `components/layout/world-sidebar.tsx` | 7-section nav + AmbientToggle; mobile shows first 5 |
+| `components/bible/archive-workspace.tsx` | Archive view-mode orchestrator; owns `viewMode` state, Oracle reveal, PNG export, refresh button |
+| `components/bible/archive-codex.tsx` | Codex view — enhanced entity grid with type sidebar, sort, search, ink-drop mention counts |
+| `components/bible/archive-web.tsx` | Web view — SVG force-directed relationship graph (custom `useForceLayout`, no library) |
+| `components/bible/archive-scroll.tsx` | Scroll view — compendium reading mode, expandable lore fragments, type filter bar |
+| `components/landing/social-proof-strip.tsx` | Landing page social proof strip (3 animated count-up stat badges) |
+| `lib/hooks/use-count-up.ts` | Count-up animation hook (cubic-out easing, requestAnimationFrame) |
+| `lib/hooks/use-scroll-y.ts` | Window scrollY hook (passive listener, used for landing page sticky header) |
 | `components/shared/command-palette.tsx` | Cmd+K palette (cmdk) |
 | `components/shared/ambient-audio.tsx` | Web Audio API ambient system + AmbientToggle |
 | `components/shared/loading-shimmer.tsx` | `LoadingShimmer` (legacy) + `SectionLoadingScreen` (themed arcane loading animation with orbiting runes) |
@@ -438,3 +468,11 @@ supabase db reset              # Reset local DB and run all migrations
 22. **`SectionLoadingScreen`** exported from `components/shared/loading-shimmer.tsx` — accepts `label` and `subtitle` props. Renders an animated arcane loading animation (orbiting runes, pulsing orb, Framer Motion) used during section tab transitions in `WorldWorkspace`. The legacy `LoadingShimmer` component is also still exported from the same file.
 
 23. **Global Theme Provider**: Inside `app/layout.tsx`, `<ThemeProvider>` operates without the `disableTransitionOnChange` prop. This deliberate omission allows `globals.css` to orchestrate a beautifully eased `0.45` second color transition (`var(--ease-drawer)`) between user theme preferences rather than jarring frame snaps.
+
+24. **`ConstellationCanvas` cannot read CSS vars directly** — the canvas 2D context has no access to CSS custom properties. Use `resolveThemeColors()` which calls `getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()` each animation frame (browser-cached, zero perf cost).
+
+25. **`ArchiveWorkspace` owns `viewMode` state** for the Bible section. `ConstellationDossier` reads from `useWorkspaceStore` (not local state), so it works regardless of which view mode is active. The `ConstellationDossier` is rendered inside the constellation view panel, positioned `absolute` (not `fixed`).
+
+26. **`useForceLayout` in `ArchiveWeb`** runs an 80-tick pure-JS simulation on mount (no library). Nodes start in a circle, apply repulsion (REPEL=2800, 1/distance²), edge attraction (ATTRACT=0.04), center gravity (CENTER=0.02), and damping (0.75). The simulation is synchronous on mount — do not run it in a `requestAnimationFrame` loop (too slow for initial render).
+
+27. **`LoomEditor` Oracle Whisper CTA** — the floating Sparkles button is only visible when the editor has focus AND `wordCount > 20` AND not in focus mode. It calls `POST /api/lore/autocomplete` with the current content and inserts the returned suggestion at the cursor.

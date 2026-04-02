@@ -68,8 +68,8 @@ export function ForgeRelationshipModal({
 
       onSuccess(newRel);
       handleClose();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to forge link.");
     } finally {
       setLoading(false);
     }
@@ -124,7 +124,7 @@ export function ForgeRelationshipModal({
                 <div className="space-y-4">
                   <div>
                     <label className="mb-2 block text-xs uppercase tracking-widest text-secondary">
-                      Relationship Label (e.g. "Sworn Enemy", "Secretly loves")
+                      Relationship Label (e.g. &ldquo;Sworn Enemy&rdquo;, &ldquo;Secretly loves&rdquo;)
                     </label>
                     <input
                       autoFocus
