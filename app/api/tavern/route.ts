@@ -5,11 +5,12 @@ import { embedText, generateTavernResponse } from "@/lib/embeddings";
 import { hasAiEnv } from "@/lib/env";
 import { checkAndIncrement } from "@/lib/rate-limit";
 import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
+import { userOwnsWorld } from "@/lib/world-access";
 
 const sendSchema = z.object({
   worldId: z.string().uuid(),
   sessionId: z.string().uuid(),
-  message: z.string().min(1),
+  message: z.string().min(1).max(2500),
   directedToSoulId: z.string().uuid().nullable().optional(),
 });
 
@@ -24,12 +25,31 @@ export async function POST(request: Request) {
   if ("error" in auth) return auth.error;
 
   const { user, supabase } = auth;
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError("INVALID_JSON", 400);
+  }
 
   // Route: create session
-  if (body.action === "create") {
+  if (typeof body === "object" && body !== null && "action" in body && (body as { action: unknown }).action === "create") {
     const parsed = createSchema.safeParse(body);
     if (!parsed.success) return zodErrorResponse(parsed.error);
+
+    const ownsWorld = await userOwnsWorld(supabase, user.id, parsed.data.worldId);
+    if (!ownsWorld) return jsonError("FORBIDDEN", 403);
+
+    const { data: matchedSouls } = await supabase
+      .from("souls")
+      .select("id")
+      .eq("world_id", parsed.data.worldId)
+      .eq("user_id", user.id)
+      .in("id", parsed.data.soulIds);
+
+    if ((matchedSouls ?? []).length !== parsed.data.soulIds.length) {
+      return jsonError("INVALID_SOUL_SELECTION", 400);
+    }
 
     const { data } = await supabase
       .from("tavern_sessions")
@@ -64,11 +84,16 @@ export async function POST(request: Request) {
 
   const { sessionId, worldId, message, directedToSoulId } = parsed.data;
 
+  const ownsWorld = await userOwnsWorld(supabase, user.id, worldId);
+  if (!ownsWorld) return jsonError("FORBIDDEN", 403);
+
   // Fetch session and souls
   const { data: session } = await supabase
     .from("tavern_sessions")
     .select("*")
     .eq("id", sessionId)
+    .eq("user_id", user.id)
+    .eq("world_id", worldId)
     .single();
 
   if (!session) return Response.json({ error: "SESSION_NOT_FOUND" }, { status: 404 });
@@ -79,6 +104,10 @@ export async function POST(request: Request) {
     .in("id", session.soul_ids ?? []);
 
   if (!souls || souls.length === 0) return Response.json({ error: "NO_SOULS" }, { status: 400 });
+
+  if (directedToSoulId && !souls.some((s) => s.id === directedToSoulId)) {
+    return jsonError("INVALID_DIRECTED_SOUL", 400);
+  }
 
   // Save user message
   await supabase.from("tavern_messages").insert({
@@ -169,6 +198,15 @@ export async function GET(request: Request) {
   const sessionId = searchParams.get("sessionId");
 
   if (sessionId) {
+    const { data: session } = await supabase
+      .from("tavern_sessions")
+      .select("id")
+      .eq("id", sessionId)
+      .eq("user_id", auth.user.id)
+      .maybeSingle();
+
+    if (!session) return jsonError("FORBIDDEN", 403);
+
     const { data: messages } = await supabase
       .from("tavern_messages")
       .select("*")
@@ -179,9 +217,13 @@ export async function GET(request: Request) {
   }
 
   if (worldId) {
+    const ownsWorld = await userOwnsWorld(supabase, auth.user.id, worldId);
+    if (!ownsWorld) return jsonError("FORBIDDEN", 403);
+
     const { data: sessions } = await supabase
       .from("tavern_sessions")
       .select("*")
+      .eq("user_id", auth.user.id)
       .eq("world_id", worldId)
       .order("last_active", { ascending: false });
 

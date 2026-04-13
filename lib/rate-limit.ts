@@ -6,29 +6,21 @@ export async function checkAndIncrement(
   action: string,
   limit: number,
 ): Promise<{ allowed: boolean; count: number; limit: number }> {
-  const today = new Date().toISOString().split("T")[0];
+  const { data, error } = await supabase.rpc("increment_rate_limit", {
+    p_user_id: userId,
+    p_action: action,
+    p_limit: limit,
+  });
 
-  const { data } = await supabase
-    .from("rate_limits")
-    .select("count")
-    .eq("user_id", userId)
-    .eq("action", action)
-    .eq("date", today)
-    .maybeSingle();
-
-  if (data && data.count >= limit) {
-    return { allowed: false, count: data.count, limit };
+  if (error || !Array.isArray(data) || data.length === 0) {
+    // Fail closed so abuse cannot bypass limits when the limiter is unavailable.
+    return { allowed: false, count: limit, limit };
   }
 
-  await supabase.from("rate_limits").upsert(
-    {
-      user_id: userId,
-      action,
-      date: today,
-      count: (data?.count || 0) + 1,
-    },
-    { onConflict: "user_id,action,date" },
-  );
-
-  return { allowed: true, count: (data?.count || 0) + 1, limit };
+  const first = data[0] as { allowed?: boolean; count?: number; limit?: number };
+  return {
+    allowed: Boolean(first.allowed),
+    count: typeof first.count === "number" ? first.count : limit,
+    limit: typeof first.limit === "number" ? first.limit : limit,
+  };
 }

@@ -1,16 +1,19 @@
 export const dynamic = "force-dynamic";
 import { z } from "zod";
+import { DAILY_LIMITS } from "@/lib/constants";
 import { hasAiEnv, hasSupabaseEnv } from "@/lib/env";
 import { analyzeImpact, detectBlankSpots, orderEventsChronologically, embedText } from "@/lib/embeddings";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { jsonError, zodErrorResponse } from "@/lib/api";
+import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
+import { checkAndIncrement } from "@/lib/rate-limit";
+import { userOwnsWorld } from "@/lib/world-access";
 
 // Accept any non-empty string worldId — "demo-world" is valid for demo mode
 const worldIdSchema = z.string().min(1);
 
 const impactSchema = z.object({
   worldId: worldIdSchema,
-  scenario: z.string().min(5),
+  scenario: z.string().min(5).max(2500),
   action: z.literal("impact"),
 });
 
@@ -34,14 +37,39 @@ async function getSupabase() {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json();
-  const action = body.action as string;
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError("INVALID_JSON", 400);
+  }
+
+  const auth = await requireUser();
+  if ("error" in auth) return auth.error;
+  const { user, supabase: authSupabase } = auth;
+  const rate = await checkAndIncrement(
+    authSupabase,
+    user.id,
+    "narrator_action",
+    DAILY_LIMITS.narrator_action,
+  );
+  if (!rate.allowed) return jsonRateLimited("narrator_action", rate.limit);
+  const action = typeof body === "object" && body !== null && "action" in body
+    ? String((body as { action: unknown }).action)
+    : "";
   const supabase = await getSupabase();
 
   if (action === "impact") {
     const parsed = impactSchema.safeParse(body);
     if (!parsed.success) return zodErrorResponse(parsed.error);
     const { worldId, scenario } = parsed.data;
+
+    const isDemoWorld = worldId === "demo-world";
+    if (!isDemoWorld) {
+      if (!supabase) return jsonError("SUPABASE_NOT_CONFIGURED", 500);
+      const ownsWorld = await userOwnsWorld(supabase, user.id, worldId);
+      if (!ownsWorld) return jsonError("FORBIDDEN", 403);
+    }
 
     // For demo world or no supabase, return mocked plausible result
     if (!supabase || worldId === "demo-world") {
@@ -82,6 +110,13 @@ export async function POST(request: Request) {
     if (!parsed.success) return zodErrorResponse(parsed.error);
     const { worldId } = parsed.data;
 
+    const isDemoWorld = worldId === "demo-world";
+    if (!isDemoWorld) {
+      if (!supabase) return jsonError("SUPABASE_NOT_CONFIGURED", 500);
+      const ownsWorld = await userOwnsWorld(supabase, user.id, worldId);
+      if (!ownsWorld) return jsonError("FORBIDDEN", 403);
+    }
+
     if (!supabase || worldId === "demo-world") {
       return Response.json({
         holes: [
@@ -119,6 +154,13 @@ export async function POST(request: Request) {
     const parsed = timelineSchema.safeParse(body);
     if (!parsed.success) return zodErrorResponse(parsed.error);
     const { worldId } = parsed.data;
+
+    const isDemoWorld = worldId === "demo-world";
+    if (!isDemoWorld) {
+      if (!supabase) return jsonError("SUPABASE_NOT_CONFIGURED", 500);
+      const ownsWorld = await userOwnsWorld(supabase, user.id, worldId);
+      if (!ownsWorld) return jsonError("FORBIDDEN", 403);
+    }
 
     if (!supabase || worldId === "demo-world") {
       return Response.json({

@@ -4,6 +4,7 @@ export const DAILY_LIMITS = {
   consistency_check: 5,
   soul_generate: 3,
   tavern_message: 30,
+  narrator_action: 20,
 } as const;
 
 export const FREE_TIER_LIMITS = {

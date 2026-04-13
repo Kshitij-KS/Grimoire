@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { z } from "zod";
-import { requireUser, zodErrorResponse } from "@/lib/api";
+import { jsonError, requireUser, zodErrorResponse } from "@/lib/api";
+import { userOwnsWorld } from "@/lib/world-access";
 
 const createSchema = z.object({
   worldId: z.string().uuid(),
@@ -29,6 +30,10 @@ export async function GET(request: Request) {
   const worldId = searchParams.get("worldId");
 
   if (!worldId) return Response.json({ error: "Missing worldId" }, { status: 400 });
+  if (!z.string().uuid().safeParse(worldId).success) return jsonError("INVALID_WORLD_ID", 400);
+
+  const ownsWorld = await userOwnsWorld(supabase, auth.user.id, worldId);
+  if (!ownsWorld) return jsonError("FORBIDDEN", 403);
 
   const { data: folders } = await supabase
     .from("lore_folders")
@@ -44,12 +49,38 @@ export async function POST(request: Request) {
   if ("error" in auth) return auth.error;
 
   const { user, supabase } = auth;
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError("INVALID_JSON", 400);
+  }
 
   // Move lore entry to folder
-  if (body.action === "move-entry") {
+  if (typeof body === "object" && body !== null && "action" in body && (body as { action: unknown }).action === "move-entry") {
     const parsed = moveEntrySchema.safeParse(body);
     if (!parsed.success) return zodErrorResponse(parsed.error);
+
+    const { data: entry } = await supabase
+      .from("lore_entries")
+      .select("id, world_id")
+      .eq("id", parsed.data.entryId)
+      .maybeSingle();
+    if (!entry) return jsonError("LORE_ENTRY_NOT_FOUND", 404);
+
+    const ownsEntryWorld = await userOwnsWorld(supabase, user.id, entry.world_id);
+    if (!ownsEntryWorld) return jsonError("FORBIDDEN", 403);
+
+    if (parsed.data.folderId) {
+      const { data: folder } = await supabase
+        .from("lore_folders")
+        .select("id, world_id")
+        .eq("id", parsed.data.folderId)
+        .maybeSingle();
+
+      if (!folder) return jsonError("FOLDER_NOT_FOUND", 404);
+      if (folder.world_id !== entry.world_id) return jsonError("FOLDER_WORLD_MISMATCH", 400);
+    }
 
     const { error } = await supabase
       .from("lore_entries")
@@ -61,9 +92,30 @@ export async function POST(request: Request) {
   }
 
   // Update folder
-  if (body.action === "update") {
+  if (typeof body === "object" && body !== null && "action" in body && (body as { action: unknown }).action === "update") {
     const parsed = updateSchema.safeParse(body);
     if (!parsed.success) return zodErrorResponse(parsed.error);
+
+    const { data: folder } = await supabase
+      .from("lore_folders")
+      .select("id, world_id")
+      .eq("id", parsed.data.id)
+      .maybeSingle();
+    if (!folder) return jsonError("FOLDER_NOT_FOUND", 404);
+
+    const ownsWorld = await userOwnsWorld(supabase, user.id, folder.world_id);
+    if (!ownsWorld) return jsonError("FORBIDDEN", 403);
+
+    if (parsed.data.parentId) {
+      const { data: parentFolder } = await supabase
+        .from("lore_folders")
+        .select("id, world_id")
+        .eq("id", parsed.data.parentId)
+        .maybeSingle();
+
+      if (!parentFolder) return jsonError("PARENT_FOLDER_NOT_FOUND", 404);
+      if (parentFolder.world_id !== folder.world_id) return jsonError("FOLDER_WORLD_MISMATCH", 400);
+    }
 
     const update: Record<string, unknown> = {};
     if (parsed.data.name !== undefined) update.name = parsed.data.name;
@@ -85,6 +137,20 @@ export async function POST(request: Request) {
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) return zodErrorResponse(parsed.error);
 
+  const ownsWorld = await userOwnsWorld(supabase, user.id, parsed.data.worldId);
+  if (!ownsWorld) return jsonError("FORBIDDEN", 403);
+
+  if (parsed.data.parentId) {
+    const { data: parentFolder } = await supabase
+      .from("lore_folders")
+      .select("id, world_id")
+      .eq("id", parsed.data.parentId)
+      .maybeSingle();
+
+    if (!parentFolder) return jsonError("PARENT_FOLDER_NOT_FOUND", 404);
+    if (parentFolder.world_id !== parsed.data.worldId) return jsonError("FOLDER_WORLD_MISMATCH", 400);
+  }
+
   const { data, error } = await supabase
     .from("lore_folders")
     .insert({
@@ -104,11 +170,22 @@ export async function DELETE(request: Request) {
   const auth = await requireUser();
   if ("error" in auth) return auth.error;
 
-  const { supabase } = auth;
+  const { user, supabase } = auth;
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
 
   if (!id) return Response.json({ error: "Missing id" }, { status: 400 });
+
+  const { data: folder } = await supabase
+    .from("lore_folders")
+    .select("id, world_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!folder) return jsonError("FOLDER_NOT_FOUND", 404);
+
+  const ownsWorld = await userOwnsWorld(supabase, user.id, folder.world_id);
+  if (!ownsWorld) return jsonError("FORBIDDEN", 403);
 
   // Move entries in this folder to root before deleting
   await supabase

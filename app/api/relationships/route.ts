@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { z } from "zod";
-import { requireUser, zodErrorResponse } from "@/lib/api";
+import { jsonError, requireUser, zodErrorResponse } from "@/lib/api";
+import { userOwnsWorld } from "@/lib/world-access";
 
 const createSchema = z.object({
   worldId: z.string().uuid(),
@@ -23,6 +24,12 @@ export async function GET(request: Request) {
   const worldId = searchParams.get("worldId");
 
   if (!worldId) return Response.json({ error: "Missing worldId" }, { status: 400 });
+  if (!z.string().uuid().safeParse(worldId).success) {
+    return jsonError("INVALID_WORLD_ID", 400);
+  }
+
+  const ownsWorld = await userOwnsWorld(supabase, auth.user.id, worldId);
+  if (!ownsWorld) return jsonError("FORBIDDEN", 403);
 
   const { data: relationships } = await supabase
     .from("entity_relationships")
@@ -41,11 +48,27 @@ export async function POST(request: Request) {
   if ("error" in auth) return auth.error;
 
   const { user, supabase } = auth;
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError("INVALID_JSON", 400);
+  }
 
-  if (body.action === "delete") {
+  if (typeof body === "object" && body !== null && "action" in body && (body as { action: unknown }).action === "delete") {
     const parsed = deleteSchema.safeParse(body);
     if (!parsed.success) return zodErrorResponse(parsed.error);
+
+    const { data: existing } = await supabase
+      .from("entity_relationships")
+      .select("id, world_id")
+      .eq("id", parsed.data.id)
+      .maybeSingle();
+
+    if (!existing) return jsonError("RELATIONSHIP_NOT_FOUND", 404);
+
+    const ownsWorld = await userOwnsWorld(supabase, user.id, existing.world_id);
+    if (!ownsWorld) return jsonError("FORBIDDEN", 403);
 
     const { error } = await supabase
       .from("entity_relationships")
@@ -62,6 +85,23 @@ export async function POST(request: Request) {
   // Prevent self-referencing
   if (parsed.data.sourceEntityId === parsed.data.targetEntityId) {
     return Response.json({ error: "Cannot create self-referencing relationship" }, { status: 400 });
+  }
+
+  const ownsWorld = await userOwnsWorld(supabase, user.id, parsed.data.worldId);
+  if (!ownsWorld) return jsonError("FORBIDDEN", 403);
+
+  const { data: entities } = await supabase
+    .from("entities")
+    .select("id, world_id")
+    .in("id", [parsed.data.sourceEntityId, parsed.data.targetEntityId]);
+
+  if (!entities || entities.length !== 2) {
+    return jsonError("ENTITY_NOT_FOUND", 404);
+  }
+
+  const entitiesAreInWorld = entities.every((entity) => entity.world_id === parsed.data.worldId);
+  if (!entitiesAreInWorld) {
+    return jsonError("ENTITY_WORLD_MISMATCH", 400);
   }
 
   const { data, error } = await supabase
