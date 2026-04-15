@@ -1,5 +1,14 @@
 export const dynamic = "force-dynamic";
-import { requireUser, jsonError } from "@/lib/api";
+import { z } from "zod";
+import { requireUser, jsonError, zodErrorResponse } from "@/lib/api";
+import { entityTypeValues } from "@/lib/entity-validation";
+
+const createEntitySchema = z.object({
+  worldId: z.string().uuid(),
+  name: z.string().trim().min(1).max(120),
+  type: z.enum(entityTypeValues),
+  summary: z.string().trim().max(3000).optional(),
+});
 
 /**
  * GET /api/entities?worldId=<id>&since=<ISO timestamp>
@@ -44,4 +53,56 @@ export async function GET(request: Request) {
   if (error) return jsonError(error.message, 500);
 
   return Response.json({ entities: entities ?? [], since: since ?? null });
+}
+
+/**
+ * POST /api/entities
+ * Manually create an entity: { worldId, name, type, summary? }
+ */
+export async function POST(request: Request) {
+  const auth = await requireUser();
+  if ("error" in auth) return auth.error;
+  const { user, supabase } = auth;
+
+  let body: unknown;
+  try { body = await request.json(); } catch { return jsonError("Invalid JSON", 400); }
+
+  const parsed = createEntitySchema.safeParse(body);
+  if (!parsed.success) return zodErrorResponse(parsed.error);
+  const { worldId, name, type, summary } = parsed.data;
+
+  const { data: world } = await supabase
+    .from("worlds")
+    .select("id, user_id")
+    .eq("id", worldId)
+    .maybeSingle();
+
+  if (!world) return jsonError("World not found", 404);
+  if (world.user_id !== user.id) return jsonError("Forbidden", 403);
+
+  // Normalize name for deduplication
+  const normalizedName = name.trim().toLowerCase().replace(/\s+/g, " ");
+
+  const { data: entity, error } = await supabase
+    .from("entities")
+    .insert({
+      world_id: worldId,
+      user_id: user.id,
+      name: name.trim(),
+      normalized_name: normalizedName,
+      type,
+      summary: summary ?? null,
+      mention_count: 0,
+      first_mentioned_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === "23505") return jsonError("An entity with this name and type already exists", 409);
+    return jsonError(error.message, 500);
+  }
+
+  return Response.json({ entity }, { status: 201 });
 }

@@ -122,6 +122,8 @@ export default async function DashboardPage() {
           <DashboardOverview
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             worlds={dashboardData.worlds as unknown as any[]}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            sharedWorlds={(dashboardData as any).sharedWorlds as unknown as any[]}
             globalStats={dashboardData.globalStats}
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             recentActivity={dashboardData.recentActivity as unknown as any[]}

@@ -1,6 +1,7 @@
 import type { WorldSection } from "@/lib/constants";
 
 export type PlanTier = "free" | "pro";
+export type MemberRole = "owner" | "editor" | "viewer";
 export type EntityType =
   | "character"
   | "location"
@@ -241,6 +242,7 @@ export interface WorldWorkspaceData {
   relationships: EntityRelationship[];
   activeSection: WorldSection;
   isReadonly?: boolean;
+  memberRole?: MemberRole;
 }
 
 export interface DashboardData {
@@ -253,6 +255,30 @@ export interface DashboardData {
     totalSouls: number;
     totalEntities: number;
   };
+}
+
+// ── Collaboration types ──────────────────────────────────────────────────
+
+export interface WorldMember {
+  id: string;
+  world_id: string;
+  user_id: string;
+  role: MemberRole;
+  invited_by: string | null;
+  joined_at: string;
+  profile?: Profile;
+}
+
+export interface WorldInvitation {
+  id: string;
+  world_id: string;
+  invited_email: string;
+  role: MemberRole;
+  token: string;
+  created_by: string;
+  expires_at: string;
+  accepted_at: string | null;
+  created_at: string;
 }
 
 export interface ActivityItem {

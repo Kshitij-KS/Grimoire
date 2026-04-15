@@ -62,7 +62,7 @@ export function LoreList({
                   <p className="mt-1 text-xs text-secondary">
                     {formatRelativeTime(entry.updated_at ?? entry.created_at)}
                     {" · "}
-                    <span className="text-[rgb(139,120,80)]">~{wordCount(entry.content)} words</span>
+                    <span className="text-[var(--text-muted)]">~{wordCount(entry.content)} words</span>
                   </p>
                 </div>
                 <div className="shrink-0 flex items-center gap-2">
@@ -81,7 +81,7 @@ export function LoreList({
                       size="sm"
                       variant="ghost"
                       onClick={(e) => { e.stopPropagation(); onDelete(entry.id, entry.title ?? undefined); }}
-                      className="px-2 text-secondary opacity-0 transition-all duration-200 group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400"
+                      className="px-2 text-secondary opacity-0 transition-all duration-200 group-hover:opacity-100 hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] hover:text-[var(--danger)]"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

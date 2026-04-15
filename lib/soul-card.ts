@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { repairAndParseJSON } from "@/lib/json-repair";
 
 export const soulCardPrompt = `You are a creative writing assistant. Given a character description and any relevant 
 world lore, generate a structured Soul Card that will be used to animate this character 
@@ -31,6 +32,6 @@ export const soulCardSchema = z.object({
 });
 
 export function parseSoulCard(raw: string) {
-  const jsonString = raw.trim().replace(/^```json\s*/i, "").replace(/```$/i, "");
-  return soulCardSchema.parse(JSON.parse(jsonString));
+  const parsed = repairAndParseJSON(raw);
+  return soulCardSchema.parse(parsed);
 }

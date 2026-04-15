@@ -233,7 +233,7 @@ export function EntityDetailPanel({
               variant="ghost"
               size="sm"
               onClick={() => setDeleteModalOpen(true)}
-              className="text-red-400 hover:text-red-300 hover:bg-red-950/30 gap-2"
+              className="text-[var(--danger)] hover:text-[color-mix(in_srgb,var(--danger)_80%,var(--text-main))] hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] gap-2"
             >
               <Trash2 className="h-4 w-4" />
               Delete Entity

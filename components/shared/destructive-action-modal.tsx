@@ -73,10 +73,10 @@ export function DestructiveActionModal({
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               className="glass-panel w-full max-w-md overflow-hidden rounded-[32px] border-[var(--danger)]/20 bg-[var(--surface)] shadow-2xl"
             >
-              <div className="flex items-start justify-between border-b border-red-500/10 p-6">
+              <div className="flex items-start justify-between border-b border-[color-mix(in_srgb,var(--danger)_12%,transparent)] p-6">
                 <div className="flex flex-col gap-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/10">
-                    <AlertCircle className="h-5 w-5 text-red-500" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]">
+                    <AlertCircle className="h-5 w-5 text-[var(--danger)]" />
                   </div>
                   <h2 className="mt-2 font-heading text-2xl text-[var(--danger)]">{title}</h2>
                 </div>
@@ -90,7 +90,7 @@ export function DestructiveActionModal({
 
               <div className="p-6">
                 <p className="text-sm leading-6 text-secondary">{description}</p>
-                <p className="mt-4 text-sm font-medium text-red-400">
+                <p className="mt-4 text-sm font-medium text-[var(--danger)]">
                   This action cannot be undone.
                 </p>
 
@@ -121,7 +121,7 @@ export function DestructiveActionModal({
                 </Button>
                 <Button
                   variant="default"
-                  className="bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:text-red-400"
+                  className="bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] text-[var(--danger)] hover:bg-[color-mix(in_srgb,var(--danger)_18%,transparent)] hover:text-[var(--danger)]"
                   onClick={handleAction}
                   disabled={disabled}
                 >

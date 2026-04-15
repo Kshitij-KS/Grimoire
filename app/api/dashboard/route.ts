@@ -102,34 +102,42 @@ export async function GET() {
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 10);
 
-  // Get per-world stats
+  // Fetch shared worlds (via world_members)
+  const { data: memberships } = await supabase
+    .from("world_members")
+    .select("world_id, role")
+    .eq("user_id", user.id);
+
+  const sharedWorldIds = (memberships ?? []).map((m) => m.world_id);
+  const memberRoleMap = new Map((memberships ?? []).map((m) => [m.world_id, m.role]));
+
+  const { data: sharedWorlds } = sharedWorldIds.length > 0
+    ? await supabase.from("worlds").select("*").in("id", sharedWorldIds).order("updated_at", { ascending: false })
+    : { data: [] };
+
+  // All world IDs combined for stats
+  const allWorldIds = [...worldIds, ...sharedWorldIds];
+
+  // Get per-world stats (owned + shared)
   const worldStats: Record<string, { lore: number; souls: number; entities: number }> = {};
-  for (const wId of worldIds) {
+  for (const wId of allWorldIds) {
     const [{ count: wLore }, { count: wSouls }, { count: wEntities }] =
       await Promise.all([
-        supabase
-          .from("lore_entries")
-          .select("*", { head: true, count: "exact" })
-          .eq("world_id", wId),
-        supabase
-          .from("souls")
-          .select("*", { head: true, count: "exact" })
-          .eq("world_id", wId),
-        supabase
-          .from("entities")
-          .select("*", { head: true, count: "exact" })
-          .eq("world_id", wId),
+        supabase.from("lore_entries").select("*", { head: true, count: "exact" }).eq("world_id", wId),
+        supabase.from("souls").select("*", { head: true, count: "exact" }).eq("world_id", wId),
+        supabase.from("entities").select("*", { head: true, count: "exact" }).eq("world_id", wId),
       ]);
-    worldStats[wId] = {
-      lore: wLore ?? 0,
-      souls: wSouls ?? 0,
-      entities: wEntities ?? 0,
-    };
+    worldStats[wId] = { lore: wLore ?? 0, souls: wSouls ?? 0, entities: wEntities ?? 0 };
   }
 
   return Response.json({
     worlds: (worlds ?? []).map((w) => ({
       ...w,
+      stats: worldStats[w.id] ?? { lore: 0, souls: 0, entities: 0 },
+    })),
+    sharedWorlds: (sharedWorlds ?? []).map((w) => ({
+      ...w,
+      memberRole: memberRoleMap.get(w.id) ?? "viewer",
       stats: worldStats[w.id] ?? { lore: 0, souls: 0, entities: 0 },
     })),
     profile: profile ?? null,

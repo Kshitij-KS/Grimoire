@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Network, LayoutGrid, GitBranch, ScrollText, Dices, Camera, RefreshCw } from "lucide-react";
+import { Network, LayoutGrid, GitBranch, ScrollText, Dices, Camera, RefreshCw, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWorkspaceStore } from "@/lib/store";
 import type { Entity, EntityRelationship, Soul } from "@/lib/types";
@@ -11,6 +11,7 @@ import { ConstellationDossier } from "./constellation-dossier";
 import { ArchiveCodex } from "./archive-codex";
 import { ArchiveWeb } from "./archive-web";
 import { ArchiveScroll } from "./archive-scroll";
+import { EntityCreateModal } from "./entity-create-modal";
 
 type ArchiveViewMode = "constellation" | "codex" | "web" | "scroll";
 
@@ -29,6 +30,8 @@ interface ArchiveWorkspaceProps {
   onDeleteRelationship?: (id: string) => void;
   onCreateSoul?: (entityName: string) => void;
   canCreateSoul?: boolean;
+  onEntityCreated?: (entity: Entity) => void;
+  onEntityMerged?: (sourceId: string, updatedTarget: Entity) => void;
 }
 
 const VIEW_OPTIONS: { mode: ArchiveViewMode; icon: React.ElementType; label: string }[] = [
@@ -53,8 +56,11 @@ export function ArchiveWorkspace({
   onDeleteRelationship,
   onCreateSoul,
   canCreateSoul = false,
+  onEntityCreated,
+  onEntityMerged,
 }: ArchiveWorkspaceProps) {
   const [viewMode, setViewMode] = useState<ArchiveViewMode>("constellation");
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   // Local selection for non-constellation views
   const [codexSelectedId, setCodexSelectedId] = useState<string | null>(null);
   const [spotlightEntityId, setSpotlightEntityId] = useState<string | null>(null);
@@ -127,6 +133,7 @@ export function ArchiveWorkspace({
 
           {!isDemo && onRefresh && (
             <button
+              type="button"
               onClick={onRefresh}
               disabled={isRefreshing}
               title={lastRefreshed ? `Last refreshed: ${new Date(lastRefreshed).toLocaleTimeString()}` : undefined}
@@ -136,6 +143,17 @@ export function ArchiveWorkspace({
               <span className="hidden sm:inline">
                 {isRefreshing ? "Refreshing…" : refreshCount > 0 ? `Refresh (+${refreshCount})` : "Refresh"}
               </span>
+            </button>
+          )}
+
+          {!isReadonly && !isDemo && onEntityCreated && (
+            <button
+              type="button"
+              onClick={() => setCreateModalOpen(true)}
+              className="flex items-center gap-1.5 rounded-[14px] border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--text-muted)] transition-colors hover:border-[color-mix(in_srgb,var(--accent)_40%,transparent)] hover:text-[var(--accent)] active:scale-[0.97] active:transition-none"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Add Entity</span>
             </button>
           )}
         </div>
@@ -166,6 +184,19 @@ export function ArchiveWorkspace({
         </div>
       </div>
 
+      {/* ── Entity create modal ───────────────────────────────────────── */}
+      {onEntityCreated && (
+        <EntityCreateModal
+          open={createModalOpen}
+          onOpenChange={setCreateModalOpen}
+          worldId={worldId}
+          onEntityCreated={(entity) => {
+            onEntityCreated(entity);
+            setCreateModalOpen(false);
+          }}
+        />
+      )}
+
       {/* ── View content ──────────────────────────────────────────────── */}
       <div className="relative flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
@@ -192,7 +223,9 @@ export function ArchiveWorkspace({
                     allEntities={entities}
                     relationships={relationships}
                     souls={souls}
+                    isDemo={isDemo}
                     onDeleteRelationship={onDeleteRelationship}
+                    onMergeComplete={onEntityMerged}
                   />
                 </AnimatePresence>
               </div>

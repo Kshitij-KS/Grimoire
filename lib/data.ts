@@ -16,6 +16,7 @@ import type {
   ConsistencyFlag,
   Entity,
   LoreEntry,
+  MemberRole,
   Soul,
   UsageMeter,
   World,
@@ -104,6 +105,33 @@ export async function getUsageMeters(userId: string): Promise<UsageMeter[]> {
   );
 }
 
+/**
+ * Returns the effective role of a user in a world.
+ * Returns "owner" if they own it, the member role if shared, or null if no access.
+ */
+export async function getWorldRole(worldId: string, userId: string): Promise<MemberRole | null> {
+  if (!hasSupabaseEnv()) return "owner";
+  const supabase = createServerSupabaseClient();
+
+  const { data: world } = await supabase
+    .from("worlds")
+    .select("user_id")
+    .eq("id", worldId)
+    .maybeSingle();
+
+  if (!world) return null;
+  if (world.user_id === userId) return "owner";
+
+  const { data: member } = await supabase
+    .from("world_members")
+    .select("role")
+    .eq("world_id", worldId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  return (member?.role as MemberRole) ?? null;
+}
+
 export async function getWorldWorkspaceData(
   worldId: string,
   section: WorldWorkspaceData["activeSection"],
@@ -131,6 +159,10 @@ export async function getWorldWorkspaceData(
 
   const { data: world } = await supabase.from("worlds").select("*").eq("id", worldId).maybeSingle();
   if (!world) return null;
+
+  // Resolve role — owner or shared member
+  const memberRole = await getWorldRole(worldId, user.id);
+  if (!memberRole) return null; // No access
 
   const [loreEntriesRes, entitiesRes, soulsRes, flagsRes, usage] = await Promise.all([
     supabase.from("lore_entries").select("*").eq("world_id", worldId).order("created_at", { ascending: false }),
@@ -169,6 +201,8 @@ export async function getWorldWorkspaceData(
     folders: [],
     relationships: [],
     activeSection: section,
+    memberRole,
+    isReadonly: memberRole === "viewer",
   };
 }
 

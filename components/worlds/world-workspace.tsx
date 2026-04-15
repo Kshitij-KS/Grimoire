@@ -24,6 +24,7 @@ import { Breadcrumbs, type BreadcrumbItem } from "@/components/shared/breadcrumb
 import { Skeleton } from "@/components/ui/skeleton";
 import { SectionLoadingScreen } from "@/components/shared/loading-shimmer";
 import { useWorkspaceStore } from "@/lib/store";
+import { FREE_TIER_LIMITS } from "@/lib/constants";
 import type { ConsistencyCheck, Entity, EntityRelationship, Soul, WorldWorkspaceData } from "@/lib/types";
 
 const SECTION_META: Record<string, { label: string; subtitle: string; description: string }> = {
@@ -171,7 +172,7 @@ export function WorldWorkspace({
           <div className="space-y-4 min-w-0">
             <Breadcrumbs items={breadcrumbs} className="opacity-80" />
             <div className="flex items-baseline gap-3">
-              <h1 className="font-heading text-4xl text-foreground tracking-tight truncate max-w-xl">
+              <h1 className="font-heading text-3xl sm:text-4xl text-foreground tracking-tight truncate max-w-full lg:max-w-xl">
                 {activeSoul ? activeSoul.name : (selectedEntity ? selectedEntity.name : data.world.name)}
               </h1>
               <span className="chapter-label text-xs opacity-40 uppercase tracking-[0.3em] font-bold">
@@ -184,7 +185,7 @@ export function WorldWorkspace({
                 <Skeleton className="h-4 w-[60%]" />
               </div>
             ) : (
-              <p className="max-w-3xl text-sm leading-7 text-secondary/80 animate-in fade-in slide-in-from-left-2 duration-500">
+              <p className="max-w-3xl text-sm leading-7 text-secondary/80 animate-in fade-in slide-in-from-left-2 duration-500 line-clamp-2 lg:line-clamp-none">
                 {activeSoul ? `Listening to the echoes of ${activeSoul.name}. Forge their destiny through your dialogue.` : meta.description}
               </p>
             )}
@@ -194,7 +195,7 @@ export function WorldWorkspace({
             {isDemo ? (
               <Button variant="ghost" asChild className="rounded-2xl border border-border/50 bg-background/20 hover:bg-background/40">
                 <Link href="/auth?mode=signup">
-                  <Sparkles className="h-4 w-4 text-[rgb(212,168,83)]" />
+                  <Sparkles className="h-4 w-4 text-[var(--accent-soft)]" />
                   Sign up free
                 </Link>
               </Button>
@@ -265,7 +266,15 @@ export function WorldWorkspace({
                     url.searchParams.set("section", "souls");
                     window.history.pushState({}, "", url.toString());
                   }}
-                  canCreateSoul={souls.length < 3}
+                  canCreateSoul={souls.length < FREE_TIER_LIMITS.soulsPerWorld}
+                  onEntityCreated={(entity) => setEntities((prev) => [entity, ...prev])}
+                  onEntityMerged={(sourceId, updatedTarget) =>
+                    setEntities((prev) =>
+                      prev
+                        .filter((e) => e.id !== sourceId)
+                        .map((e) => (e.id === updatedTarget.id ? updatedTarget : e)),
+                    )
+                  }
                 />
               </div>
             ) : null}
@@ -299,7 +308,7 @@ export function WorldWorkspace({
                       </p>
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                       {souls.map((soul) => (
                         <SoulCard
                           key={soul.id}
@@ -337,7 +346,7 @@ export function WorldWorkspace({
                               {rune}
                             </span>
                           ))}
-                          <Sparkles className="mb-4 h-8 w-8 text-[rgb(196,168,106)]" />
+                          <Sparkles className="mb-4 h-8 w-8 text-[var(--accent-soft)]" />
                           <p className="font-heading text-3xl text-foreground">Forge a new soul</p>
                           <p className="mt-2 max-w-xs text-sm text-secondary">
                             Create a bounded persona from what your world already knows.
@@ -406,7 +415,7 @@ export function WorldWorkspace({
 
       <CommandPalette
         worldId={data.world.id}
-        entities={data.entities}
+        entities={entities}
         souls={souls}
         loreEntries={data.loreEntries}
       />

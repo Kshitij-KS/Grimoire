@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, BrainCircuit, Send, RotateCcw } from "lucide-react";
+import { ArrowLeft, BookOpen, Bookmark, BrainCircuit, Send, RotateCcw, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { DestructiveActionModal } from "@/components/shared/destructive-action-modal";
 import { EchoesOrbDynamic } from "@/components/echoes/echoes-orb-dynamic";
@@ -35,6 +35,7 @@ export function EchoesInterface({
   const [voiceText, setVoiceText] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
   const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [mobileSoulCardOpen, setMobileSoulCardOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -196,6 +197,17 @@ export function EchoesInterface({
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3">
+              {/* Mobile soul card toggle */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setMobileSoulCardOpen((v) => !v)}
+                className="lg:hidden"
+                title="View soul card"
+              >
+                <BookOpen className="mr-1.5 h-3.5 w-3.5" />
+                Soul Card
+              </Button>
               <Badge variant="outline">Speaking in character</Badge>
               <Badge variant={messagesLeft < 10 ? "danger" : "gold"}>
                 {messagesLeft} remaining today
@@ -205,7 +217,7 @@ export function EchoesInterface({
                   variant="ghost"
                   size="sm"
                   onClick={() => setResetModalOpen(true)}
-                  className="text-red-400 hover:text-red-300 hover:bg-red-950/30"
+                  className="text-[var(--danger)] hover:text-[color-mix(in_srgb,var(--danger)_80%,var(--text-main))] hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]"
                 >
                   <RotateCcw className="mr-2 h-4 w-4" />
                   Wipe Memory
@@ -216,8 +228,8 @@ export function EchoesInterface({
         </div>
 
         <div className="grid flex-1 gap-0 lg:grid-cols-[300px_1fr]">
-          {/* ── Soul sidebar ── */}
-          <aside className="border-b border-border p-6 lg:border-b-0 lg:border-r">
+          {/* ── Soul sidebar — desktop always visible ── */}
+          <aside className="hidden flex-col overflow-y-auto border-r border-[var(--border)] p-6 lg:flex">
             <div className="flex flex-col items-center text-center">
               {/* Enlarged orb */}
               <div className="relative mb-5 h-52 w-52">
@@ -246,22 +258,22 @@ export function EchoesInterface({
               {/* Sample line quote */}
               {soul.soul_card?.sample_lines?.[0] ? (
                 <blockquote
-                  className="mt-6 border-l-2 pl-4 text-left font-heading text-lg italic text-[rgba(230,233,245,0.82)]"
+                  className="mt-6 border-l-2 pl-4 text-left font-heading text-lg italic text-[color-mix(in_srgb,var(--text-main)_82%,transparent)]"
                   style={{ borderColor: `${color}44` }}
                 >
                   &ldquo;{soul.soul_card.sample_lines[0]}&rdquo;
                 </blockquote>
               ) : null}
 
-              {/* Soul avatar badge below quote */}
-              <div className="mt-5 flex items-center gap-2 rounded-full border border-border px-3 py-1.5">
+              {/* Soul avatar badge */}
+              <div className="mt-5 flex items-center gap-2 rounded-full border border-[var(--border)] px-3 py-1.5">
                 <div
                   className="flex h-5 w-5 items-center justify-center rounded-full border text-[9px] font-bold"
                   style={{ borderColor: color, background: `${color}22`, color }}
                 >
                   {initials.slice(0, 1)}
                 </div>
-                <span className="text-[10px] uppercase tracking-[0.18em] text-secondary">Bound Soul</span>
+                <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">Bound Soul</span>
               </div>
 
               {/* Memory depth bar */}
@@ -285,6 +297,84 @@ export function EchoesInterface({
               </div>
             </div>
           </aside>
+
+          {/* ── Mobile soul card backdrop ── */}
+          <AnimatePresence>
+            {mobileSoulCardOpen && (
+              <motion.div
+                key="soul-card-backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                onClick={() => setMobileSoulCardOpen(false)}
+                className="fixed inset-0 z-40 bg-[color-mix(in_srgb,var(--bg)_55%,transparent)] backdrop-blur-[2px] lg:hidden"
+              />
+            )}
+          </AnimatePresence>
+
+          {/* ── Mobile soul card bottom sheet ── */}
+          <AnimatePresence>
+            {mobileSoulCardOpen && (
+              <motion.aside
+                key="soul-card-mobile"
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+                className="fixed bottom-0 left-0 right-0 z-50 max-h-[80vh] overflow-y-auto rounded-t-[28px] border-t border-[var(--border)] bg-[var(--surface)] p-6 lg:hidden"
+              >
+                <div className="mb-4 flex items-center justify-between">
+                  <p className="chapter-label">— Soul Card —</p>
+                  <button
+                    type="button"
+                    onClick={() => setMobileSoulCardOpen(false)}
+                    title="Close soul card"
+                    className="rounded-lg p-1.5 text-[var(--text-muted)] transition hover:text-[var(--text-main)]"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="flex flex-col items-center text-center">
+                  <div className="relative mb-5 h-40 w-40">
+                    <EchoesOrbDynamic isStreaming={isStreaming} />
+                  </div>
+                  <p className="font-heading text-2xl text-[var(--text-main)]">{soul.name}</p>
+                  {voiceFull ? (
+                    <p className="mt-3 min-h-[3rem] text-sm leading-7 text-[var(--text-muted)]">
+                      {voiceText}
+                    </p>
+                  ) : null}
+                  {soul.soul_card?.sample_lines?.[0] ? (
+                    <blockquote
+                      className="mt-4 border-l-2 pl-4 text-left font-heading text-base italic text-[color-mix(in_srgb,var(--text-main)_80%,transparent)]"
+                      style={{ borderColor: `${color}44` }}
+                    >
+                      &ldquo;{soul.soul_card.sample_lines[0]}&rdquo;
+                    </blockquote>
+                  ) : null}
+                  <div className="mt-4 w-full space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-[var(--text-muted)]">
+                        <BrainCircuit className="h-3 w-3" style={{ color }} />
+                        Memory depth
+                      </div>
+                      <span className="text-[10px] text-[var(--text-muted)]">{messages.length}/50</span>
+                    </div>
+                    <div className="h-1 overflow-hidden rounded-full bg-[var(--border)]">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${Math.min(100, (messages.length / 50) * 100)}%`,
+                          background: `linear-gradient(90deg, ${color}, ${color}88)`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </motion.aside>
+            )}
+          </AnimatePresence>
 
           {/* ── Chat area ── */}
           <div className="flex min-h-0 flex-col">
@@ -312,7 +402,7 @@ export function EchoesInterface({
                         transition={{ type: "spring", stiffness: 340, damping: 26 }}
                         className="flex justify-end"
                       >
-                        <div className="max-w-[80%] rounded-[22px] rounded-tr-[6px] bg-[linear-gradient(135deg,var(--ai-pulse),var(--ai-pulse-soft))] px-4 py-3 text-sm leading-7 text-white shadow-message-soul">
+                        <div className="max-w-[80%] rounded-[22px] rounded-tr-[6px] bg-[linear-gradient(135deg,var(--ai-pulse),var(--ai-pulse-soft))] px-4 py-3 text-sm leading-7 text-[color-mix(in_srgb,var(--bg)_95%,transparent)] shadow-message-soul">
                           {message.content}
                         </div>
                       </motion.div>
@@ -339,13 +429,13 @@ export function EchoesInterface({
                         <div
                           className="rounded-[22px] rounded-tl-[6px] border border-border px-4 py-3"
                           style={{
-                            background: "rgba(20,24,38,0.88)",
+                            background: "color-mix(in srgb, var(--surface) 92%, transparent)",
                             borderLeft: `2px solid ${color}55`,
                           }}
                         >
                           <p
                             className="mb-1.5 text-[10px] uppercase tracking-[0.22em]"
-                            style={{ color: "rgb(196,168,106)" }}
+                            style={{ color: "var(--accent)" }}
                           >
                             {soul.name}
                           </p>
@@ -367,6 +457,7 @@ export function EchoesInterface({
                         {/* Reaction toolbar — appears on hover */}
                         <div className="flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover/msg:opacity-100">
                           <button
+                            type="button"
                             onClick={async () => {
                               try {
                                 await fetch("/api/lore/ingest", {
@@ -383,21 +474,26 @@ export function EchoesInterface({
                                 toast.error("Could not save to lore.");
                               }
                             }}
-                            className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-[11px] text-[var(--text-muted)] transition-colors hover:border-[color-mix(in_srgb,var(--accent)_40%,transparent)] hover:text-[var(--accent)]"
+                            className="flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-[11px] text-[var(--text-muted)] transition-colors hover:border-[color-mix(in_srgb,var(--accent)_40%,transparent)] hover:text-[var(--accent)]"
                           >
-                            📖 Save to Lore
+                            <BookOpen className="h-3 w-3" />
+                            Save to Lore
                           </button>
                           <button
+                            type="button"
                             onClick={() => toast.info("Coming soon.")}
-                            className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-[11px] text-[var(--text-muted)] transition-colors hover:text-[var(--text-main)]"
+                            className="flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-[11px] text-[var(--text-muted)] transition-colors hover:text-[var(--text-main)]"
+                            title="Bookmark"
                           >
-                            🔖
+                            <Bookmark className="h-3 w-3" />
                           </button>
                           <button
+                            type="button"
                             onClick={() => toast.info("Coming soon.")}
-                            className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-[11px] text-[var(--text-muted)] transition-colors hover:text-[var(--text-main)]"
+                            className="flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-[11px] text-[var(--text-muted)] transition-colors hover:text-[var(--text-main)]"
+                            title="Inspire"
                           >
-                            ✨
+                            <Sparkles className="h-3 w-3" />
                           </button>
                         </div>
                       </div>
@@ -423,8 +519,8 @@ export function EchoesInterface({
                       {initials.slice(0, 1)}
                     </div>
                     <div
-                      className="flex items-center gap-2 rounded-[16px] px-4 py-2.5"
-                      style={{ background: "rgba(20,24,38,0.92)" }}
+                      className="flex items-center gap-2 rounded-[16px] border border-[var(--border)] px-4 py-2.5"
+                      style={{ background: "var(--surface-raised)" }}
                     >
                       <span className="text-xs italic text-secondary">The soul stirs</span>
                       <span className="flex gap-1">

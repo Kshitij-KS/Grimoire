@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
+import { motion, AnimatePresence, useInView } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import {
   BookOpenText,
   ChevronRight,
@@ -95,6 +95,52 @@ const lineVariants = {
 };
 
 
+// ─── Nav data ────────────────────────────────────────────────────────────────
+
+const navLinks = [
+  { label: "Features", href: "#features" },
+  { label: "How It Works", href: "#how-it-works" },
+  { label: "Demo", href: "/demo" },
+] as const;
+
+// ─── Hamburger button ─────────────────────────────────────────────────────────
+
+function HamburgerButton({ open, onClick }: { open: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label={open ? "Close menu" : "Open menu"}
+      aria-expanded={open ? "true" : "false"}
+      onClick={onClick}
+      className="relative flex h-9 w-9 items-center justify-center rounded-xl text-[var(--text-muted)] transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--text-main)_6%,transparent)] hover:text-[var(--text-main)] active:scale-[0.97] active:transition-none md:hidden"
+    >
+      <svg viewBox="0 0 16 16" fill="none" className="h-5 w-5" aria-hidden>
+        <motion.line
+          x1="2" y1="5" x2="14" y2="5"
+          stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+          animate={open ? { rotate: 45, y: 3 } : { rotate: 0, y: 0 }}
+          transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
+          style={{ originX: "50%", originY: "50%" }}
+        />
+        <motion.line
+          x1="2" y1="8" x2="14" y2="8"
+          stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+          animate={open ? { opacity: 0, scaleX: 0.3 } : { opacity: 1, scaleX: 1 }}
+          transition={{ duration: 0.12 }}
+          style={{ originX: "50%", originY: "50%" }}
+        />
+        <motion.line
+          x1="2" y1="11" x2="14" y2="11"
+          stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+          animate={open ? { rotate: -45, y: -3 } : { rotate: 0, y: 0 }}
+          transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
+          style={{ originX: "50%", originY: "50%" }}
+        />
+      </svg>
+    </button>
+  );
+}
+
 // ─── Feature card sub-component ───────────────────────────────────────────────
 
 function FeatureCard({
@@ -167,6 +213,12 @@ export function LandingPage() {
   const heroInView = useInView(heroRef, { once: true });
   const scrollY = useScrollY();
   const headerScrolled = scrollY > 60;
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Close mobile menu when user scrolls past threshold
+  useEffect(() => {
+    if (headerScrolled) setMobileMenuOpen(false);
+  }, [headerScrolled]);
 
   return (
     <main className="relative overflow-hidden">
@@ -188,36 +240,113 @@ export function LandingPage() {
         />
 
         <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-6 pb-16 pt-6 lg:px-10">
-          {/* Nav — sticky with blur on scroll */}
+          {/* Nav — 3-zone sticky with blur on scroll */}
           <header
-            className="sticky top-0 z-50 -mx-6 flex items-center justify-between border-b border-[var(--border)] px-6 py-2.5 transition-[background,backdrop-filter] duration-300 lg:-mx-10 lg:px-10"
-            style={headerScrolled ? {
-              background: "color-mix(in srgb, var(--bg) 88%, transparent)",
-              backdropFilter: "blur(14px)",
-            } : {}}
+            className={`sticky top-0 z-50 -mx-6 flex items-center justify-between gap-4 border-b px-6 py-2.5 transition-[background,backdrop-filter,border-color] duration-300 lg:-mx-10 lg:px-10 ${
+              headerScrolled
+                ? "border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] backdrop-blur-[14px]"
+                : "border-transparent"
+            }`}
           >
+            {/* Logo */}
             <motion.div
               initial={{ opacity: 0, x: -12 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.4, ease: "easeOut" }}
+              className="shrink-0"
             >
-              <GrimoireLogo />
+              <div className="relative">
+                <GrimoireLogo />
+                <div className="pointer-events-none absolute -right-3 -top-1 h-6 w-6 rounded-full bg-[var(--accent)] blur-lg opacity-0 dark:opacity-30" />
+              </div>
             </motion.div>
+
+            {/* Center nav — desktop only */}
+            <nav className="hidden md:flex flex-1 justify-center items-center gap-1" aria-label="Main navigation">
+              {navLinks.map((link, i) => (
+                <motion.div
+                  key={link.label}
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.08 + i * 0.05, ease: "easeOut" }}
+                >
+                  <Link
+                    href={link.href}
+                    className="nav-link-underline relative px-3 py-2 text-sm text-[var(--text-muted)] transition-colors duration-150 hover:text-[var(--text-main)]"
+                  >
+                    {link.label}
+                  </Link>
+                </motion.div>
+              ))}
+            </nav>
+
+            {/* Right: actions */}
             <motion.div
-              className="flex items-center gap-3"
+              className="flex shrink-0 items-center gap-2"
               initial={{ opacity: 0, x: 12 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
             >
               <ThemeToggle />
-              <Button variant="ghost" asChild className="hidden sm:flex">
-                <Link href="/demo">See Demo World</Link>
-              </Button>
-              <Button asChild>
+              <Button asChild className="hidden sm:flex">
                 <Link href="/auth">Begin Writing</Link>
               </Button>
+              <HamburgerButton open={mobileMenuOpen} onClick={() => setMobileMenuOpen((v) => !v)} />
             </motion.div>
           </header>
+
+          {/* Mobile menu overlay */}
+          <AnimatePresence>
+            {mobileMenuOpen && (
+              <>
+                <motion.div
+                  key="mobile-backdrop"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18 }}
+                  className="fixed inset-0 z-40 bg-[color-mix(in_srgb,var(--bg)_50%,transparent)] backdrop-blur-sm md:hidden"
+                  onClick={() => setMobileMenuOpen(false)}
+                />
+                <motion.nav
+                  key="mobile-menu"
+                  initial={{ opacity: 0, clipPath: "inset(0 0 100% 0 round 0 0 20px 20px)" }}
+                  animate={{ opacity: 1, clipPath: "inset(0 0 0% 0 round 0 0 20px 20px)" }}
+                  exit={{ opacity: 0, clipPath: "inset(0 0 100% 0 round 0 0 20px 20px)" }}
+                  transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
+                  className="fixed left-0 right-0 top-[49px] z-40 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_96%,transparent)] px-6 py-5 backdrop-blur-xl md:hidden"
+                >
+                  <div className="flex flex-col">
+                    {navLinks.map((link, i) => (
+                      <motion.div
+                        key={link.label}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.2, delay: i * 0.04, ease: [0.22, 1, 0.36, 1] }}
+                      >
+                        <Link
+                          href={link.href}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex items-center justify-between rounded-[12px] px-4 py-3 text-base text-[var(--text-muted)] transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--text-main)_4%,transparent)] hover:text-[var(--text-main)] active:scale-[0.97] active:transition-none"
+                        >
+                          {link.label}
+                          <ChevronRight className="h-4 w-4 opacity-30" />
+                        </Link>
+                      </motion.div>
+                    ))}
+                  </div>
+                  <div className="mt-4 flex flex-col gap-2 border-t border-[var(--border)] pt-4">
+                    <Button asChild className="w-full">
+                      <Link href="/auth" onClick={() => setMobileMenuOpen(false)}>Begin Writing</Link>
+                    </Button>
+                    <Button variant="ghost" asChild className="w-full">
+                      <Link href="/demo" onClick={() => setMobileMenuOpen(false)}>See Demo World</Link>
+                    </Button>
+                  </div>
+                </motion.nav>
+              </>
+            )}
+          </AnimatePresence>
 
           {/* Two-column hero grid */}
           <div
@@ -401,7 +530,7 @@ export function LandingPage() {
       </section>
 
       {/* ── FEATURES ──────────────────────────────────────────────────── */}
-      <section className="mx-auto max-w-7xl px-6 py-24 lg:px-10">
+      <section id="features" className="mx-auto max-w-7xl px-6 py-24 lg:px-10">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -431,7 +560,7 @@ export function LandingPage() {
       <SocialProofStrip />
 
       {/* ── HOW IT WORKS ──────────────────────────────────────────────── */}
-      <section className="border-t border-[var(--border)]">
+      <section id="how-it-works" className="border-t border-[var(--border)]">
         <div className="mx-auto max-w-7xl px-6 py-24 lg:px-10">
           <motion.div
             initial={{ opacity: 0, y: 24 }}

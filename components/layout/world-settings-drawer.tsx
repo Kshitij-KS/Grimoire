@@ -11,14 +11,16 @@ import {
   ChevronRight,
   Check,
   Loader2,
-  Download, // Added Download icon
+  Download,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { DestructiveActionModal } from "@/components/shared/destructive-action-modal";
+import { WorldCollaboratorsTab } from "@/components/worlds/world-collaborators-tab";
 import type { World, UsageMeter } from "@/lib/types";
-import { toast } from "sonner"; // Added toast import
+import { toast } from "sonner";
 
 interface WorldSettingsDrawerProps {
   open: boolean;
@@ -38,7 +40,7 @@ export function WorldSettingsDrawer({
   usage,
   isDemo = false,
 }: WorldSettingsDrawerProps) {
-  const [tab, setTab] = useState<"world" | "plan">("world");
+  const [tab, setTab] = useState<"world" | "plan" | "team">("world");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -85,23 +87,27 @@ export function WorldSettingsDrawer({
     router.refresh();
   };
 
-  const handleExport = async () => {
+  const handleExport = async (format: "json" | "markdown" = "json") => {
     setExporting(true);
     try {
-      const res = await fetch(`/api/worlds/${world.id}/export`);
+      const url = `/api/worlds/${world.id}/export${format === "markdown" ? "?format=markdown" : ""}`;
+      const res = await fetch(url);
       if (!res.ok) throw new Error("Export failed");
-      
+
       const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
+      const objectUrl = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url;
-      a.download = `grimoire_export_${world.name.replace(/\s+/g, "_").toLowerCase()}.json`;
+      a.href = objectUrl;
+      const safeName = world.name.replace(/\s+/g, "_").toLowerCase();
+      a.download = format === "markdown"
+        ? `grimoire_export_${safeName}.zip`
+        : `grimoire_export_${safeName}.json`;
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(objectUrl);
       document.body.removeChild(a);
-      
-      toast.success("World data exported successfully.");
+
+      toast.success(format === "markdown" ? "Markdown archive exported." : "World data exported successfully.");
     } catch {
       toast.error("Failed to export world data.");
     } finally {
@@ -153,18 +159,23 @@ export function WorldSettingsDrawer({
 
             {/* Tabs */}
             <div className="flex border-b border-border px-4 pt-2">
-              {(["world", "plan"] as const).map((t) => (
+              {([
+                { key: "world", label: "World", icon: Globe2 },
+                { key: "team", label: "Team", icon: Users },
+                { key: "plan", label: "Plan", icon: CreditCard },
+              ] as const).map(({ key, label, icon: Icon }) => (
                 <button
-                  key={t}
-                  onClick={() => setTab(t)}
+                  key={key}
+                  type="button"
+                  onClick={() => setTab(key)}
                   className={`flex items-center gap-1.5 px-3 py-2.5 text-xs uppercase tracking-widest transition-colors border-b-2 -mb-px ${
-                    tab === t
-                      ? "border-[var(--gold)] text-[var(--gold)]"
+                    tab === key
+                      ? "border-[var(--accent)] text-[var(--accent)]"
                       : "border-transparent text-secondary hover:text-foreground"
                   }`}
                 >
-                  {t === "world" ? <Globe2 className="h-3 w-3" /> : <CreditCard className="h-3 w-3" />}
-                  {t === "world" ? "World" : "Plan"}
+                  <Icon className="h-3 w-3" />
+                  {label}
                 </button>
               ))}
             </div>
@@ -259,31 +270,52 @@ export function WorldSettingsDrawer({
                     </div>
                     
                     {/* Export Data */}
-                    <div className="pt-4 mt-6 border-t border-border">
+                    <div className="pt-4 mt-6 border-t border-border space-y-2">
                       <label className="text-xs uppercase tracking-widest text-secondary mb-2 block">Data Portability</label>
                       <button
-                        onClick={handleExport}
+                        type="button"
+                        onClick={() => handleExport("json")}
                         disabled={exporting}
-                        className="w-full rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] px-3 py-2.5 text-sm transition hover:bg-[rgba(255,255,255,0.06)] flex justify-between items-center text-foreground disabled:opacity-50"
+                        className="w-full rounded-[12px] border border-[color-mix(in_srgb,var(--text-main)_8%,transparent)] bg-[color-mix(in_srgb,var(--text-main)_2%,transparent)] px-3 py-2.5 text-sm transition hover:bg-[color-mix(in_srgb,var(--text-main)_6%,transparent)] flex justify-between items-center text-foreground disabled:opacity-50"
                       >
-                        {exporting ? "Compiling Bible..." : "Export World Bible (JSON)"}
+                        {exporting ? "Compiling…" : "Export JSON"}
                         <Download className="h-4 w-4 text-secondary" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleExport("markdown")}
+                        disabled={exporting}
+                        className="w-full rounded-[12px] border border-[color-mix(in_srgb,var(--accent)_20%,transparent)] bg-[color-mix(in_srgb,var(--accent)_4%,transparent)] px-3 py-2.5 text-sm transition hover:bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] flex justify-between items-center text-[var(--accent)] disabled:opacity-50"
+                      >
+                        {exporting ? "Compiling…" : "Export Markdown (ZIP)"}
+                        <Download className="h-4 w-4" />
                       </button>
                     </div>
                     
                     {/* Danger Zone */}
                     {!isDemo && (
-                      <div className="pt-6 mt-6 border-t border-red-900/20">
-                        <label className="text-xs uppercase tracking-widest text-red-500/80 mb-2 block">Danger Zone</label>
+                      <div className="pt-6 mt-6 border-t border-[color-mix(in_srgb,var(--danger)_20%,transparent)]">
+                        <label className="text-xs uppercase tracking-widest text-[color-mix(in_srgb,var(--danger)_80%,transparent)] mb-2 block">Danger Zone</label>
                         <button
                           onClick={() => setDeleteModalOpen(true)}
-                          className="w-full rounded-[12px] border border-red-500/20 bg-red-500/5 px-3 py-2.5 text-sm text-red-400 transition hover:bg-red-500/10 hover:border-red-500/30 text-left flex justify-between items-center"
+                          className="w-full rounded-[12px] border border-[color-mix(in_srgb,var(--danger)_20%,transparent)] bg-[color-mix(in_srgb,var(--danger)_5%,transparent)] px-3 py-2.5 text-sm text-[var(--danger)] transition hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] hover:border-[color-mix(in_srgb,var(--danger)_30%,transparent)] text-left flex justify-between items-center"
                         >
                           Delete World
                           <ChevronRight className="h-4 w-4 opacity-50" />
                         </button>
                       </div>
                     )}
+                  </motion.div>
+                )}
+
+                {tab === "team" && (
+                  <motion.div
+                    key="team"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                  >
+                    <WorldCollaboratorsTab worldId={world.id} isDemo={isDemo} />
                   </motion.div>
                 )}
 
@@ -344,13 +376,13 @@ export function WorldSettingsDrawer({
                                 {meter.count} / {meter.limit}
                               </span>
                             </div>
-                            <div className="h-1 rounded-full bg-[rgba(255,255,255,0.06)] overflow-hidden">
+                            <div className="h-1 rounded-full bg-[color-mix(in_srgb,var(--text-main)_6%,transparent)] overflow-hidden">
                               <motion.div
                                 className="h-full rounded-full"
                                 style={{
                                   background: isWarning
-                                    ? "rgb(212,168,83)"
-                                    : "rgba(126,109,242,0.7)",
+                                    ? "var(--accent)"
+                                    : "color-mix(in srgb, var(--primary) 70%, transparent)",
                                 }}
                                 initial={{ width: 0 }}
                                 animate={{ width: `${pct}%` }}
@@ -367,7 +399,7 @@ export function WorldSettingsDrawer({
             </div>
 
             {/* Footer — save button only on world tab, non-demo */}
-            {tab === "world" && !isDemo && (
+            {tab === "world" && !isDemo && dirty && (
               <div className="border-t border-border p-4">
                 <Button
                   onClick={handleSave}

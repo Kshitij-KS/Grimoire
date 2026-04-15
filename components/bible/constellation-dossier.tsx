@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Sparkles, X, Trash2, Link as LinkIcon, ChevronRight, Pencil, Check, ChevronDown, ChevronUp } from "lucide-react";
+import { Sparkles, X, Trash2, Link as LinkIcon, ChevronRight, Pencil, Check, ChevronDown, ChevronUp, GitMerge } from "lucide-react";
 import { useWorkspaceStore } from "@/lib/store";
 import type { Entity, EntityType, EntityRelationship, Soul } from "@/lib/types";
+import { EntityMergeModal } from "./entity-merge-modal";
 
 const TYPE_COLORS: Record<EntityType, string> = {
   character: "var(--accent)",
@@ -37,7 +38,9 @@ function LoreFragment({ content }: { content: string }) {
       </p>
       {isLong && (
         <button
+          type="button"
           onClick={() => setExpanded(!expanded)}
+          title={expanded ? "Collapse fragment" : "Read more"}
           className="mt-1 flex items-center gap-1 text-[10px] text-[var(--text-muted)] hover:text-[var(--text-main)]"
         >
           {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -54,12 +57,16 @@ export function ConstellationDossier({
   relationships = [],
   souls = [],
   onDeleteRelationship,
+  onMergeComplete,
+  isDemo = false,
 }: {
   worldId: string;
   allEntities?: Entity[];
   relationships?: EntityRelationship[];
   souls?: Soul[];
   onDeleteRelationship?: (id: string) => void;
+  onMergeComplete?: (sourceId: string, updatedTarget: Entity) => void;
+  isDemo?: boolean;
 }) {
   const { selectedEntity, setSelectedEntity, setForgeSoulName } = useWorkspaceStore();
   const router = useRouter();
@@ -68,6 +75,7 @@ export function ConstellationDossier({
   // Entity navigation history — last 3 visited
   const historyRef = useRef<Entity[]>([]);
   const [, forceRender] = useState(0);
+  const [mergeModalOpen, setMergeModalOpen] = useState(false);
 
   // Inline edit state
   const [editingName, setEditingName] = useState(false);
@@ -146,6 +154,7 @@ export function ConstellationDossier({
   };
 
   return (
+    <>
     <motion.aside
       initial={{ x: -60, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
@@ -163,7 +172,9 @@ export function ConstellationDossier({
                 <div key={e.id} className="flex items-center gap-1">
                   {i > 0 && <ChevronRight className="h-3 w-3 text-[var(--text-muted)] opacity-50" />}
                   <button
+                    type="button"
                     onClick={() => setSelectedEntity(e)}
+                    title={`Go to ${e.name}`}
                     className="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] text-[var(--text-muted)] hover:text-[var(--text-main)]"
                     style={{ background: `color-mix(in srgb, ${TYPE_COLORS[e.type]} 10%, transparent)` }}
                   >
@@ -188,9 +199,12 @@ export function ConstellationDossier({
                 onChange={(e) => setEditName(e.target.value)}
                 onBlur={saveEdit}
                 onKeyDown={(e) => e.key === "Enter" && saveEdit()}
+                placeholder="Entity name"
+                title="Edit entity name"
+                aria-label="Entity name"
                 className="min-w-0 flex-1 bg-transparent font-heading text-3xl text-[var(--text-main)] outline-none border-b border-[var(--border-focus)]"
               />
-              <button onClick={saveEdit} className="shrink-0 text-[var(--accent)]">
+              <button type="button" onClick={saveEdit} title="Save name" className="shrink-0 text-[var(--accent)]">
                 <Check className="h-4 w-4" />
               </button>
             </div>
@@ -200,6 +214,7 @@ export function ConstellationDossier({
                 {selectedEntity.name}
               </h2>
               <button
+                type="button"
                 onClick={startEdit}
                 title="Edit name"
                 className="mt-2 shrink-0 opacity-0 transition-opacity group-hover:opacity-60 hover:!opacity-100"
@@ -212,6 +227,7 @@ export function ConstellationDossier({
         <button
           type="button"
           onClick={() => setSelectedEntity(null)}
+          title="Close panel"
           className="ml-3 mt-1 rounded-full p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[color-mix(in_srgb,var(--border)_50%,transparent)] hover:text-[var(--text-main)]"
         >
           <X className="h-4 w-4" />
@@ -268,7 +284,9 @@ export function ConstellationDossier({
                           {isSource ? "→ " : "← "}{rel.label}
                         </p>
                         <button
+                          type="button"
                           onClick={() => setSelectedEntity(otherEntity)}
+                          title={`View ${otherEntity.name}`}
                           className="font-heading text-lg text-[var(--text-main)] transition-colors hover:text-[var(--accent)]"
                         >
                           {otherEntity.name}
@@ -277,6 +295,7 @@ export function ConstellationDossier({
                     </div>
                     {onDeleteRelationship && (
                       <button
+                        type="button"
                         onClick={async () => {
                           try {
                             await fetch(`/api/relationships`, {
@@ -357,7 +376,34 @@ export function ConstellationDossier({
             <span style={{ color: "var(--ai-pulse)" }}>✦</span> Soul already bound
           </p>
         )}
+
+        {/* Merge into another entity */}
+        {!isDemo && onMergeComplete && allEntities.length > 1 && (
+          <button
+            type="button"
+            onClick={() => setMergeModalOpen(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--danger)_20%,transparent)] bg-[color-mix(in_srgb,var(--danger)_4%,transparent)] py-2 text-xs text-[var(--text-muted)] transition-colors hover:border-[color-mix(in_srgb,var(--danger)_35%,transparent)] hover:text-[var(--danger)] active:scale-[0.97] active:transition-none"
+          >
+            <GitMerge className="h-3.5 w-3.5" />
+            Merge into another entity
+          </button>
+        )}
       </div>
     </motion.aside>
+
+    {/* Merge modal — rendered outside the aside to avoid clipping */}
+    {onMergeComplete && (
+      <EntityMergeModal
+        open={mergeModalOpen}
+        onOpenChange={setMergeModalOpen}
+        sourceEntity={selectedEntity}
+        allEntities={allEntities}
+        onMergeComplete={(sourceId, updatedTarget) => {
+          setSelectedEntity(null);
+          onMergeComplete(sourceId, updatedTarget);
+        }}
+      />
+    )}
+    </>
   );
 }

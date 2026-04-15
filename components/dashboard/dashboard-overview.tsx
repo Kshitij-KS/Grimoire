@@ -12,6 +12,7 @@ import {
   ShieldAlert,
   Compass,
   TrendingUp,
+  Share2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ interface WorldWithStats {
   cover_color: string;
   updated_at: string;
   stats: { lore: number; souls: number; entities: number };
+  memberRole?: string;
 }
 
 interface ActivityItem {
@@ -41,6 +43,7 @@ interface ActivityItem {
 
 interface DashboardOverviewProps {
   worlds: WorldWithStats[];
+  sharedWorlds?: WorldWithStats[];
   globalStats: {
     totalWorlds: number;
     totalLore: number;
@@ -210,6 +213,7 @@ function ConstellationDecoration({ color }: { color: string }) {
 
 export function DashboardOverview({
   worlds,
+  sharedWorlds = [],
   globalStats,
   recentActivity,
   displayName,
@@ -384,6 +388,54 @@ export function DashboardOverview({
                   </Link>
                 </motion.div>
               ))}
+            </div>
+          )}
+
+          {/* ── Shared Worlds ── */}
+          {sharedWorlds.length > 0 && (
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center gap-2">
+                <Share2 className="h-4 w-4 text-[var(--ai-pulse)]" />
+                <h2 className="font-heading text-xl text-[var(--text-main)]">Shared with You</h2>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {sharedWorlds.map((world, i) => (
+                  <motion.div
+                    key={world.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.1 + i * 0.05 }}
+                  >
+                    <Link href={`/worlds/${world.id}`}>
+                      <div className="glass-panel hoverable-card group overflow-hidden rounded-[14px]">
+                        <div
+                          className="relative h-16 overflow-hidden rounded-t-[14px]"
+                          style={{ background: `linear-gradient(135deg, ${world.cover_color}33, ${world.cover_color}0a)` }}
+                        >
+                          <ConstellationDecoration color={world.cover_color} />
+                          <div className="absolute right-2 top-2 flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--ai-pulse)_30%,transparent)] bg-[color-mix(in_srgb,var(--ai-pulse)_12%,transparent)] px-2 py-0.5">
+                            <Share2 className="h-2.5 w-2.5 text-[var(--ai-pulse)]" />
+                            <span className="text-[9px] uppercase tracking-widest text-[var(--ai-pulse)] capitalize">{world.memberRole}</span>
+                          </div>
+                        </div>
+                        <div className="px-4 py-3 space-y-1.5">
+                          <h3 className="font-heading text-lg text-[var(--text-main)] group-hover:text-[var(--accent)] transition-colors">
+                            {world.name}
+                          </h3>
+                          <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
+                            <span className="flex items-center gap-1">
+                              <ScrollText className="h-2.5 w-2.5" />{world.stats.lore} lore
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Users className="h-2.5 w-2.5" />{world.stats.souls} souls
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
             </div>
           )}
         </div>
