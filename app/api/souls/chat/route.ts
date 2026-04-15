@@ -12,7 +12,7 @@ import { soulMatchesWorld } from "@/lib/soul-access";
 const schema = z.object({
   worldId: z.string().uuid(),
   soulId: z.string().uuid(),
-  message: z.string().min(1),
+  message: z.string().min(1).max(2500),
 });
 
 function hashPrompt(text: string): string {
@@ -28,7 +28,12 @@ export async function POST(request: Request) {
     });
   }
 
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError("INVALID_JSON", 400);
+  }
   const parsed = schema.safeParse(body);
   if (!parsed.success) return zodErrorResponse(parsed.error);
 
