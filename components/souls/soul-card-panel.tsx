@@ -110,7 +110,7 @@ export function SoulCardPanel({ soul, worldId, onClose, onRegenerated }: SoulCar
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 60, opacity: 0 }}
       transition={{ type: "spring", stiffness: 340, damping: 32 }}
-      className="glass-panel-elevated fixed inset-y-4 right-4 z-40 flex w-[min(92vw,460px)] flex-col rounded-[30px] shadow-arcane"
+      className="glass-panel-elevated fixed inset-y-4 right-4 z-40 flex w-[min(92vw,460px)] flex-col rounded-2xl shadow-arcane"
     >
       <div className="flex items-start justify-between border-b border-border p-5 pb-4">
         <div className="flex items-center gap-4">
@@ -154,7 +154,7 @@ export function SoulCardPanel({ soul, worldId, onClose, onRegenerated }: SoulCar
           ) : (
             <>
               {isEditing ? (
-                <Card className="rounded-[24px] border border-border bg-[rgba(255,255,255,0.02)] p-4">
+                <Card className="rounded-xl border border-border bg-[var(--surface-raised)] p-4">
                   <p className="chapter-label">Manual Overrides</p>
                   <div className="mt-4 space-y-4">
                     <div className="space-y-2">
@@ -223,10 +223,10 @@ export function SoulCardPanel({ soul, worldId, onClose, onRegenerated }: SoulCar
                 <SoulSection title="Relationships" color="purple">
                   <div className="space-y-2">
                     {card.relationships.map((rel, i) => (
-                      <div key={i} className="flex items-start gap-2 rounded-[14px] border border-border bg-[rgba(28,22,14,0.6)] px-3 py-2">
-                        <span className="font-heading text-base text-[rgb(157,127,224)]">{rel.name}</span>
-                        <span className="text-secondary">-</span>
-                        <span className="text-sm text-secondary">{rel.attitude}</span>
+                      <div key={i} className="flex items-start gap-2 rounded-[14px] border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2">
+                        <span className="font-heading text-base text-[var(--ai-pulse)]">{rel.name}</span>
+                        <span className="text-[var(--text-muted)]">·</span>
+                        <span className="text-sm text-[var(--text-main)]">{rel.attitude}</span>
                       </div>
                     ))}
                   </div>
@@ -243,12 +243,12 @@ export function SoulCardPanel({ soul, worldId, onClose, onRegenerated }: SoulCar
                           key={i}
                           type="button"
                           onClick={() => toggleSecret(i)}
-                          className="flex w-full items-start justify-between rounded-[14px] border border-border bg-[rgba(28,22,14,0.6)] px-3 py-2 text-left"
+                          className="flex w-full items-start justify-between rounded-[14px] border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-left"
                         >
-                          <span className="pr-3 text-sm leading-7 text-secondary">
+                          <span className="pr-3 text-sm leading-7 text-[var(--text-main)]">
                             {visible ? secret : "Hidden until willingly revealed."}
                           </span>
-                          {visible ? <EyeOff className="mt-1 h-4 w-4 text-secondary" /> : <Eye className="mt-1 h-4 w-4 text-secondary" />}
+                          {visible ? <EyeOff className="mt-1 h-4 w-4 text-[var(--text-muted)]" /> : <Eye className="mt-1 h-4 w-4 text-[var(--text-muted)]" />}
                         </button>
                       );
                     })}
@@ -260,7 +260,7 @@ export function SoulCardPanel({ soul, worldId, onClose, onRegenerated }: SoulCar
                 <SoulSection title="Sample Lines" color="purple">
                   <div className="space-y-3">
                     {card.sample_lines.map((line, i) => (
-                      <blockquote key={i} className="rounded-[14px] border border-border bg-[rgba(28,22,14,0.6)] px-4 py-3 font-heading text-lg italic text-[rgb(240,230,214)]">
+                      <blockquote key={i} className="rounded-[14px] border border-[var(--border)] bg-[var(--surface-raised)] px-4 py-3 font-heading text-lg italic text-[var(--text-main)]">
                         &ldquo;{line}&rdquo;
                       </blockquote>
                     ))}
@@ -304,7 +304,7 @@ function SoulSection({
         : "text-[rgb(139,133,160)]";
 
   return (
-    <Card className="rounded-[24px] border border-border bg-[rgba(255,255,255,0.02)] p-4">
+    <Card className="rounded-xl border border-border bg-[var(--surface-raised)] p-4">
       <p className={`text-xs uppercase tracking-[0.24em] ${accentClass}`}>{title}</p>
       <div className="mt-3">{children}</div>
     </Card>

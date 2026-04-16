@@ -160,7 +160,7 @@ export function ConstellationDossier({
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: -60, opacity: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 28 }}
-      className="glass-panel-elevated absolute inset-y-4 left-4 z-40 flex w-[min(92vw,390px)] flex-col overflow-hidden rounded-[28px]"
+      className="glass-panel-elevated absolute inset-y-4 left-4 z-40 flex w-[min(92vw,390px)] flex-col overflow-hidden rounded-2xl"
     >
       {/* ── Header ───────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between p-5 pb-3">

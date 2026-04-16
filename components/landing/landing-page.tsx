@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { SoulChatPreview } from "@/components/landing/soul-chat-preview";
-import { SocialProofStrip } from "@/components/landing/social-proof-strip";
+import { FractureLensPreview } from "@/components/landing/fracture-lens-preview";
 import { useScrollY } from "@/lib/hooks/use-scroll-y";
 
 // ─── Static data ─────────────────────────────────────────────────────────────
@@ -239,15 +239,14 @@ export function LandingPage() {
           }}
         />
 
-        <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-6 pb-16 pt-6 lg:px-10">
-          {/* Nav — 3-zone sticky with blur on scroll */}
-          <header
-            className={`sticky top-0 z-50 -mx-6 flex items-center justify-between gap-4 border-b px-6 py-2.5 transition-[background,backdrop-filter,border-color] duration-300 lg:-mx-10 lg:px-10 ${
-              headerScrolled
-                ? "border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] backdrop-blur-[14px]"
-                : "border-transparent"
-            }`}
-          >
+        {/* --- FULL WIDTH DASHBOARD-STYLE HEADER --- */}
+        <header
+          className="fixed inset-x-0 top-0 z-[100] border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_80%,transparent)] backdrop-blur-md shadow-[0_4px_30px_rgba(0,0,0,0.06)]"
+        >
+          {/* Gradient top stripe to match dashboard navbar */}
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[color-mix(in_srgb,var(--accent)_25%,transparent)] to-transparent" />
+
+          <div className="mx-auto flex w-full items-center justify-between px-6 py-5 lg:px-12 xl:px-16">
             {/* Logo */}
             <motion.div
               initial={{ opacity: 0, x: -12 }}
@@ -293,60 +292,63 @@ export function LandingPage() {
               </Button>
               <HamburgerButton open={mobileMenuOpen} onClick={() => setMobileMenuOpen((v) => !v)} />
             </motion.div>
-          </header>
+          </div>
+        </header>
 
-          {/* Mobile menu overlay */}
-          <AnimatePresence>
-            {mobileMenuOpen && (
-              <>
-                <motion.div
-                  key="mobile-backdrop"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.18 }}
-                  className="fixed inset-0 z-40 bg-[color-mix(in_srgb,var(--bg)_50%,transparent)] backdrop-blur-sm md:hidden"
-                  onClick={() => setMobileMenuOpen(false)}
-                />
-                <motion.nav
-                  key="mobile-menu"
-                  initial={{ opacity: 0, clipPath: "inset(0 0 100% 0 round 0 0 20px 20px)" }}
-                  animate={{ opacity: 1, clipPath: "inset(0 0 0% 0 round 0 0 20px 20px)" }}
-                  exit={{ opacity: 0, clipPath: "inset(0 0 100% 0 round 0 0 20px 20px)" }}
-                  transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
-                  className="fixed left-0 right-0 top-[49px] z-40 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_96%,transparent)] px-6 py-5 backdrop-blur-xl md:hidden"
-                >
-                  <div className="flex flex-col">
-                    {navLinks.map((link, i) => (
-                      <motion.div
-                        key={link.label}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.2, delay: i * 0.04, ease: [0.22, 1, 0.36, 1] }}
+        {/* Mobile menu overlay */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <>
+              <motion.div
+                key="mobile-backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                className="fixed inset-0 z-40 bg-[color-mix(in_srgb,var(--bg)_50%,transparent)] backdrop-blur-sm md:hidden"
+                onClick={() => setMobileMenuOpen(false)}
+              />
+              <motion.nav
+                key="mobile-menu"
+                initial={{ opacity: 0, clipPath: "inset(0 0 100% 0 round 0 0 20px 20px)" }}
+                animate={{ opacity: 1, clipPath: "inset(0 0 0% 0 round 0 0 20px 20px)" }}
+                exit={{ opacity: 0, clipPath: "inset(0 0 100% 0 round 0 0 20px 20px)" }}
+                transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
+                className="fixed left-0 right-0 top-[65px] z-[90] border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_96%,transparent)] px-6 py-5 backdrop-blur-xl md:hidden"
+              >
+                <div className="flex flex-col">
+                  {navLinks.map((link, i) => (
+                    <motion.div
+                      key={link.label}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.2, delay: i * 0.04, ease: [0.22, 1, 0.36, 1] }}
+                    >
+                      <Link
+                        href={link.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center justify-between rounded-[12px] px-4 py-3 text-base text-[var(--text-muted)] transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--text-main)_4%,transparent)] hover:text-[var(--text-main)] active:scale-[0.97] active:transition-none"
                       >
-                        <Link
-                          href={link.href}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="flex items-center justify-between rounded-[12px] px-4 py-3 text-base text-[var(--text-muted)] transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--text-main)_4%,transparent)] hover:text-[var(--text-main)] active:scale-[0.97] active:transition-none"
-                        >
-                          {link.label}
-                          <ChevronRight className="h-4 w-4 opacity-30" />
-                        </Link>
-                      </motion.div>
-                    ))}
-                  </div>
-                  <div className="mt-4 flex flex-col gap-2 border-t border-[var(--border)] pt-4">
-                    <Button asChild className="w-full">
-                      <Link href="/auth" onClick={() => setMobileMenuOpen(false)}>Begin Writing</Link>
-                    </Button>
-                    <Button variant="ghost" asChild className="w-full">
-                      <Link href="/demo" onClick={() => setMobileMenuOpen(false)}>See Demo World</Link>
-                    </Button>
-                  </div>
-                </motion.nav>
-              </>
-            )}
-          </AnimatePresence>
+                        {link.label}
+                        <ChevronRight className="h-4 w-4 opacity-30" />
+                      </Link>
+                    </motion.div>
+                  ))}
+                </div>
+                <div className="mt-4 flex flex-col gap-2 border-t border-[var(--border)] pt-4">
+                  <Button asChild className="w-full">
+                    <Link href="/auth" onClick={() => setMobileMenuOpen(false)}>Begin Writing</Link>
+                  </Button>
+                  <Button variant="ghost" asChild className="w-full">
+                    <Link href="/demo" onClick={() => setMobileMenuOpen(false)}>See Demo World</Link>
+                  </Button>
+                </div>
+              </motion.nav>
+            </>
+          )}
+        </AnimatePresence>
+
+        <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-6 pb-16 pt-[65px] lg:px-10">
 
           {/* Two-column hero grid */}
           <div
@@ -356,17 +358,7 @@ export function LandingPage() {
             {/* ── LEFT: headline + CTAs ─────────────────── */}
             <div className="space-y-8">
               {/* Badge */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.88 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.06 }}
-                className="w-fit"
-              >
-                <Badge variant="outline" className="gap-2 px-3 py-1.5">
-                  <Stars className="h-3.5 w-3.5 text-[var(--accent)]" />
-                  Living lore · Bound souls · Canon memory
-                </Badge>
-              </motion.div>
+
 
               {/* Headline — line-by-line ink reveal */}
               <motion.div
@@ -556,8 +548,42 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ── SOCIAL PROOF STRIP ───────────────────────────────────────── */}
-      <SocialProofStrip />
+      {/* ── FRACTURE LENS SHOWCASE ─────────────────────────────────────── */}
+      <section id="the-eye" className="border-t border-[var(--border)] relative overflow-hidden">
+        {/* Subtle background glow */}
+        <div 
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: "radial-gradient(circle at 80% 50%, color-mix(in srgb, var(--danger) 5%, transparent), transparent 50%)"
+          }}
+        />
+        <div className="mx-auto max-w-7xl px-6 py-24 lg:px-10">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-60px" }}
+            transition={{ duration: 0.5 }}
+            className="mb-14 space-y-4"
+          >
+            <p className="chapter-label">The Narrator&apos;s Eye</p>
+            <h2 className="font-heading text-5xl text-[var(--text-main)]">
+              No detail escapes the archive.
+            </h2>
+            <p className="max-w-2xl text-sm leading-7 text-[var(--text-muted)]">
+              Write freely. True canon enforcement means you never have to cross-reference your own notes. The archive flags contradictions as soon as they are typed.
+            </p>
+          </motion.div>
+          
+          <motion.div
+            initial={{ opacity: 0, y: 32 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-40px" }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <FractureLensPreview />
+          </motion.div>
+        </div>
+      </section>
 
       {/* ── HOW IT WORKS ──────────────────────────────────────────────── */}
       <section id="how-it-works" className="border-t border-[var(--border)]">

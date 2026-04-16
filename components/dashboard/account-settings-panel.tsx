@@ -79,7 +79,7 @@ export function AccountSettingsPanel({ email, profile }: AccountSettingsPanelPro
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-      <Card id="profile" className="rounded-[32px] p-6 sm:p-7">
+      <Card id="profile" className="rounded-2xl p-6 sm:p-7">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
             <p className="chapter-label">Account • Profile</p>
@@ -95,7 +95,7 @@ export function AccountSettingsPanel({ email, profile }: AccountSettingsPanelPro
         </div>
 
         <div className="mt-8 grid gap-4 md:grid-cols-2">
-          <div className="rounded-[24px] border border-border bg-[rgba(255,255,255,0.03)] p-4">
+          <div className="rounded-xl border border-border bg-[rgba(255,255,255,0.03)] p-4">
             <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-secondary">
               <UserCircle2 className="h-4 w-4" />
               Display name
@@ -104,7 +104,7 @@ export function AccountSettingsPanel({ email, profile }: AccountSettingsPanelPro
             <p className="mt-1 text-sm text-secondary">{email || "No email found"}</p>
           </div>
 
-          <div className="rounded-[24px] border border-border bg-[rgba(255,255,255,0.03)] p-4">
+          <div className="rounded-xl border border-border bg-[rgba(255,255,255,0.03)] p-4">
             <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-secondary">
               <Shield className="h-4 w-4" />
               Plan
@@ -115,7 +115,7 @@ export function AccountSettingsPanel({ email, profile }: AccountSettingsPanelPro
         </div>
 
         <div className="mt-8 grid gap-4 xl:grid-cols-2">
-          <Card className="rounded-[28px] border border-border bg-[rgba(255,255,255,0.02)] p-5">
+          <Card className="rounded-xl border border-border bg-[rgba(255,255,255,0.02)] p-5">
             <div className="flex items-center gap-2">
               <Mail className="h-4 w-4 text-[var(--gold)]" />
               <h2 className="font-heading text-2xl text-foreground">Update email</h2>
@@ -137,7 +137,7 @@ export function AccountSettingsPanel({ email, profile }: AccountSettingsPanelPro
             </form>
           </Card>
 
-          <Card className="rounded-[28px] border border-border bg-[rgba(255,255,255,0.02)] p-5">
+          <Card className="rounded-xl border border-border bg-[rgba(255,255,255,0.02)] p-5">
             <div className="flex items-center gap-2">
               <KeyRound className="h-4 w-4 text-[var(--violet-soft)]" />
               <h2 className="font-heading text-2xl text-foreground">Update password</h2>
@@ -162,7 +162,7 @@ export function AccountSettingsPanel({ email, profile }: AccountSettingsPanelPro
       </Card>
 
       <div className="space-y-6">
-        <Card className="rounded-[32px] p-6">
+        <Card className="rounded-2xl p-6">
           <p className="chapter-label">Session</p>
           <h2 className="mt-2 font-heading text-3xl text-foreground">Leave the archive</h2>
           <p className="mt-3 text-sm leading-7 text-secondary">
@@ -174,7 +174,7 @@ export function AccountSettingsPanel({ email, profile }: AccountSettingsPanelPro
           </Button>
         </Card>
 
-        <Card className="rounded-[32px] border-[rgba(196,168,106,0.24)] bg-[rgba(196,168,106,0.06)] p-6">
+        <Card className="rounded-2xl border-[rgba(196,168,106,0.24)] bg-[rgba(196,168,106,0.06)] p-6">
           <p className="chapter-label">Session</p>
           <h2 className="mt-2 font-heading text-2xl text-foreground">Security</h2>
           <p className="mt-3 text-sm leading-7 text-secondary">

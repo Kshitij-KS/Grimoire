@@ -611,3 +611,13 @@ These are deliberate blockers, not bugs:
 32. **Dashboard `/api/dashboard` route** has a per-world stats loop that makes 3 parallel queries per world (N×3 queries). Acceptable at current world count (free tier = 1 world), but watch this if limits increase.
 
 33. **`@anthropic-ai/sdk` in `package.json`** — present but unused. Do not introduce Anthropic API calls; all AI runs through Gemini exclusively.
+
+34. **Lore Scribe toolbar uses `.loom-toolbar-btn` CSS class** (not Tailwind `transition`) — this class in `globals.css` pins transitions to exactly `background-color 120ms`, `color 120ms`, `transform 80ms` with `var(--ease-snap)` easing and an instant `active: scale(0.93)`. Reverting to `transition` class causes the global 0.45s transition to bleed in, making buttons feel laggy.
+
+35. **Lore Scribe has 12 toolbar buttons** plus an Oracle Whisper button. Buttons are grouped by separators (`<span className="mx-1 h-4 w-px shrink-0 bg-[var(--border)]" />`): headings group (H1/H2/H3) | inline group (Bold/Italic/Strike/Highlight/Code) | block group (Quote/Bullet/Ordered/HR). Requires `Highlight` extension from `@tiptap/extension-highlight` and `Fragment` import from React.
+
+36. **`ArchiveWeb` has a mobile list view** — on viewports < 768px, the force-directed SVG graph is replaced by a grouped accordion list of entities with inline relationship expansion. The switch is via `isMobile` state set by a `resize` event listener. Desktop retains the existing SVG graph with `touch-action: none`.
+
+37. **World creation tone cards** use tone-specific Lucide icons (Skull=Dark, Mountain=Epic, Wand2=Whimsical, Eye=Mystery, Ghost=Horror, Sun=Hopeful). Active state for both genre and tone cards: `border-2 border-[var(--accent)]` + accent background + `scale-[1.02]` + absolute `Check` icon in top-right. `rounded-xl` on all cards (was `rounded-[24px]`).
+
+38. **Global border-radius principle**: large container surfaces use `rounded-xl` (12px) or `rounded-2xl` (16px) max. Pill shapes (dock, badges, `rounded-full` avatars) are intentionally kept. Do NOT revert to `rounded-[28px]` or larger on container cards — the project intentionally moved away from the bubbly AI-app aesthetic.

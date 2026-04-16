@@ -24,6 +24,7 @@ import { Breadcrumbs, type BreadcrumbItem } from "@/components/shared/breadcrumb
 import { Skeleton } from "@/components/ui/skeleton";
 import { SectionLoadingScreen } from "@/components/shared/loading-shimmer";
 import { useWorkspaceStore } from "@/lib/store";
+import { cn } from "@/lib/utils";
 import { FREE_TIER_LIMITS } from "@/lib/constants";
 import type { ConsistencyCheck, Entity, EntityRelationship, Soul, WorldWorkspaceData } from "@/lib/types";
 
@@ -239,7 +240,7 @@ export function WorldWorkspace({
               className="relative z-10"
             >
             {data.activeSection === "lore" ? (
-              <div className={structuredSection ? "mx-auto max-w-[1100px]" : ""}>
+              <div className={cn("relative h-[calc(100vh-230px)]", structuredSection ? "mx-auto max-w-[1100px]" : "")}>
                 <LoomEditor worldId={data.world.id} initialEntries={data.loreEntries} isReadonly={data.isReadonly} />
               </div>
             ) : null}
@@ -327,7 +328,7 @@ export function WorldWorkspace({
                           onClick={() => setSoulModalOpen(true)}
                           whileHover={{ y: -4, scale: 1.01 }}
                           transition={{ type: "spring", stiffness: 340, damping: 24 }}
-                          className="glass-panel relative flex min-h-[240px] flex-col items-center justify-center overflow-hidden rounded-[30px] border border-dashed border-[color-mix(in_srgb,var(--ai-pulse)_35%,transparent)] text-center transition-shadow hover:border-[color-mix(in_srgb,var(--ai-pulse)_55%,transparent)] hover:shadow-arcane-glow"
+                          className="glass-panel relative flex min-h-[240px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-dashed border-[color-mix(in_srgb,var(--ai-pulse)_35%,transparent)] text-center transition-shadow hover:border-[color-mix(in_srgb,var(--ai-pulse)_55%,transparent)] hover:shadow-arcane-glow"
                         >
                           {/* Rotating rune glyphs at corners */}
                           {["ᚠ", "ᚢ", "ᚦ", "ᚨ"].map((rune, i) => (

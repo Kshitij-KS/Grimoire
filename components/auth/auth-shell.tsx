@@ -6,10 +6,9 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Stars } from "lucide-react";
+import { Loader2, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { GrimoireLogo } from "@/components/shared/grimoire-logo";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -139,12 +138,6 @@ export function AuthShell() {
           <div className="flex justify-center">
             <GrimoireLogo className="scale-90" />
           </div>
-          <div className="flex justify-center">
-            <Badge variant="outline" className="gap-2 px-3 py-1">
-              <Stars className="h-3.5 w-3.5 text-[rgb(196,168,106)]" />
-              Moonlit Arcane access
-            </Badge>
-          </div>
           <div>
             <h1 className="font-heading text-4xl text-foreground">
               {mode === "signup" ? "Begin the first chapter." : "Return to your world."}
@@ -185,8 +178,9 @@ export function AuthShell() {
           </div>
           <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
             <Button className="w-full" type="submit" disabled={busy}>
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               {mode === "signup" ? "Begin the first chapter" : "Return to the archive"}
+              {!busy && <ArrowRight className="ml-2 h-4 w-4" />}
             </Button>
           </motion.div>
         </form>
@@ -199,7 +193,6 @@ export function AuthShell() {
 
         <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
           <Button className="w-full" variant="secondary" onClick={signInWithGoogle}>
-            <Sparkles className="h-4 w-4" />
             Continue with Google
           </Button>
         </motion.div>

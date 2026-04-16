@@ -15,7 +15,7 @@ export function ThemeToggle() {
   if (!mounted) {
     return (
       <button
-        className="h-8 w-8 rounded-md border border-transparent"
+        className="h-10 w-10 rounded-md border border-transparent"
         aria-label="Toggle theme"
       />
     );
@@ -26,32 +26,32 @@ export function ThemeToggle() {
   return (
     <button
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="relative h-8 w-8 rounded-md flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface)] transition-colors duration-150 border border-transparent hover:border-[var(--border)] active:scale-[0.92] transition-transform"
+      className="relative h-10 w-10 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface)] transition-colors duration-150 border border-transparent hover:border-[var(--border)] active:scale-[0.92] transition-transform"
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       style={{ transition: "background 150ms ease, color 150ms ease, border-color 150ms ease, transform 120ms cubic-bezier(0.23,1,0.32,1)" }}
     >
-      <AnimatePresence mode="wait" initial={false}>
+      <AnimatePresence initial={false}>
         {isDark ? (
           <motion.span
             key="sun"
-            initial={{ opacity: 0, rotate: -90, scale: 0.7 }}
+            initial={{ opacity: 0, rotate: -90, scale: 0.8 }}
             animate={{ opacity: 1, rotate: 0, scale: 1 }}
-            exit={{ opacity: 0, rotate: 90, scale: 0.7 }}
-            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+            exit={{ opacity: 0, rotate: 90, scale: 0.8 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             className="absolute flex items-center justify-center"
           >
-            <Sun className="h-[15px] w-[15px]" />
+            <Sun className="h-[18px] w-[18px]" />
           </motion.span>
         ) : (
           <motion.span
             key="moon"
-            initial={{ opacity: 0, rotate: 90, scale: 0.7 }}
+            initial={{ opacity: 0, rotate: 90, scale: 0.8 }}
             animate={{ opacity: 1, rotate: 0, scale: 1 }}
-            exit={{ opacity: 0, rotate: -90, scale: 0.7 }}
-            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+            exit={{ opacity: 0, rotate: -90, scale: 0.8 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             className="absolute flex items-center justify-center"
           >
-            <Moon className="h-[15px] w-[15px]" />
+            <Moon className="h-[18px] w-[18px]" />
           </motion.span>
         )}
       </AnimatePresence>

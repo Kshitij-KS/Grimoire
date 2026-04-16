@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from "react";
-import { Search, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, X } from "lucide-react";
 import { useWorkspaceStore } from "@/lib/store";
 import type { Entity, EntityType, EntityRelationship } from "@/lib/types";
 import { ForgeRelationshipModal } from "./forge-relationship-modal";
@@ -190,6 +190,15 @@ export function ConstellationCanvas({
   const forgeCurrentPosRef = useRef<{ x: number; y: number } | null>(null);
   
   const [forgeModalOpen, setForgeModalOpen] = useState(false);
+  const [legendOpen, setLegendOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check, { passive: true });
+    return () => window.removeEventListener("resize", check);
+  }, []);
   const [forgeSourceEntity, setForgeSourceEntity] = useState<Entity | null>(null);
   const [forgeTargetEntity, setForgeTargetEntity] = useState<Entity | null>(null);
   
@@ -871,20 +880,48 @@ export function ConstellationCanvas({
           </div>
         )}
 
-        {/* Legend */}
-        <div className="pointer-events-none absolute bottom-4 right-4 flex flex-col gap-1.5 rounded-[16px] border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_85%,transparent)] px-3 py-2.5 backdrop-blur-sm">
-          {ALL_ENTITY_TYPES.map((type) => (
-            <div key={type} className="flex items-center gap-2">
-              <span
-                className="h-2 w-2 shrink-0 rounded-full"
-                style={{ background: TYPE_COLORS[type] }}
-              />
-              <span className="text-[10px] text-[var(--text-muted)]">{TYPE_SHAPE_LABELS[type]}</span>
+        {/* Legend — collapsible on mobile */}
+        <div className="pointer-events-auto absolute bottom-4 right-4 flex flex-col rounded-[16px] border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_90%,transparent)] backdrop-blur-sm overflow-hidden">
+          {isMobile ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setLegendOpen((v) => !v)}
+                className="flex items-center gap-1.5 px-3 py-2 text-[10px] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors"
+                title={legendOpen ? "Hide legend" : "Show legend"}
+              >
+                <span className="flex gap-1">
+                  {ALL_ENTITY_TYPES.slice(0, 3).map((t) => (
+                    <span key={t} className="h-2 w-2 rounded-full" style={{ background: TYPE_COLORS[t] }} />
+                  ))}
+                </span>
+                <span className="font-medium">Legend</span>
+                {legendOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
+              </button>
+              {legendOpen && (
+                <div className="flex flex-col gap-1.5 border-t border-[var(--border)] px-3 pb-2.5 pt-2">
+                  {ALL_ENTITY_TYPES.map((type) => (
+                    <div key={type} className="flex items-center gap-2">
+                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: TYPE_COLORS[type] }} />
+                      <span className="text-[10px] text-[var(--text-muted)]">{TYPE_SHAPE_LABELS[type]}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex flex-col gap-1.5 px-3 py-2.5">
+              {ALL_ENTITY_TYPES.map((type) => (
+                <div key={type} className="flex items-center gap-2">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: TYPE_COLORS[type] }} />
+                  <span className="text-[10px] text-[var(--text-muted)]">{TYPE_SHAPE_LABELS[type]}</span>
+                </div>
+              ))}
+              <p className="mt-1 border-t border-[var(--border)] pt-1.5 text-[9px] text-[var(--text-muted)] opacity-60">
+                Scroll to zoom · Drag to pan · Drag node to forge link
+              </p>
             </div>
-          ))}
-          <p className="mt-1 border-t border-[var(--border)] pt-1.5 text-[9px] text-[var(--text-muted)] opacity-60">
-            Scroll to zoom · Drag to pan · Drag node to forge link
-          </p>
+          )}
         </div>
       </div>
     <ForgeRelationshipModal

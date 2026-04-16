@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronDown, User, MapPin, Users, Gem, Calendar, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Entity, EntityRelationship, EntityType } from "@/lib/types";
 
@@ -14,6 +15,15 @@ const TYPE_COLORS: Record<EntityType, string> = {
   artifact:  "var(--accent-soft)",
   event:     "var(--success)",
   rule:      "var(--text-muted)",
+};
+
+const TYPE_ICONS: Record<EntityType, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
+  character: User,
+  location:  MapPin,
+  faction:   Users,
+  artifact:  Gem,
+  event:     Calendar,
+  rule:      BookOpen,
 };
 
 // ── Force layout hook ──────────────────────────────────────────────────────
@@ -114,6 +124,171 @@ function useForceLayout(
   return positions;
 }
 
+// ── Mobile list view ───────────────────────────────────────────────────────
+
+function MobileWebList({
+  entities,
+  relationships,
+  onSelectEntity,
+  selectedEntityId,
+}: {
+  entities: Entity[];
+  relationships: EntityRelationship[];
+  onSelectEntity: (id: string | null) => void;
+  selectedEntityId: string | null;
+}) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Build a lookup: entity id → related entities
+  const relMap: Record<string, { entity: Entity; label: string }[]> = {};
+  for (const r of relationships) {
+    const src = entities.find((e) => e.id === r.source_entity_id);
+    const tgt = entities.find((e) => e.id === r.target_entity_id);
+    if (src && tgt) {
+      if (!relMap[src.id]) relMap[src.id] = [];
+      if (!relMap[tgt.id]) relMap[tgt.id] = [];
+      relMap[src.id].push({ entity: tgt, label: r.label });
+      relMap[tgt.id].push({ entity: src, label: r.label });
+    }
+  }
+
+  // Group entities by type
+  const grouped: Partial<Record<EntityType, Entity[]>> = {};
+  for (const e of entities) {
+    if (!grouped[e.type]) grouped[e.type] = [];
+    grouped[e.type]!.push(e);
+  }
+
+  const typeOrder: EntityType[] = ["character", "location", "faction", "artifact", "event", "rule"];
+
+  const toggle = (id: string) => {
+    setExpandedId((prev) => (prev === id ? null : id));
+    onSelectEntity(id);
+  };
+
+  return (
+    <div className="space-y-4 overflow-y-auto pb-4">
+      {typeOrder.map((type) => {
+        const group = grouped[type];
+        if (!group || group.length === 0) return null;
+        const color = TYPE_COLORS[type];
+        const Icon = TYPE_ICONS[type];
+        return (
+          <div key={type}>
+            {/* Type header */}
+            <div className="mb-1.5 flex items-center gap-2 px-1">
+              <Icon className="h-3.5 w-3.5" style={{ color }} />
+              <span className="chapter-label text-[10px] uppercase tracking-widest" style={{ color }}>
+                {type}
+              </span>
+              <span
+                className="rounded-full px-1.5 py-0.5 text-[9px] font-medium"
+                style={{
+                  background: `color-mix(in srgb, ${color} 12%, transparent)`,
+                  color,
+                }}
+              >
+                {group.length}
+              </span>
+            </div>
+
+            {/* Entity rows */}
+            <div className="space-y-1">
+              {group.map((entity) => {
+                const rels = relMap[entity.id] ?? [];
+                const isExpanded = expandedId === entity.id;
+                const isSelected = selectedEntityId === entity.id;
+
+                return (
+                  <div key={entity.id}>
+                    <button
+                      type="button"
+                      onClick={() => toggle(entity.id)}
+                      className={cn(
+                        "w-full rounded-xl border px-4 py-3 text-left transition-all duration-150 active:scale-[0.98] active:transition-none",
+                        isSelected
+                          ? "border-[color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[color-mix(in_srgb,var(--accent)_6%,transparent)]"
+                          : "border-[var(--border)] bg-[var(--surface)] hover:border-[color-mix(in_srgb,var(--border-focus)_60%,transparent)]"
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span
+                            className="h-2 w-2 shrink-0 rounded-full"
+                            style={{ background: color }}
+                          />
+                          <span className="truncate text-sm font-medium text-[var(--text-main)]">
+                            {entity.name}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 pl-2 shrink-0">
+                          {rels.length > 0 && (
+                            <span
+                              className="rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                              style={{
+                                background: `color-mix(in srgb, ${color} 14%, transparent)`,
+                                color,
+                              }}
+                            >
+                              {rels.length}
+                            </span>
+                          )}
+                          {rels.length > 0 && (
+                            <ChevronDown
+                              className="h-3.5 w-3.5 text-[var(--text-muted)] transition-transform duration-200"
+                              style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Inline relationship accordion */}
+                    <AnimatePresence>
+                      {isExpanded && rels.length > 0 && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+                          className="overflow-hidden"
+                        >
+                          <div className="ml-4 mt-1 space-y-1 border-l-2 border-[var(--border)] pl-3 pb-1">
+                            {rels.map(({ entity: rel, label }, i) => {
+                              const relColor = TYPE_COLORS[rel.type];
+                              return (
+                                <button
+                                  key={i}
+                                  type="button"
+                                  onClick={() => onSelectEntity(rel.id)}
+                                  className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors duration-100 hover:bg-[color-mix(in_srgb,var(--text-main)_4%,transparent)] active:scale-[0.97] active:transition-none"
+                                >
+                                  <span
+                                    className="h-1.5 w-1.5 shrink-0 rounded-full"
+                                    style={{ background: relColor }}
+                                  />
+                                  <span className="text-xs text-[var(--text-muted)]">{label}</span>
+                                  <span className="ml-auto text-xs font-medium text-[var(--text-main)]">
+                                    {rel.name}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Main component ─────────────────────────────────────────────────────────
 
 interface ArchiveWebProps {
@@ -131,6 +306,7 @@ export function ArchiveWeb({
 }: ArchiveWebProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
+  const [isMobile, setIsMobile] = useState(false);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const [edgeTooltip, setEdgeTooltip] = useState<{ x: number; y: number; label: string } | null>(null);
 
@@ -139,6 +315,13 @@ export function ArchiveWeb({
     relationships.flatMap((r) => [r.source_entity_id, r.target_entity_id])
   );
   const visibleEntities = entities.filter((e) => connectedIds.has(e.id));
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check, { passive: true });
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -183,8 +366,23 @@ export function ArchiveWeb({
     );
   }
 
+  // Mobile: grouped list view
+  if (isMobile) {
+    return (
+      <div className="h-full overflow-y-auto px-2 pt-2">
+        <MobileWebList
+          entities={visibleEntities}
+          relationships={relationships}
+          onSelectEntity={onSelectEntity}
+          selectedEntityId={selectedEntityId}
+        />
+      </div>
+    );
+  }
+
+  // Desktop: force-directed SVG graph
   return (
-    <div ref={containerRef} className="relative h-full w-full overflow-hidden">
+    <div ref={containerRef} className="relative h-full w-full overflow-hidden" style={{ touchAction: "none" }}>
       {/* SVG edges */}
       {size.w > 0 && (
         <svg

@@ -154,7 +154,7 @@ export function TavernChat({ worldId, souls }: TavernChatProps) {
           </p>
         </div>
 
-        <div className="glass-panel rounded-[28px] p-6 space-y-4">
+        <div className="glass-panel rounded-2xl p-6 space-y-4">
           <p className="chapter-label">— Select 2-4 Souls —</p>
 
           <div className="grid gap-3 sm:grid-cols-2">

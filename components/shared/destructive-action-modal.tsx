@@ -71,7 +71,7 @@ export function DestructiveActionModal({
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="glass-panel w-full max-w-md overflow-hidden rounded-[32px] border-[var(--danger)]/20 bg-[var(--surface)] shadow-2xl"
+              className="glass-panel w-full max-w-md overflow-hidden rounded-2xl border-[var(--danger)]/20 bg-[var(--surface)] shadow-2xl"
             >
               <div className="flex items-start justify-between border-b border-[color-mix(in_srgb,var(--danger)_12%,transparent)] p-6">
                 <div className="flex flex-col gap-2">

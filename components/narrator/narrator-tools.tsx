@@ -139,7 +139,7 @@ export function NarratorTools({ worldId }: NarratorToolsProps) {
             exit={{ opacity: 0, y: -8 }}
             className="space-y-4"
           >
-            <div className="glass-panel rounded-[24px] p-5 space-y-3">
+            <div className="glass-panel rounded-xl p-5 space-y-3">
               <p className="chapter-label">— What-If Scenario —</p>
               <textarea
                 value={scenario}
@@ -170,7 +170,7 @@ export function NarratorTools({ worldId }: NarratorToolsProps) {
               >
                 {/* Affected Entities */}
                 {(impactResult.affected?.length ?? 0) > 0 && (
-                  <div className="glass-panel rounded-[24px] p-5">
+                  <div className="glass-panel rounded-xl p-5">
                     <p className="chapter-label mb-3">— Affected Entities —</p>
                     <div className="space-y-2">
                       {impactResult.affected?.map((entity, i) => (
@@ -212,7 +212,7 @@ export function NarratorTools({ worldId }: NarratorToolsProps) {
 
                 {/* Orphaned */}
                 {(impactResult.orphaned?.length ?? 0) > 0 && (
-                  <div className="glass-panel rounded-[24px] p-5">
+                  <div className="glass-panel rounded-xl p-5">
                     <p className="chapter-label mb-3 text-[var(--danger)]">
                       — Orphaned Characters —
                     </p>
@@ -231,7 +231,7 @@ export function NarratorTools({ worldId }: NarratorToolsProps) {
 
                 {/* Invalidated */}
                 {(impactResult.invalidated?.length ?? 0) > 0 && (
-                  <div className="glass-panel rounded-[24px] p-5">
+                  <div className="glass-panel rounded-xl p-5">
                     <p className="chapter-label mb-3">
                       — Invalidated World Rules —
                     </p>
@@ -261,7 +261,7 @@ export function NarratorTools({ worldId }: NarratorToolsProps) {
             exit={{ opacity: 0, y: -8 }}
             className="space-y-4"
           >
-            <div className="glass-panel rounded-[24px] p-5 text-center">
+            <div className="glass-panel rounded-xl p-5 text-center">
               <Search className="mx-auto mb-2 h-6 w-6 text-[var(--gold)]" />
               <p className="mb-3 text-sm text-secondary">
                 Discover what&rsquo;s missing from your world. The Oracle examines your most referenced entities for gaps.

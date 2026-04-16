@@ -582,12 +582,35 @@ button:not(:disabled),
   letter-spacing: 0.08em;
 }
 
+/* Diary paper background — fills the entire canvas scroll area */
+.loom-canvas-paper {
+  background: color-mix(in srgb, var(--accent) 1.5%, var(--surface));
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.018'/%3E%3C/svg%3E");
+  min-height: 100%;
+  width: 100%;
+}
+
+/* Permanent formatting toolbar — thin row between topbar and canvas */
+.loom-format-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  padding: 0.375rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.loom-format-bar::-webkit-scrollbar { display: none; }
+.loom-format-bar > * { flex-shrink: 0; }
+
 .tiptap-loom-diary {
-  min-height: 52vh;
+  min-height: 72vh;
   outline: none;
   font-family: var(--font-crimson), serif;
-  font-size: 1.15rem;
-  line-height: 1.9;
+  font-size: 1.25rem;
+  line-height: 2.1;
   color: var(--text-main);
   caret-color: var(--accent);
 }

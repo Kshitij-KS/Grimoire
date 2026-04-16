@@ -6,7 +6,10 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, BookMarked, Castle, Moon, Landmark, Stars, Sparkles, Sword, Trees } from "lucide-react";
+import {
+  ArrowLeft, BookMarked, Castle, Moon, Landmark, Stars, Sparkles, Trees,
+  Mountain, Skull, Eye, Ghost, Sun, Wand2, Check,
+} from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -36,12 +39,12 @@ const genres = [
 ];
 
 const tones = [
-  "Dark & Gritty",
-  "Epic & Grand",
-  "Whimsical",
-  "Mystery",
-  "Horror",
-  "Hopeful",
+  { value: "Dark & Gritty", icon: Skull },
+  { value: "Epic & Grand", icon: Mountain },
+  { value: "Whimsical", icon: Wand2 },
+  { value: "Mystery", icon: Eye },
+  { value: "Horror", icon: Ghost },
+  { value: "Hopeful", icon: Sun },
 ];
 
 export function WorldCreationFlow() {
@@ -88,7 +91,7 @@ export function WorldCreationFlow() {
   });
 
   return (
-    <Card className="glass-panel-elevated mx-auto w-full max-w-3xl rounded-[34px] p-8">
+    <Card className="glass-panel-elevated mx-auto w-full max-w-3xl rounded-2xl p-8">
       <div className="mb-6">
         <Button variant="ghost" size="sm" asChild>
           <Link href="/dashboard">
@@ -144,10 +147,17 @@ export function WorldCreationFlow() {
                       type="button"
                       onClick={() => form.setValue("genre", genre.value, { shouldValidate: true })}
                       className={cn(
-                        "glass-panel rounded-[24px] p-4 text-left transition hover:-translate-y-0.5",
-                        active ? "border-[color-mix(in_srgb,var(--accent)_35%,transparent)] bg-[color-mix(in_srgb,var(--ai-pulse)_14%,transparent)]" : "border-border"
+                        "glass-panel relative rounded-xl p-4 text-left transition-all duration-150 active:scale-[0.97] active:transition-none",
+                        active
+                          ? "border-2 border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] scale-[1.02]"
+                          : "border-border hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--accent)_30%,transparent)]"
                       )}
                     >
+                      {active && (
+                        <span className="absolute right-2.5 top-2.5 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent)]">
+                          <Check className="h-3 w-3 text-[var(--bg)]" strokeWidth={2.5} />
+                        </span>
+                      )}
                       <Icon className="mb-3 h-5 w-5 text-[var(--accent)]" />
                       <div className="font-medium text-foreground">{genre.value}</div>
                     </button>
@@ -161,7 +171,7 @@ export function WorldCreationFlow() {
             <div className="space-y-4">
               <h2 className="font-heading text-4xl text-foreground">Pick a tone</h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {tones.map((tone) => {
+                {tones.map(({ value: tone, icon: ToneIcon }) => {
                   const active = form.watch("tone") === tone;
                   return (
                     <button
@@ -169,12 +179,19 @@ export function WorldCreationFlow() {
                       type="button"
                       onClick={() => form.setValue("tone", tone, { shouldValidate: true })}
                       className={cn(
-                        "glass-panel flex items-center gap-3 rounded-[24px] p-4 text-left transition hover:-translate-y-0.5",
-                        active ? "border-[color-mix(in_srgb,var(--accent)_35%,transparent)] bg-[color-mix(in_srgb,var(--ai-pulse)_14%,transparent)]" : "border-border"
+                        "glass-panel relative flex items-center gap-3 rounded-xl p-4 text-left transition-all duration-150 active:scale-[0.97] active:transition-none",
+                        active
+                          ? "border-2 border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] scale-[1.02]"
+                          : "border-border hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--accent)_30%,transparent)]"
                       )}
                     >
-                      <Sword className="h-4 w-4 text-[rgb(157,127,224)]" />
-                      <span className="text-sm text-foreground">{tone}</span>
+                      {active && (
+                        <span className="absolute right-2.5 top-2.5 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent)]">
+                          <Check className="h-3 w-3 text-[var(--bg)]" strokeWidth={2.5} />
+                        </span>
+                      )}
+                      <ToneIcon className={cn("h-4 w-4 shrink-0", active ? "text-[var(--accent)]" : "text-[var(--ai-pulse)]")} />
+                      <span className="text-sm font-medium text-foreground">{tone}</span>
                     </button>
                   );
                 })}

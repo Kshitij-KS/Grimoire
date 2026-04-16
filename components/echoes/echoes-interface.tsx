@@ -177,7 +177,7 @@ export function EchoesInterface({
     isStreaming && messages[messages.length - 1]?.role !== "assistant";
 
   return (
-    <div className="relative overflow-hidden rounded-[34px] border border-border bg-[color-mix(in_srgb,var(--surface)_72%,transparent)]">
+    <div className="relative overflow-hidden rounded-2xl border border-border bg-[color-mix(in_srgb,var(--surface)_72%,transparent)]">
       <div className="pointer-events-none absolute inset-0 bg-grid opacity-10" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,color-mix(in_srgb,var(--ai-pulse)_12%,transparent),transparent_24%)]" />
 
@@ -544,7 +544,7 @@ export function EchoesInterface({
             {/* ── Input ── */}
             <div className="border-t border-border px-5 py-4">
               <div
-                className="rounded-[26px] border bg-[color-mix(in_srgb,var(--surface)_70%,transparent)] p-4 transition-all duration-200"
+                className="rounded-xl border bg-[color-mix(in_srgb,var(--surface)_70%,transparent)] p-4 transition-all duration-200"
                 style={{
                   borderColor: inputFocused
                     ? "color-mix(in srgb, var(--border-focus) 70%, transparent)"

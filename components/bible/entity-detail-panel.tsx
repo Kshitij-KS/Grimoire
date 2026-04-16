@@ -117,7 +117,7 @@ export function EntityDetailPanel({
         animate={{ x: 0, opacity: 1 }}
         exit={{ x: 50, opacity: 0 }}
         transition={{ type: "spring", stiffness: 340, damping: 32 }}
-        className="glass-panel-elevated fixed bottom-4 left-4 right-4 z-40 max-h-[80vh] overflow-y-auto rounded-[30px] p-5 shadow-arcane md:bottom-auto md:inset-y-4 md:left-auto md:right-4 md:w-[min(92vw,420px)]"
+        className="glass-panel-elevated fixed bottom-4 left-4 right-4 z-40 max-h-[80vh] overflow-y-auto rounded-2xl p-5 shadow-arcane md:bottom-auto md:inset-y-4 md:left-auto md:right-4 md:w-[min(92vw,420px)]"
       >
         <div className="mb-5 flex items-start justify-between">
           <div className="min-w-0 flex-1 pr-2">
