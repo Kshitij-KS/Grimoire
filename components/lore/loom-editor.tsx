@@ -710,7 +710,7 @@ export function LoomEditor({
                 GRIMOIRE
               </p>
               <p className="mt-1 text-[8px] uppercase tracking-[0.5em] text-[var(--text-muted)] font-medium">
-                THE SCRIBE'S SIGNATURE
+                THE SCRIBE&apos;S SIGNATURE
               </p>
             </div>
           </div>

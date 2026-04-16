@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { Trash2 } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
-import { cn, formatRelativeTime, stripHtml } from "@/lib/utils";
+import { cn, stripHtml } from "@/lib/utils";
 import type { LoreEntry } from "@/lib/types";
 
 export function LoreList({
