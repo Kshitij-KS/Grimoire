@@ -374,74 +374,124 @@ button:not(:disabled),
 }
 
 /* ─────────────────────────────────────────────────────────────
-   TipTap Loom Editor
+   Loom — The Writing Canvas
+   A manuscript-quality editor. Professional. Unhurried.
    ───────────────────────────────────────────────────────────── */
 
+/* Editor content area */
 .tiptap-loom {
-  min-height: 56vh;
+  min-height: 60vh;
   outline: none;
   color: var(--text-main);
-  font-family: var(--font-crimson), serif;
-  font-size: 1.125rem;
-  line-height: 1.9;
-  padding: 2rem 0;
+  font-family: var(--font-crimson), "Georgia", serif;
+  font-size: 1.175rem;
+  line-height: 1.95;
+  letter-spacing: 0.01em;
   background: transparent;
   border: none;
+  caret-color: var(--accent);
 }
 
+/* Consistent vertical rhythm */
+.tiptap-loom > * + * {
+  margin-top: 0.85em;
+}
+
+/* Headings — structured, not decorative */
 .tiptap-loom h1,
 .tiptap-loom h2,
 .tiptap-loom h3 {
+  font-family: var(--font-crimson), "Georgia", serif;
   color: var(--text-main);
-  font-family: var(--font-crimson), serif;
-  line-height: 1.16;
-  margin-top: 1.35em;
-  margin-bottom: 0.45em;
+  font-weight: 600;
+  line-height: 1.22;
+  letter-spacing: -0.015em;
+  margin-top: 2em;
+  margin-bottom: 0.35em;
 }
 
-.tiptap-loom h1 {
-  font-size: 2.25rem;
-}
+.tiptap-loom h1 { font-size: 1.9rem; }
+.tiptap-loom h2 { font-size: 1.5rem; }
+.tiptap-loom h3 { font-size: 1.2rem; font-weight: 500; letter-spacing: 0; }
 
-.tiptap-loom h2 {
-  font-size: 1.75rem;
-}
+/* Paragraph baseline */
+.tiptap-loom p { margin: 0; }
+.tiptap-loom p + p { margin-top: 0.85em; }
 
-.tiptap-loom h3 {
-  font-size: 1.4rem;
-}
-
-.tiptap-loom p {
+/* Inline styles */
+.tiptap-loom strong {
+  font-weight: 700;
   color: var(--text-main);
 }
 
+.tiptap-loom em {
+  font-style: italic;
+}
+
+.tiptap-loom s {
+  text-decoration: line-through;
+  opacity: 0.45;
+}
+
+.tiptap-loom mark {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--text-main);
+  border-radius: 2px;
+  padding: 1px 3px;
+}
+
+.tiptap-loom code {
+  font-family: "SF Mono", "Fira Code", "Courier New", monospace;
+  font-size: 0.85em;
+  background: color-mix(in srgb, var(--text-main) 7%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  color: var(--accent-soft);
+}
+
+/* Blockquote — restrained, literary */
 .tiptap-loom blockquote {
-  margin: 1.2em 0;
-  border-left: 2px solid var(--border-focus);
-  padding-left: 1.25rem;
+  position: relative;
+  margin: 1.75em 0;
+  padding: 0 0 0 1.5rem;
+  border-left: 1.5px solid color-mix(in srgb, var(--accent) 45%, transparent);
   color: var(--text-muted);
   font-style: italic;
 }
 
-.tiptap-loom ul {
-  margin-left: 1.25rem;
-  list-style-type: disc;
-}
+/* Lists */
+.tiptap-loom ul { list-style: disc; margin-left: 1.5rem; }
+.tiptap-loom ol { list-style: decimal; margin-left: 1.5rem; }
+.tiptap-loom li + li { margin-top: 0.3em; }
 
+/* Chapter break — ornamental, not a line */
 .tiptap-loom hr {
-  margin: 2rem 0;
-  border-color: var(--border);
+  border: none;
+  margin: 2.75em 0;
+  text-align: center;
 }
 
-.tiptap-loom p.is-editor-empty:first-child::before,
-.tiptap-loom.is-editor-empty:first-child::before {
+.tiptap-loom hr::after {
+  content: "· · ·";
+  display: inline-block;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  letter-spacing: 0.5em;
+  opacity: 0.4;
+  font-family: var(--font-inter), sans-serif;
+}
+
+/* Placeholder text */
+.tiptap-loom p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
   height: 0;
   pointer-events: none;
   color: var(--text-muted);
-  opacity: 0.5;
+  opacity: 0.38;
   font-style: italic;
+  font-family: var(--font-crimson), "Georgia", serif;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -503,18 +553,10 @@ button:not(:disabled),
    ───────────────────────────────────────────────────────────── */
 
 .writing-paper {
-  background: color-mix(in srgb, var(--accent) 2%, var(--surface));
+  background-color: color-mix(in srgb, var(--accent) 2%, var(--surface));
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.02'/%3E%3C/svg%3E");
+  background-attachment: local;
   position: relative;
-}
-
-.writing-paper::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
-  pointer-events: none;
-  border-radius: inherit;
-  opacity: 0.6;
 }
 
 .loom-title-input {

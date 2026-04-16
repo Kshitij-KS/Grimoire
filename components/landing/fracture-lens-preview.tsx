@@ -198,7 +198,7 @@ export function FractureLensPreview() {
                    
                    <div className="mt-3 rounded-xl bg-[rgba(6,8,14,0.4)] p-3 border border-[var(--border)] border-opacity-40">
                      <p className="text-[11px] text-[var(--text-muted)] italic leading-relaxed opacity-80">
-                       From the archive: "The Ember Bridge is an ancient pedestrian crossing constructed entirely of hollow glass. It can scarcely bear the weight of a running child."
+                       From the archive: &ldquo;The Ember Bridge is an ancient pedestrian crossing constructed entirely of hollow glass. It can scarcely bear the weight of a running child.&rdquo;
                      </p>
                    </div>
                  </div>

@@ -50,7 +50,7 @@ const severityBgColors: Record<string, string> = {
   critical: "color-mix(in srgb, var(--danger) 15%, transparent)",
 };
 
-export function NarratorTools({ worldId }: NarratorToolsProps) {
+export function NarratorTools({ worldId, isDemo }: NarratorToolsProps & { isDemo?: boolean }) {
   const [tab, setTab] = useState<Tab>("impact");
   const [scenario, setScenario] = useState("");
   const [impactResult, setImpactResult] = useState<ImpactResult | null>(null);
@@ -60,6 +60,22 @@ export function NarratorTools({ worldId }: NarratorToolsProps) {
   const analyzeImpact = async () => {
     if (!scenario.trim()) return;
     setLoading(true);
+
+    if (isDemo) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      setImpactResult({
+        affected: [
+          { name: "Mira Ashveil", type: "character", impact: "Her primary mission would be lost, potentially leading her to seek reconciliation with her past.", severity: "high" },
+          { name: "Ember Cult", type: "faction", impact: "The Cult would lose its grip on the bridge, creating a power vacuum in the lower wards.", severity: "critical" },
+          { name: "Ashveil", type: "location", impact: "The city's political balance shifts as the northern bells stop ringing.", severity: "medium" },
+        ],
+        orphaned: ["Kaelen the Silent"],
+        invalidated: ["The Treaty of Three Fires depends on the Cult's presence."],
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/narrator", {
         method: "POST",
@@ -77,6 +93,18 @@ export function NarratorTools({ worldId }: NarratorToolsProps) {
 
   const findBlankSpots = async () => {
     setLoading(true);
+
+    if (isDemo) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      setBlankSpots([
+        { entity: "Mira Ashveil", missing: "Early years in the lower wards", suggestion: "Write about her life before the Ember Cult recruited her at the Glass Fair." },
+        { entity: "Ember Cult", missing: "The Founding Covenant", suggestion: "Explain what original promise the first High Priest made to the commoners." },
+        { entity: "Glass Fair", missing: "Origins and why it matters to the city", suggestion: "Describe the first fair and the 'Hollow Glass' tradition." },
+      ]);
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/narrator", {
         method: "POST",

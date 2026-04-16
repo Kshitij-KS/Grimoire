@@ -9,7 +9,6 @@ import {
   Compass,
   MessagesSquare,
   ShieldAlert,
-  Stars,
   Sparkles,
   Eye,
 } from "lucide-react";

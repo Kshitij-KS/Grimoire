@@ -662,6 +662,7 @@ export function ConstellationCanvas({
     [toWorld, findNode],
   );
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const { x, y } = toWorld(e.clientX, e.clientY);
     const node = findNode(x, y);
@@ -680,6 +681,7 @@ export function ConstellationCanvas({
     }
   }, [toWorld, findNode]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleMouseUp = useCallback(() => {
     if (isForgingLinkRef.current && forgeSourceRef.current) {
       const source = forgeSourceRef.current;
@@ -700,6 +702,7 @@ export function ConstellationCanvas({
     if (canvasRef.current) canvasRef.current.style.cursor = "default";
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleMouseLeave = useCallback(() => {
     isDraggingRef.current = false;
     isForgingLinkRef.current = false;
@@ -709,6 +712,7 @@ export function ConstellationCanvas({
     if (canvasRef.current) canvasRef.current.style.cursor = "default";
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     const rect = canvasRef.current?.getBoundingClientRect();

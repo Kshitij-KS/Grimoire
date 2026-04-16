@@ -78,6 +78,17 @@ export function ConsistencyChecker({
   const runCheck = async () => {
     if (!text.trim() || (isReadonly && !isDemo)) return;
     setLoading(true);
+
+    if (isDemo) {
+      // Simulate "Narrator's Eye" reflection for the demo experience
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      setFlags([]);
+      setHasChecked(true);
+      toast.success("The world holds. No contradictions found.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch("/api/consistency/check", {
         method: "POST",

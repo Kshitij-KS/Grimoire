@@ -374,7 +374,7 @@ export function WorldWorkspace({
 
             {data.activeSection === "tapestry" ? (
               <div className="mx-auto max-w-[980px]">
-                <TapestryTimeline worldId={data.world.id} />
+                <TapestryTimeline worldId={data.world.id} isDemo={isDemo} />
               </div>
             ) : null}
 
@@ -384,7 +384,7 @@ export function WorldWorkspace({
 
             {data.activeSection === "narrator" ? (
               <div className="mx-auto max-w-[980px]">
-                <NarratorTools worldId={data.world.id} />
+                <NarratorTools worldId={data.world.id} isDemo={isDemo} />
               </div>
             ) : null}
           </motion.div>

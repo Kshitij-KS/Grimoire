@@ -61,7 +61,7 @@ interface TapestryTimelineProps {
   worldId: string;
 }
 
-export function TapestryTimeline({ worldId }: TapestryTimelineProps) {
+export function TapestryTimeline({ worldId, isDemo }: TapestryTimelineProps & { isDemo?: boolean }) {
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +73,19 @@ export function TapestryTimeline({ worldId }: TapestryTimelineProps) {
   const fetchTimeline = useCallback(async () => {
     setLoading(true);
     setError(null);
+
+    if (isDemo) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      setEvents([
+        { id: "e1", name: "The Seven Foundations", era: "The Age of Roots", order: 1, summary: "Seven archmages bound their true names into the stones of Ashveil." },
+        { id: "e2", name: "The Glass Covenant", era: "The Age of Roots", order: 2, summary: "The commoners agreed to protect the city in exchange for the 'Light of the Spire'." },
+        { id: "e3", name: "Rise of Ember", era: "The Fire Era", order: 3, summary: "The Ember Cult gained control over the western bells, wrapping civic ritual in fire." },
+        { id: "e4", name: "The Night of Hollow Glass", era: "The Fire Era", order: 4, summary: "A mass betrayal within the Cult that led Mira Ashveil to desert." },
+      ]);
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/narrator", {
         method: "POST",
@@ -87,7 +100,7 @@ export function TapestryTimeline({ worldId }: TapestryTimelineProps) {
     } finally {
       setLoading(false);
     }
-  }, [worldId]);
+  }, [worldId, isDemo]);
 
   useEffect(() => {
     fetchTimeline();
