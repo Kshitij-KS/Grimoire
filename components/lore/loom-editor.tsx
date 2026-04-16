@@ -766,9 +766,9 @@ export function LoomEditor({
           open={importModalOpen}
           onOpenChange={setImportModalOpen}
           worldId={worldId}
-          onImported={(newEntry) => {
-            setEntries((prev) => [newEntry, ...prev]);
-            setSelectedEntry(newEntry);
+          onImportComplete={(newEntries) => {
+            setEntries((prev) => [...newEntries, ...prev]);
+            if (newEntries.length > 0) setSelectedEntry(newEntries[0]);
           }}
         />
       )}
