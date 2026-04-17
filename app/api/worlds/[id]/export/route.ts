@@ -153,7 +153,7 @@ export async function GET(
   // Rate limit world exports
   const rateLimit = await checkAndIncrement(supabase, user.id, "world_export", DAILY_LIMITS.world_export);
   if (!rateLimit.allowed) {
-    return jsonRateLimited();
+    return jsonRateLimited("world_export", DAILY_LIMITS.world_export);
   }
 
   const { data: world } = await supabase

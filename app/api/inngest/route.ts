@@ -11,6 +11,4 @@ if (process.env.NODE_ENV === "production" && !env.inngestSigningKey) {
 export const { GET, POST, PUT } = serve({
   client: inngest,
   functions: [loreIngestFunction],
-  signatureKey: env.inngestSigningKey,
-  rejectUnauthorized: process.env.NODE_ENV === "production",
 });
