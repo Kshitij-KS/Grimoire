@@ -106,6 +106,7 @@ The aesthetic is **dark parchment, warm candlelight, arcane purple** — NOT col
 - POST `/api/narrator` with `action: "timeline"` → `orderEventsChronologically()` (Gemini)
 - Events grouped into eras (Early Age, Rise of Empires, etc.)
 - Visual vertical timeline with era dividers and animated event cards
+- Built-in `isDemo` mock data bypass for public demos without requiring backend auth.
 - Component: `components/tapestry/tapestry-timeline.tsx`
 
 ---
@@ -119,9 +120,9 @@ The aesthetic is **dark parchment, warm candlelight, arcane purple** — NOT col
 - GET `/api/tavern?worldId=` — list sessions; GET `/api/tavern?sessionId=` — fetch messages
 - POST `/api/tavern` with `action: "create"` — create session with `{ worldId, soulIds, name? }`
 - POST `/api/tavern` — `{ sessionId, worldId, message, directedToSoulId? }` → `generateTavernResponse()`
-- Gemini receives all souls' cards + world lore + conversation history
-- Soul responds according to their voice and what they know; can be directed at a specific soul
+- **Strict JSON-based contract & per-soul prompt isolation:** To mitigate hallucination and persona blending, 2 souls use a single Duo call with enforced turn order. 3+ souls use parallel isolated generation where each soul only sees its own card. The internal reasoning step is discarded from the final output.
 - **Daily limit:** 30 tavern messages/day (set via `DAILY_LIMITS.tavern_message` in `lib/constants.ts`)
+- **Session limit:** Free tier limited to 3 souls per session (Pro up to 4).
 - Component: `components/tavern/tavern-chat.tsx`
 
 ---
@@ -155,6 +156,7 @@ The aesthetic is **dark parchment, warm candlelight, arcane purple** — NOT col
   - `action: "blank-spots"` → `detectBlankSpots(entities, loreContext)` → `{ holes: BlankSpot[] }`
   - `action: "timeline"` → `orderEventsChronologically(events)` → `{ timeline: [] }`
 - **All `ImpactResult` fields are optional** — always use optional chaining (`?.`) when accessing `affected`, `orphaned`, `invalidated`
+- Built-in `isDemo` mock data bypass for public demos.
 - Component: `components/narrator/narrator-tools.tsx`
 
 ---
@@ -246,6 +248,7 @@ All per-user, per-day (reset midnight UTC):
 | Worlds | 1 |
 | Souls per world | 3 |
 | Lore entries per world | 50 |
+| Tavern souls per session | 3 (Pro: 4) |
 
 ---
 

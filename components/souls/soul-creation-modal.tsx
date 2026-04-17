@@ -172,7 +172,7 @@ export function SoulCreationModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="relative pb-4 max-w-lg overflow-x-hidden">
+      <DialogContent className="pb-4 max-w-lg overflow-x-hidden">
         {/* Three-beat forge ritual overlay */}
         <AnimatePresence>
           {forging && (

@@ -1,6 +1,8 @@
 export const dynamic = "force-dynamic";
 import JSZip from "jszip";
-import { requireUser, jsonError } from "@/lib/api";
+import { requireUser, jsonError, jsonRateLimited } from "@/lib/api";
+import { checkAndIncrement } from "@/lib/rate-limit";
+import { DAILY_LIMITS } from "@/lib/constants";
 
 function safeFileName(value: string) {
   return value.trim().toLowerCase().replace(/[^a-z0-9-_]+/g, "_").replace(/^_+|_+$/g, "") || "world";
@@ -148,6 +150,12 @@ export async function GET(
   if ("error" in auth) return auth.error;
   const { user, supabase } = auth;
 
+  // Rate limit world exports
+  const rateLimit = await checkAndIncrement(supabase, user.id, "world_export", DAILY_LIMITS.world_export);
+  if (!rateLimit.allowed) {
+    return jsonRateLimited();
+  }
+
   const { data: world } = await supabase
     .from("worlds")
     .select("*")
@@ -186,10 +194,10 @@ export async function GET(
   const conversationIds = (conversations ?? []).map((conversation) => conversation.id);
   const { data: messages } = conversationIds.length > 0
     ? await supabase
-        .from("messages")
-        .select("*")
-        .in("conversation_id", conversationIds)
-        .order("created_at", { ascending: true })
+      .from("messages")
+      .select("*")
+      .in("conversation_id", conversationIds)
+      .order("created_at", { ascending: true })
     : { data: [] as Array<Record<string, unknown>> };
 
   const exportData = {

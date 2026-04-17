@@ -71,6 +71,7 @@ export async function POST(request: Request) {
       query_embedding: embedding,
       soul_uuid: parsed.data.soulId,
       world_uuid: soulWorldId,
+      user_uuid: user.id,
       threshold: SEMANTIC_CACHE_THRESHOLD,
     });
 
@@ -303,6 +304,7 @@ RULES:
           supabase.from("semantic_cache").insert({
             world_id: soulWorldId,
             soul_id: parsed.data.soulId,
+            user_id: user.id,
             prompt_hash: promptHash,
             prompt_text: parsed.data.message,
             embedding,

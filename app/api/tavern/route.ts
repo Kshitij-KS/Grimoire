@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 import { z } from "zod";
-import { DAILY_LIMITS } from "@/lib/constants";
+import { DAILY_LIMITS, FREE_TIER_LIMITS } from "@/lib/constants";
 import { embedText, generateTavernResponse } from "@/lib/embeddings";
 import { hasAiEnv } from "@/lib/env";
 import { checkAndIncrement } from "@/lib/rate-limit";
@@ -16,7 +16,7 @@ const sendSchema = z.object({
 
 const createSchema = z.object({
   worldId: z.string().uuid(),
-  soulIds: z.array(z.string().uuid()).min(2).max(4),
+  soulIds: z.array(z.string().uuid()).min(2).max(FREE_TIER_LIMITS.tavernSoulsPro),
   name: z.string().min(1).max(80).optional(),
 });
 
@@ -39,6 +39,27 @@ export async function POST(request: Request) {
 
     const ownsWorld = await userOwnsWorld(supabase, user.id, parsed.data.worldId);
     if (!ownsWorld) return jsonError("FORBIDDEN", 403);
+
+    // ── Plan-gated soul count ───────────────────────────────────────────
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("plan")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const isFree = !profile || profile.plan === "free";
+    const soulLimit = isFree ? FREE_TIER_LIMITS.tavernSouls : FREE_TIER_LIMITS.tavernSoulsPro;
+
+    if (parsed.data.soulIds.length > soulLimit) {
+      return jsonError("TAVERN_SOUL_LIMIT", 403, {
+        detail: isFree
+          ? `Free accounts can gather up to ${FREE_TIER_LIMITS.tavernSouls} souls. Upgrade to Pro to unlock a 4th slot.`
+          : `You can gather at most ${FREE_TIER_LIMITS.tavernSoulsPro} souls at once.`,
+        limit: soulLimit,
+        plan: isFree ? "free" : "pro",
+      });
+    }
+    // ───────────────────────────────────────────────────────────────────
 
     const { data: matchedSouls } = await supabase
       .from("souls")
@@ -118,13 +139,14 @@ export async function POST(request: Request) {
     content: message,
   });
 
-  // Get recent conversation history
+  // Get recent conversation history — cap at 8 turns to reduce context pressure with 3 souls
+  const historyLimit = souls.length >= 3 ? 8 : 12;
   const { data: recentMessages } = await supabase
     .from("tavern_messages")
     .select("*")
     .eq("session_id", sessionId)
     .order("created_at", { ascending: false })
-    .limit(12);
+    .limit(historyLimit);
 
   const history = (recentMessages ?? [])
     .reverse()
@@ -151,6 +173,9 @@ export async function POST(request: Request) {
     ? souls.find((s) => s.id === directedToSoulId)?.name ?? null
     : null;
 
+  // Build the set of valid soul names for hallucination guard
+  const validSoulNames = new Set(souls.map((s: { name: string }) => s.name));
+
   // Generate responses
   const responses = await generateTavernResponse(
     souls.map((s) => ({ name: s.name, soul_card: s.soul_card ?? {} })),
@@ -160,10 +185,15 @@ export async function POST(request: Request) {
     loreContext,
   );
 
-  // Save soul responses
+  // Save soul responses — discard hallucinated names and sub-5-char responses
   const savedMessages = [];
   for (const resp of responses) {
-    const soul = souls.find((s) => s.name === resp.soulName);
+    // Hallucination guard: reject any soul name not in this session
+    if (!validSoulNames.has(resp.soulName)) continue;
+    // Minimum length guard: skip empty/stub responses
+    if (!resp.response || resp.response.trim().length < 5) continue;
+
+    const soul = souls.find((s: { name: string }) => s.name === resp.soulName);
     if (!soul) continue;
 
     const { data: saved } = await supabase
@@ -187,6 +217,7 @@ export async function POST(request: Request) {
 
   return Response.json({ messages: savedMessages });
 }
+
 
 export async function GET(request: Request) {
   const auth = await requireUser();

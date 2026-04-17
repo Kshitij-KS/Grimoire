@@ -2,14 +2,16 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Copy, Pencil, Send, Loader2, Users, Plus } from "lucide-react";
+import { Check, Copy, Crown, Loader2, Lock, Pencil, Send, Users, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import type { Soul, TavernMessage } from "@/lib/types";
+import { FREE_TIER_LIMITS } from "@/lib/constants";
+import type { PlanTier, Soul, TavernMessage } from "@/lib/types";
 
 interface TavernChatProps {
   worldId: string;
   souls: Soul[];
+  plan?: PlanTier;
 }
 
 interface SessionState {
@@ -18,7 +20,7 @@ interface SessionState {
   soulIds: string[];
 }
 
-export function TavernChat({ worldId, souls }: TavernChatProps) {
+export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
   const [session, setSession] = useState<SessionState | null>(null);
   const [messages, setMessages] = useState<TavernMessage[]>([]);
   const [input, setInput] = useState("");
@@ -29,6 +31,9 @@ export function TavernChat({ worldId, souls }: TavernChatProps) {
   const [sessionName, setSessionName] = useState("");
   const nameInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const isFree = plan === "free";
+  const soulLimit = isFree ? FREE_TIER_LIMITS.tavernSouls : FREE_TIER_LIMITS.tavernSoulsPro;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -50,6 +55,10 @@ export function TavernChat({ worldId, souls }: TavernChatProps) {
         }),
       });
       const data = await res.json();
+      if (data.error === "TAVERN_SOUL_LIMIT") {
+        toast.error(data.detail ?? "Soul limit reached. Upgrade to Pro.");
+        return;
+      }
       if (data.session) {
         setSession({
           id: data.session.id,
@@ -155,26 +164,32 @@ export function TavernChat({ worldId, souls }: TavernChatProps) {
         </div>
 
         <div className="glass-panel rounded-2xl p-6 space-y-4">
-          <p className="chapter-label">— Select 2-4 Souls —</p>
+          <p className="chapter-label">— Select 2–{soulLimit} Souls —</p>
 
           <div className="grid gap-3 sm:grid-cols-2">
             {souls.map((soul) => {
               const isSelected = selectedSouls.includes(soul.id);
+              const isAtLimit = !isSelected && selectedSouls.length >= soulLimit;
+              // Show a locked upsell slot when a free user already has 3 souls selected
+              // and tries to select a 4th (which doesn't exist yet for free), or just
+              // grey out excess souls when at limit.
               return (
                 <motion.button
                   key={soul.id}
-                  whileTap={{ scale: 0.97 }}
+                  whileTap={isAtLimit ? undefined : { scale: 0.97 }}
                   onClick={() => {
+                    if (isAtLimit) return; // locked at free limit
                     if (isSelected) {
-                      setSelectedSouls((prev) =>
-                        prev.filter((id) => id !== soul.id),
-                      );
-                    } else if (selectedSouls.length < 4) {
+                      setSelectedSouls((prev) => prev.filter((id) => id !== soul.id));
+                    } else {
                       setSelectedSouls((prev) => [...prev, soul.id]);
                     }
                   }}
+                  disabled={isAtLimit}
                   className={`flex items-center gap-3 rounded-[18px] border p-4 text-left transition-all ${
-                    isSelected
+                    isAtLimit
+                      ? "cursor-not-allowed opacity-40 border-border bg-[rgba(255,255,255,0.02)]"
+                      : isSelected
                       ? "border-border bg-[rgba(255,255,255,0.02)]"
                       : "border-border bg-[rgba(255,255,255,0.02)] hover:border-[rgba(90,72,52,0.45)]"
                   }`}
@@ -207,11 +222,50 @@ export function TavernChat({ worldId, souls }: TavernChatProps) {
             })}
           </div>
 
+          {/* Upsell slot — shown when a free user hits the 3-soul limit */}
+          {isFree && souls.length >= FREE_TIER_LIMITS.tavernSouls && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className="flex items-center gap-3 rounded-[18px] border border-dashed border-[color-mix(in_srgb,var(--gold)_30%,transparent)] bg-[color-mix(in_srgb,var(--gold)_4%,transparent)] p-4"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--gold)_15%,transparent)]">
+                <Lock className="h-4 w-4 text-[var(--gold)]" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-[var(--gold)] truncate flex items-center gap-1.5">
+                  4th Soul Slot
+                  <span className="rounded-md bg-[color-mix(in_srgb,var(--gold)_18%,transparent)] px-1.5 py-0.5 text-[9px] uppercase tracking-widest font-bold text-[var(--gold)]">Pro</span>
+                </p>
+                <p className="text-xs text-secondary truncate">
+                  Upgrade to gather a 4th voice in the room.
+                </p>
+              </div>
+              <Crown className="h-4 w-4 text-[var(--gold)] opacity-60 shrink-0" />
+            </motion.div>
+          )}
+
           {souls.length < 2 && (
             <p className="text-xs text-secondary text-center">
               You need at least 2 bound souls to use the Tavern.
             </p>
           )}
+
+          {/* Contextual generation note when 3 souls selected */}
+          <AnimatePresence>
+            {selectedSouls.length === FREE_TIER_LIMITS.tavernSouls && (
+              <motion.p
+                key="parallel-note"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="text-[11px] text-center text-secondary overflow-hidden"
+              >
+                3 souls use isolated generation for voice clarity — responses may take a few extra seconds.
+              </motion.p>
+            )}
+          </AnimatePresence>
 
           <Button
             className="w-full"
@@ -219,7 +273,7 @@ export function TavernChat({ worldId, souls }: TavernChatProps) {
             disabled={selectedSouls.length < 2}
           >
             <Plus className="mr-2 h-4 w-4" />
-            Open the Tavern ({selectedSouls.length}/4 souls)
+            Open the Tavern ({selectedSouls.length}/{soulLimit} souls)
           </Button>
         </div>
       </div>
@@ -342,7 +396,13 @@ export function TavernChat({ worldId, souls }: TavernChatProps) {
             className="flex items-center gap-2 text-sm text-secondary"
           >
             <Loader2 className="h-3 w-3 animate-spin text-[var(--violet-soft)]" />
-            <span>The souls deliberate&hellip;</span>
+            <span>
+              {activeSouls.length === 1
+                ? `${activeSouls[0].name} considers…`
+                : activeSouls.length === 2
+                ? `${activeSouls[0].name} and ${activeSouls[1].name} deliberate…`
+                : `${activeSouls.map((s) => s.name).join(", ")} each consider their words…`}
+            </span>
           </motion.div>
         )}
         <div ref={messagesEndRef} />

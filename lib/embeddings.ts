@@ -252,7 +252,184 @@ Order numbers should start at 1.`;
   }
 }
 
-// ── New: Tavern multi-soul response ─────────────────────────────────────
+// ── Tavern: soul context builder ─────────────────────────────────────────
+function buildSoulSystemBlock(soul: {
+  name: string;
+  soul_card: Record<string, unknown>;
+}): string {
+  const card = soul.soul_card as {
+    voice?: string;
+    core?: string;
+    sample_lines?: string[];
+    knows?: string[];
+    doesnt_know?: string[];
+    secrets?: string[];
+    relationships?: Array<{ name: string; attitude: string }>;
+  };
+
+  const sampleLines = Array.isArray(card.sample_lines) && card.sample_lines.length > 0
+    ? card.sample_lines.map((l) => `  • "${l}"`).join("\n")
+    : "  (no sample lines provided)";
+
+  return `CHARACTER: ${soul.name}
+VOICE (memorize and replicate): ${card.voice ?? "No voice description."}
+CORE WOUND / DRIVE: ${card.core ?? "No core description."}
+THINGS THEY KNOW: ${Array.isArray(card.knows) ? card.knows.join("; ") : "unknown"}
+THINGS THEY DON'T KNOW: ${Array.isArray(card.doesnt_know) ? card.doesnt_know.join("; ") : "unknown"}
+SAMPLE SPEECH PATTERNS (match this cadence and vocabulary exactly):
+${sampleLines}`;
+}
+
+// ── Tavern: single-soul isolated call ────────────────────────────────────
+async function generateSingleSoulResponse(
+  soul: { name: string; soul_card: Record<string, unknown> },
+  context: {
+    userMessage: string;
+    history: string;
+    loreContext: string[];
+    directedToName: string | null;
+  },
+): Promise<{ soulName: string; response: string } | null> {
+  const model = getGeminiClient().getGenerativeModel({ model: "gemini-2.5-pro" });
+
+  const isAddressed = context.directedToName === null || context.directedToName === soul.name;
+
+  const directedClause = context.directedToName
+    ? context.directedToName === soul.name
+      ? `The Director is speaking DIRECTLY to you, ${soul.name}. You must respond.`
+      : `The Director is speaking to ${context.directedToName}. You can interject briefly if you have a strong reason, but keep it very short. If the topic doesn't concern you, return an empty response array.`
+    : `The Director addressed the whole room. Respond only if this topic meaningfully involves your character.`;
+
+  const prompt = `SYSTEM IDENTITY LOCK: You are roleplaying as ${soul.name} ONLY. Never speak as any other character.
+
+${buildSoulSystemBlock(soul)}
+
+WORLD LORE (stay within these facts — do NOT invent new lore):
+${context.loreContext.join("\n\n")}
+
+RECENT CONVERSATION (last 8 turns):
+${context.history || "(no prior conversation)"}
+
+${directedClause}
+
+DIRECTOR SAYS: "${context.userMessage}"
+
+RULES:
+- Never break character or adopt another soul's voice.
+- Do not introduce facts absent from the world lore above.
+- Keep your response under 160 words.
+- Respond in dialogue only — no stage directions, no narration.
+- ${isAddressed ? "You must respond." : "Only respond if you have a compelling character reason."}
+
+Return ONLY valid JSON, no other text:
+{
+  "responses": [
+    {
+      "soulName": "${soul.name}",
+      "reasoning": "<one sentence: why ${soul.name} responds to THIS message, grounded in their core>",
+      "response": "<in-character dialogue>"
+    }
+  ]
+}
+
+If this soul would stay silent, return: {"responses": []}`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const raw = result.response.text();
+    const parsed = repairAndParseJSON<{
+      responses: Array<{ soulName: string; reasoning: string; response: string }>;
+    }>(raw);
+
+    const item = parsed?.responses?.[0];
+    if (!item?.soulName || !item?.response || item.response.trim().length < 5) return null;
+
+    // Discard reasoning — it served its grounding purpose
+    return { soulName: item.soulName, response: item.response.trim() };
+  } catch {
+    return null;
+  }
+}
+
+// ── Tavern: multi-soul response (2-soul monolithic path) ──────────────────
+async function generateDuoResponse(
+  souls: Array<{ name: string; soul_card: Record<string, unknown> }>,
+  context: {
+    userMessage: string;
+    history: string;
+    loreContext: string[];
+    directedToName: string | null;
+  },
+): Promise<Array<{ soulName: string; response: string }>> {
+  const model = getGeminiClient().getGenerativeModel({ model: "gemini-2.5-pro" });
+
+  const [soulA, soulB] = souls;
+  const directedClause = context.directedToName
+    ? `The Director is speaking directly to ${context.directedToName}.`
+    : "The Director addressed both characters.";
+
+  const prompt = `You are simulating a scene with exactly two fictional characters.
+Each must stay strictly in their own voice. They must not agree on everything.
+
+${buildSoulSystemBlock(soulA)}
+
+---
+
+${buildSoulSystemBlock(soulB)}
+
+WORLD LORE (do NOT invent facts outside this):
+${context.loreContext.join("\n\n")}
+
+RECENT CONVERSATION:
+${context.history || "(no prior conversation)"}
+
+${directedClause}
+DIRECTOR SAYS: "${context.userMessage}"
+
+TURN ORDER: ${soulA.name} responds first. ${soulB.name} responds second, reacting to what ${soulA.name} said.
+
+RULES:
+- Never merge the two voices.
+- No stage directions, narration, or invented lore.
+- Each response under 160 words.
+- ${context.directedToName && context.directedToName !== soulA.name ? `${soulA.name} may briefly acknowledge but keep it short.` : ""}
+- ${context.directedToName && context.directedToName !== soulB.name ? `${soulB.name} may briefly acknowledge but keep it short.` : ""}
+
+Return ONLY valid JSON, no other text:
+{
+  "responses": [
+    { "soulName": "${soulA.name}", "reasoning": "<why ${soulA.name} speaks>", "response": "<dialogue>" },
+    { "soulName": "${soulB.name}", "reasoning": "<why ${soulB.name} speaks>", "response": "<dialogue>" }
+  ]
+}`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const raw = result.response.text();
+    const parsed = repairAndParseJSON<{
+      responses: Array<{ soulName: string; reasoning: string; response: string }>;
+    }>(raw);
+
+    return (parsed?.responses ?? [])
+      .filter((r) => r?.soulName && r?.response && r.response.trim().length >= 5)
+      .map((r) => ({ soulName: r.soulName, response: r.response.trim() }));
+  } catch {
+    return [];
+  }
+}
+
+// ── Tavern: main entry point ──────────────────────────────────────────────
+/**
+ * Generates in-character responses for 2-3 souls in a Tavern session.
+ *
+ * Strategy:
+ * - 2 souls → single "duo" call (monolithic, with explicit turn order).
+ * - 3 souls → N parallel isolated calls, each soul sees only its own card.
+ *   This eliminates persona blending at the context level.
+ *
+ * Reasoning fields are generated internally (chain-of-thought grounding)
+ * but discarded before responses are returned and saved.
+ */
 export async function generateTavernResponse(
   souls: Array<{ name: string; soul_card: Record<string, unknown> }>,
   targetSoulName: string | null,
@@ -260,49 +437,32 @@ export async function generateTavernResponse(
   conversationHistory: string,
   loreContext: string[],
 ): Promise<Array<{ soulName: string; response: string }>> {
-  const model = getGeminiClient().getGenerativeModel({ model: "gemini-2.5-pro" });
+  const validSouls = souls.filter((s) => s.name?.trim());
+  if (validSouls.length === 0) return [];
 
-  const soulDescriptions = souls
-    .map(
-      (s) =>
-        `CHARACTER: ${s.name}\nSOUL CARD: ${JSON.stringify(s.soul_card, null, 2)}`,
-    )
-    .join("\n\n---\n\n");
+  const context = {
+    userMessage,
+    history: conversationHistory,
+    loreContext,
+    directedToName: targetSoulName,
+  };
 
-  const directedTo = targetSoulName
-    ? `The user is speaking directly to ${targetSoulName}.`
-    : "The user is speaking to the entire room. Each character should react based on whether the topic is relevant to them.";
-
-  const prompt = `You are simulating a tavern gathering with multiple fictional characters.
-Each character must stay perfectly in-character based on their soul card.
-
-${soulDescriptions}
-
-WORLD LORE CONTEXT:
-${loreContext.join("\n\n")}
-
-CONVERSATION SO FAR:
-${conversationHistory}
-
-${directedTo}
-
-USER (the Director) says: "${userMessage}"
-
-Generate a response for ${targetSoulName ? `only ${targetSoulName}` : "each character who would naturally react"}. 
-Characters should be aware of each other's presence.
-
-Return strict JSON:
-{"responses": [{"soulName": "character name", "response": "their in-character response"}]}`;
-
-  const response = await model.generateContent(prompt);
-  const raw = response.response.text();
-
-  try {
-    const parsed = repairAndParseJSON<{ responses: Array<{ soulName: string; response: string }> }>(raw);
-    return parsed.responses ?? [];
-  } catch {
-    return [];
+  // 2-soul path: single monolithic call with turn-order enforcement
+  if (validSouls.length === 2) {
+    return generateDuoResponse(validSouls, context);
   }
+
+  // 3-soul path: parallel isolated calls (one per soul), merged server-side
+  const soulsToQuery = targetSoulName
+    ? validSouls // each soul still gets its own call; directed clause handles skipping
+    : validSouls;
+
+  const results = await Promise.all(
+    soulsToQuery.map((soul) => generateSingleSoulResponse(soul, context)),
+  );
+
+  // Filter nulls (silent souls), preserve generation order
+  return results.filter((r): r is { soulName: string; response: string } => r !== null);
 }
 
 // ── New: Detect declarative facts in chat messages ──────────────────────

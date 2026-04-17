@@ -3,6 +3,8 @@ export const env = {
   nextPublicSupabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
   geminiApiKey: process.env.GEMINI_API_KEY,
+  inngestSigningKey: process.env.INNGEST_SIGNING_KEY,
+  inngestEventKey: process.env.INNGEST_EVENT_KEY,
 };
 
 export function hasSupabaseEnv() {
@@ -12,8 +14,8 @@ export function hasSupabaseEnv() {
 export function hasServerSupabaseEnv() {
   return Boolean(
     env.nextPublicSupabaseUrl &&
-      env.nextPublicSupabaseAnonKey &&
-      env.supabaseServiceRoleKey,
+    env.nextPublicSupabaseAnonKey &&
+    env.supabaseServiceRoleKey,
   );
 }
 

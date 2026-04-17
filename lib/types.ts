@@ -213,6 +213,13 @@ export interface TavernMessage {
   soul?: Soul;
 }
 
+/** Single response item returned by the Tavern AI generation pipeline. */
+export interface TavernResponseItem {
+  soulName: string;
+  /** The in-character dialogue. `reasoning` is generated internally but discarded before storage. */
+  response: string;
+}
+
 // ── Composite types ─────────────────────────────────────────────────────
 
 export interface WorldStats {

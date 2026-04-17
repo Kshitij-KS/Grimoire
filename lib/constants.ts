@@ -5,12 +5,19 @@ export const DAILY_LIMITS = {
   soul_generate: 3,
   tavern_message: 30,
   narrator_action: 20,
+  world_export: 5,
 } as const;
+
+export const EXPORT_MIN_INTERVAL_MS = 60 * 1000; // 1 minute minimum between exports
 
 export const FREE_TIER_LIMITS = {
   worlds: 1,
   soulsPerWorld: 3,
   loreEntries: 50,
+  /** Max souls in a single Tavern session on the free plan. Pro unlocks up to 4. */
+  tavernSouls: 3,
+  /** Absolute maximum souls in a Tavern session (pro cap). */
+  tavernSoulsPro: 4,
 } as const;
 
 export const WORLD_SECTIONS = [
