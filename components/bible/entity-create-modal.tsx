@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { motion } from "framer-motion";
 import {
   BookOpen,
@@ -10,8 +11,7 @@ import {
   CalendarDays,
   Scale,
   Plus,
-  Loader2,
-} from "lucide-react";
+  } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -163,7 +163,7 @@ export function EntityCreateModal({
 
           <Button type="submit" disabled={!name.trim() || submitting} className="w-full">
             {submitting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <LoadingSpinner className="mr-2 h-4 w-4" />
             ) : (
               <Plus className="mr-2 h-4 w-4" />
             )}

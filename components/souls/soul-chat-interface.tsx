@@ -134,11 +134,11 @@ export function SoulChatInterface({
         }}
       />
 
-      <div className="relative z-10 mx-auto flex min-h-screen max-w-5xl flex-col px-4 pb-6 pt-6">
+      <div className="relative z-10 mx-auto flex h-[100dvh] max-w-5xl flex-col px-3 pb-3 pt-3 sm:px-4 sm:pb-6 sm:pt-6">
         {/* Soul header */}
-        <Card className="mb-4 flex items-center gap-4 rounded-[28px] px-5 py-4">
+        <Card className="mb-3 sm:mb-4 flex items-center gap-3 sm:gap-4 rounded-2xl sm:rounded-[28px] px-4 py-3 sm:px-5 sm:py-4 shrink-0">
           <Avatar
-            className="h-14 w-14 border-2"
+            className="h-10 w-10 sm:h-14 sm:w-14 border-2 shrink-0"
             style={{ borderColor: soul.avatar_color, boxShadow: `0 0 24px ${soul.avatar_color}44` }}
           >
             <AvatarFallback style={{ background: `${soul.avatar_color}22`, color: soul.avatar_color }}>
@@ -146,8 +146,8 @@ export function SoulChatInterface({
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <p className="text-xs uppercase tracking-[0.25em] text-secondary">Speaking as</p>
-            <h1 className="font-heading text-4xl text-foreground">{soul.name}</h1>
+            <p className="text-[10px] sm:text-xs uppercase tracking-[0.25em] text-secondary">Speaking as</p>
+            <h1 className="font-heading text-2xl sm:text-4xl text-foreground line-clamp-1">{soul.name}</h1>
             {soul.soul_card?.voice ? (
               <p className="mt-0.5 line-clamp-1 text-xs italic text-secondary">
                 {soul.soul_card.voice.slice(0, 70)}
@@ -159,8 +159,7 @@ export function SoulChatInterface({
         {/* Messages area */}
         <div
           ref={scrollRef}
-          className="glass-panel flex-1 space-y-4 overflow-y-auto rounded-[30px] p-5"
-          style={{ minHeight: "300px" }}
+          className="glass-panel flex-1 space-y-4 overflow-y-auto rounded-2xl sm:rounded-[30px] p-4 sm:p-5"
         >
           {/* Empty state */}
           {messages.length === 0 && !isTyping && (
@@ -170,16 +169,16 @@ export function SoulChatInterface({
               className="flex flex-col items-center justify-center py-12 text-center"
             >
               <Avatar
-                className="mb-4 h-16 w-16 border-2"
+                className="mb-4 h-12 w-12 sm:h-16 sm:w-16 border-2"
                 style={{ borderColor: soul.avatar_color, boxShadow: `0 0 32px ${soul.avatar_color}44` }}
               >
                 <AvatarFallback style={{ background: `${soul.avatar_color}22`, color: soul.avatar_color }}>
                   {soul.avatar_initials ?? initialsFromName(soul.name)}
                 </AvatarFallback>
               </Avatar>
-              <h3 className="font-heading text-3xl text-foreground">{soul.name}</h3>
+              <h3 className="font-heading text-2xl sm:text-3xl text-foreground">{soul.name}</h3>
               {soul.soul_card?.sample_lines?.[0] && (
-                <blockquote className="mt-4 max-w-md border-l-[3px] border-[rgba(212,168,83,0.4)] pl-4 font-heading text-xl italic text-secondary">
+                <blockquote className="mt-4 max-w-md border-l-[3px] border-[rgba(212,168,83,0.4)] pl-4 font-heading text-lg sm:text-xl italic text-secondary">
                   &ldquo;{soul.soul_card.sample_lines[0]}&rdquo;
                 </blockquote>
               )}
@@ -199,14 +198,14 @@ export function SoulChatInterface({
                 <div
                   className={
                     message.role === "user"
-                      ? "max-w-[80%] rounded-[24px] bg-[linear-gradient(135deg,var(--ai-pulse),var(--ai-pulse-soft))] px-4 py-3 text-white shadow-sm"
-                      : "max-w-[80%] rounded-[24px] border border-border border-l-[3px] border-l-[var(--accent)] bg-[color-mix(in_srgb,var(--surface)_94%,transparent)] px-4 py-3"
+                      ? "max-w-[90%] sm:max-w-[80%] rounded-[20px] sm:rounded-[24px] bg-[linear-gradient(135deg,var(--ai-pulse),var(--ai-pulse-soft))] px-4 py-2.5 sm:px-4 sm:py-3 text-white shadow-sm text-sm sm:text-base prose-grimoire"
+                      : "max-w-[90%] sm:max-w-[80%] rounded-[20px] sm:rounded-[24px] border border-border border-l-[3px] border-l-[var(--accent)] bg-[color-mix(in_srgb,var(--surface)_94%,transparent)] px-4 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-base prose-grimoire"
                   }
                 >
                   {message.role === "assistant" ? (
                     <p className="mb-2 text-xs uppercase tracking-[0.25em] text-[var(--accent)]">{soul.name}</p>
                   ) : null}
-                  <div className="prose-grimoire">
+                  <div>
                     <ReactMarkdown>{message.content}</ReactMarkdown>
                   </div>
                 </div>
@@ -223,7 +222,7 @@ export function SoulChatInterface({
                 exit={{ opacity: 0, y: 8 }}
                 className="flex justify-start"
               >
-                <div className="rounded-[24px] border border-border border-l-[3px] border-l-[var(--accent)] bg-[color-mix(in_srgb,var(--surface)_94%,transparent)] px-4 py-3">
+                <div className="rounded-[20px] sm:rounded-[24px] border border-border border-l-[3px] border-l-[var(--accent)] bg-[color-mix(in_srgb,var(--surface)_94%,transparent)] px-4 py-2.5 sm:px-4 sm:py-3">
                   <p className="mb-2 text-xs uppercase tracking-[0.25em] text-[var(--accent)]">{soul.name}</p>
                   <TypingDots />
                 </div>
@@ -233,7 +232,7 @@ export function SoulChatInterface({
         </div>
 
         {/* Input bar */}
-        <Card className="mt-4 rounded-[28px] p-4">
+        <Card className="mt-3 sm:mt-4 rounded-[20px] sm:rounded-[28px] p-3 sm:p-4 shrink-0">
           <textarea
             ref={textareaRef}
             value={input}

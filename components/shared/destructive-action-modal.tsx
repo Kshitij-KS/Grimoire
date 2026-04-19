@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertCircle, Loader2, X } from "lucide-react";
+import { AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface DestructiveActionModalProps {
@@ -125,7 +126,7 @@ export function DestructiveActionModal({
                   onClick={handleAction}
                   disabled={disabled}
                 >
-                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {loading && <LoadingSpinner className="mr-2 h-4 w-4" />}
                   Delete
                 </Button>
               </div>

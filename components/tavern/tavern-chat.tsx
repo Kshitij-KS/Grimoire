@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Copy, Crown, Loader2, Lock, Pencil, Send, Users, Plus } from "lucide-react";
+import { Check, Copy, Crown, Lock, Pencil, Send, Users, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { FREE_TIER_LIMITS } from "@/lib/constants";
@@ -395,7 +396,7 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
             animate={{ opacity: 1 }}
             className="flex items-center gap-2 text-sm text-secondary"
           >
-            <Loader2 className="h-3 w-3 animate-spin text-[var(--violet-soft)]" />
+            <LoadingSpinner className="h-3 w-3 text-[var(--violet-soft)]" />
             <span>
               {activeSouls.length === 1
                 ? `${activeSouls[0].name} considers…`

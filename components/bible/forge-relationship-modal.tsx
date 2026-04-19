@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link, Loader2, X } from "lucide-react";
+import { Link, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Entity, EntityRelationship } from "@/lib/types";
 
@@ -148,7 +149,7 @@ export function ForgeRelationshipModal({
                     disabled={loading || !label.trim()}
                     className="gap-2"
                   >
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link className="h-4 w-4" />}
+                    {loading ? <LoadingSpinner className="h-4 w-4" /> : <Link className="h-4 w-4" />}
                     Forge Connection
                   </Button>
                 </div>

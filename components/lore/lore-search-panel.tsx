@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, Search, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LoreChunkResult {
@@ -143,7 +144,7 @@ export function LoreSearchPanel({ worldId, isOpen, onClose, anchorRef }: LoreSea
           {/* Search input row */}
           <div className="relative flex items-center gap-2 rounded-[14px] border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_60%,transparent)] px-3 py-2.5 focus-within:border-[var(--border-focus)]">
             {isSearching ? (
-              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-[var(--accent)]" />
+              <LoadingSpinner className="h-3.5 w-3.5 shrink-0 text-[var(--accent)]" />
             ) : (
               <Search className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" />
             )}

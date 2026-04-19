@@ -65,6 +65,7 @@ export function SoulCreationModal({
   worldId: string;
   onCreated: (soul?: Soul) => void;
   prefillName?: string;
+  prefillDescription?: string;
 }) {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -77,13 +78,14 @@ export function SoulCreationModal({
     defaultValues: {
       name: prefillName ?? "",
       avatarColor: "#7c5cbf",
-      description: "",
+      description: prefillDescription ?? "",
     },
   });
 
   useEffect(() => {
     if (prefillName) form.setValue("name", prefillName);
-  }, [prefillName, form]);
+    if (prefillDescription) form.setValue("description", prefillDescription);
+  }, [prefillName, prefillDescription, form]);
 
   const watchedName = form.watch("name");
   const watchedColor = form.watch("avatarColor");

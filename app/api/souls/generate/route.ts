@@ -60,14 +60,23 @@ export async function POST(request: Request) {
 Relevant lore:
 ${(loreChunks ?? []).map((chunk) => chunk.content).join("\n\n")}`;
 
-  const model = getGeminiModel();
-  const result = await model.generateContent({
-    systemInstruction: soulCardPrompt,
-    contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-  });
+  let soulCard;
+  try {
+    const model = getGeminiModel();
+    const result = await model.generateContent({
+      systemInstruction: soulCardPrompt,
+      contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+    });
 
-  const raw = result.response.text().trim();
-  const soulCard = parseSoulCard(raw);
+    const raw = result.response.text().trim();
+    soulCard = parseSoulCard(raw);
+  } catch (error) {
+    console.error("Soul Forge Error:", error);
+    return Response.json(
+      { error: "Failed to forge soul. The oracle may be resting or overwhelmed." },
+      { status: 500 }
+    );
+  }
 
   if (isRegeneration && parsed.data.soulId) {
     const { data: soul, error } = await supabase

@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Loader2, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { GrimoireLogo } from "@/components/shared/grimoire-logo";
 import { Button } from "@/components/ui/button";
@@ -178,7 +179,7 @@ export function AuthShell() {
           </div>
           <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
             <Button className="w-full" type="submit" disabled={busy}>
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {busy ? <LoadingSpinner className="h-4 w-4" /> : null}
               {mode === "signup" ? "Begin the first chapter" : "Return to the archive"}
               {!busy && <ArrowRight className="ml-2 h-4 w-4" />}
             </Button>

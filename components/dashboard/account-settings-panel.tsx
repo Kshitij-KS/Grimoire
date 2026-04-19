@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { KeyRound, Loader2, LogOut, Mail, Shield, UserCircle2 } from "lucide-react";
+import { KeyRound, LogOut, Mail, Shield, UserCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/browser";
 import { Button } from "@/components/ui/button";
@@ -131,7 +132,7 @@ export function AccountSettingsPanel({ email, profile }: AccountSettingsPanelPro
                 Supabase will send a confirmation email before the change takes effect.
               </p>
               <Button type="submit" disabled={savingEmail || !emailDraft.trim() || emailDraft.trim() === email}>
-                {savingEmail ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {savingEmail ? <LoadingSpinner className="mr-2 h-4 w-4" /> : null}
                 Save email
               </Button>
             </form>
@@ -153,7 +154,7 @@ export function AccountSettingsPanel({ email, profile }: AccountSettingsPanelPro
                 Password changes are handled directly by Supabase Auth and take effect immediately.
               </p>
               <Button type="submit" disabled={savingPassword || passwordDraft.trim().length < 8}>
-                {savingPassword ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {savingPassword ? <LoadingSpinner className="mr-2 h-4 w-4" /> : null}
                 Save password
               </Button>
             </form>
@@ -169,7 +170,7 @@ export function AccountSettingsPanel({ email, profile }: AccountSettingsPanelPro
             Sign out when you’re done. Your session will close cleanly and return you to the entrance page.
           </p>
           <Button className="mt-5 w-full" variant="secondary" onClick={handleSignOut} disabled={signingOut}>
-            {signingOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
+            {signingOut ? <LoadingSpinner className="mr-2 h-4 w-4" /> : <LogOut className="mr-2 h-4 w-4" />}
             Sign out
           </Button>
         </Card>

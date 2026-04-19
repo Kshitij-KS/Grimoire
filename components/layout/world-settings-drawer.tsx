@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -10,7 +11,6 @@ import {
   CreditCard,
   ChevronRight,
   Check,
-  Loader2,
   Download,
   Users,
 } from "lucide-react";
@@ -407,7 +407,7 @@ export function WorldSettingsDrawer({
                   className="w-full"
                 >
                   {saving ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <LoadingSpinner className="mr-2 h-4 w-4" />
                   ) : saved ? (
                     <Check className="mr-2 h-4 w-4" />
                   ) : null}

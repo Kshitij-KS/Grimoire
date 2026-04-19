@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Copy,
   Crown,
-  Loader2,
   Mail,
   Pencil,
   Shield,
@@ -111,7 +111,7 @@ export function WorldCollaboratorsTab({ worldId, isDemo = false }: WorldCollabor
   if (loading) {
     return (
       <div className="flex items-center justify-center py-10">
-        <Loader2 className="h-5 w-5 animate-spin text-[var(--text-muted)]" />
+        <LoadingSpinner className="h-5 w-5 text-[var(--text-muted)]" />
       </div>
     );
   }
@@ -159,7 +159,7 @@ export function WorldCollaboratorsTab({ worldId, isDemo = false }: WorldCollabor
             className="w-full"
             size="sm"
           >
-            {sending ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <UserPlus className="mr-2 h-3.5 w-3.5" />}
+            {sending ? <LoadingSpinner className="mr-2 h-3.5 w-3.5" /> : <UserPlus className="mr-2 h-3.5 w-3.5" />}
             Send Invite
           </Button>
         </form>
@@ -208,7 +208,7 @@ export function WorldCollaboratorsTab({ worldId, isDemo = false }: WorldCollabor
                     title="Remove member"
                   >
                     {removingId === member.user_id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <LoadingSpinner className="h-3.5 w-3.5" />
                     ) : (
                       <Trash2 className="h-3.5 w-3.5" />
                     )}

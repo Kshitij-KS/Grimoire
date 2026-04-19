@@ -1,7 +1,8 @@
+import { LoadingSpinner } from "@/components/shared/loading-spinner";
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Loader2 } from "lucide-react";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type ProcessingStepStatus = "idle" | "active" | "complete";
@@ -44,7 +45,7 @@ export function ProcessingStatus({ steps }: { steps: ProcessingStep[] }) {
                     exit={{ scale: 0, opacity: 0 }}
                     transition={{ duration: 0.15 }}
                   >
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <LoadingSpinner className="h-4 w-4" />
                   </motion.span>
                 ) : step.status === "complete" ? (
                   <motion.span

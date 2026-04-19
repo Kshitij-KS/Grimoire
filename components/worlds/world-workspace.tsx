@@ -86,6 +86,21 @@ export function WorldWorkspace({
   const [isRefreshingArchive, setIsRefreshingArchive] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState(() => new Date().toISOString());
   const [archiveRefreshCount, setArchiveRefreshCount] = useState(0);
+  const [prefillDesc, setPrefillDesc] = useState<string | null>(null);
+  const [usage, setUsage] = useState<UsageMeter[]>(data.usage);
+
+  const incrementUsage = useCallback((action: string) => {
+    setUsage((prev) =>
+      prev.map((m) => (m.action === action ? { ...m, count: m.count + 1 } : m))
+    );
+  }, []);
+
+  const suggestedCharacters = useMemo(() => {
+    return entities.filter(e => 
+      e.type === "character" && 
+      !souls.some(s => s.name.toLowerCase() === e.name.toLowerCase())
+    );
+  }, [entities, souls]);
 
   const activeSoul = souls.find((s) => s.id === activeSoulId) ?? null;
   const activeSoulCard = souls.find((s) => s.id === activeSoulCardId) ?? null;
@@ -164,7 +179,7 @@ export function WorldWorkspace({
         <div className="flex gap-5 items-start">
           <WorldSidebar
             world={data.world}
-            usage={data.usage}
+            usage={usage}
             activeSection={data.activeSection}
             isDemo={isDemo}
           />
@@ -241,7 +256,7 @@ export function WorldWorkspace({
             >
             {data.activeSection === "lore" ? (
               <div className={cn("relative h-[calc(100vh-230px)]", structuredSection ? "mx-auto max-w-[1100px]" : "")}>
-                <LoomEditor worldId={data.world.id} initialEntries={data.loreEntries} isReadonly={data.isReadonly} />
+                <LoomEditor worldId={data.world.id} initialEntries={data.loreEntries} isReadonly={data.isReadonly} onUsageIncrement={incrementUsage} />
               </div>
             ) : null}
 
@@ -308,6 +323,31 @@ export function WorldWorkspace({
                         Forge characters into bounded voices from your world&apos;s lore. Then speak with them directly.
                       </p>
                     </div>
+
+                    {suggestedCharacters.length > 0 && !data.isReadonly && (
+                      <div className="mb-8 overflow-hidden rounded-[14px] border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_60%,transparent)] shadow-sm">
+                        <div className="flex h-8 items-center border-b border-[color-mix(in_srgb,var(--accent)_15%,transparent)] bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] px-4">
+                          <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-[color-mix(in_srgb,var(--accent)_80%,white)] flex items-center gap-1.5 opacity-90">
+                            <Sparkles className="h-3 w-3" /> Suggestions from ingested lore
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 overflow-x-auto p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                          {suggestedCharacters.map(char => (
+                            <button
+                              key={char.id}
+                              onClick={() => {
+                                setForgeSoulName(char.name);
+                                setPrefillDesc(char.summary ?? "");
+                                setSoulModalOpen(true);
+                              }}
+                              className="shrink-0 rounded-full border border-[var(--border)] bg-[var(--surface-raised)] px-3.5 py-1.5 text-[11px] font-medium text-[var(--text-secondary)] transition-all hover:border-[color-mix(in_srgb,var(--accent)_40%,transparent)] hover:text-[var(--text-main)] hover:bg-[color-mix(in_srgb,var(--accent)_6%,transparent)] active:scale-[0.98]"
+                            >
+                              {char.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                       {souls.map((soul) => (
@@ -398,12 +438,19 @@ export function WorldWorkspace({
         open={soulModalOpen || !!forgeSoulName}
         onOpenChange={(open) => {
           setSoulModalOpen(open);
-          if (!open) setForgeSoulName(null);
+          if (!open) {
+            setForgeSoulName(null);
+            setPrefillDesc(null);
+          }
         }}
         worldId={data.world.id}
         prefillName={forgeSoulName ?? undefined}
+        prefillDescription={prefillDesc ?? undefined}
         onCreated={(newSoul) => {
-          if (newSoul) setSouls((prev) => [...prev, newSoul]);
+          if (newSoul) {
+            setSouls((prev) => [...prev, newSoul]);
+            incrementUsage("soul_generate");
+          }
         }}
       />
 

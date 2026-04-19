@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
   Search,
   AlertTriangle,
   TrendingUp,
-  Loader2,
   Zap,
   MapPin,
 } from "lucide-react";
@@ -182,7 +182,7 @@ export function NarratorTools({ worldId, isDemo }: NarratorToolsProps & { isDemo
                 className="w-full"
               >
                 {loading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <LoadingSpinner className="mr-2 h-4 w-4" />
                 ) : (
                   <TrendingUp className="mr-2 h-4 w-4" />
                 )}
@@ -296,7 +296,7 @@ export function NarratorTools({ worldId, isDemo }: NarratorToolsProps & { isDemo
               </p>
               <Button onClick={findBlankSpots} disabled={loading}>
                 {loading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <LoadingSpinner className="mr-2 h-4 w-4" />
                 ) : (
                   <Sparkles className="mr-2 h-4 w-4" />
                 )}

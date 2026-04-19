@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertTriangle, CheckCircle2, FileText, Loader2, Upload, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, FileText, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -271,7 +272,7 @@ export function LoreImportModal({
                 >
                   {importing ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <LoadingSpinner className="h-4 w-4" />
                       Inscribing…
                     </>
                   ) : (

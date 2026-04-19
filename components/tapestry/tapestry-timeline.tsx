@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ChevronUp, Columns, List, Loader2, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronUp, Columns, List, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface TimelineEvent {
@@ -147,7 +148,7 @@ export function TapestryTimeline({ worldId, isDemo }: TapestryTimelineProps & { 
             {horizontal ? <List className="h-4 w-4" /> : <Columns className="h-4 w-4" />}
           </button>
           <Button variant="secondary" size="sm" onClick={fetchTimeline} disabled={loading}>
-            {loading ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1 h-3 w-3" />}
+            {loading ? <LoadingSpinner className="mr-1 h-3 w-3" /> : <Sparkles className="mr-1 h-3 w-3" />}
             Reweave
           </Button>
         </div>

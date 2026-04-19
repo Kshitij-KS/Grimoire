@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Highlight from "@tiptap/extension-highlight";
@@ -9,8 +10,7 @@ import CharacterCount from "@tiptap/extension-character-count";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Bold, Code, Heading1, Heading2, Heading3,
-  Highlighter, Italic, List, ListOrdered, Loader2,
-  Minus, PanelLeft, Plus, Quote, Search,
+  Highlighter, Italic, List, ListOrdered, Minus, PanelLeft, Plus, Quote, Search,
   Sparkles, Strikethrough, Upload, X, Layers,
   BookOpen, CheckSquare,
 } from "lucide-react";
@@ -54,10 +54,12 @@ export function LoomEditor({
   worldId,
   initialEntries,
   isReadonly,
+  onUsageIncrement,
 }: {
   worldId: string;
   initialEntries: LoreEntry[];
   isReadonly?: boolean;
+  onUsageIncrement?: (action: string) => void;
 }) {
   const [entries, setEntries] = useState(initialEntries);
   const [selectedEntry, setSelectedEntry] = useState<LoreEntry | null>(null);
@@ -255,6 +257,26 @@ export function LoomEditor({
         const payload = await response.json();
         throw new Error(payload.error || "Lore ingest failed.");
       }
+
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const payload = await response.json();
+        if (payload.processing === "background") {
+          updateStep("saved", "complete");
+          updateStep("chunking", "complete");
+          updateStep("embedding", "complete");
+          updateStep("entities", "complete");
+          updateStep("complete", "complete");
+          if (payload.entry) {
+            setEntries((prev) => [payload.entry as LoreEntry, ...prev.filter((e) => e.id !== payload.entry.id)]);
+            setSelectedEntry(payload.entry);
+          }
+          toast.success("Lore sent to the archive for background weaving.");
+          onUsageIncrement?.("lore_ingest");
+          return;
+        }
+      }
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -282,6 +304,7 @@ export function LoomEditor({
               setSelectedEntry(payload.entry);
             }
             toast.success("Lore woven into memory.");
+            onUsageIncrement?.("lore_ingest");
           }
           if (eventName === "error") throw new Error(payload?.error || "Lore ingest failed.");
         }
@@ -379,7 +402,7 @@ export function LoomEditor({
             title="Semantic search"
             className="flex items-center justify-center rounded-md border border-[var(--border)] bg-transparent w-7 h-7 text-[var(--text-muted)] hover:border-[var(--border-focus)] hover:text-[var(--accent)] transition-colors disabled:opacity-40"
           >
-            {isSemanticSearching ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+            {isSemanticSearching ? <LoadingSpinner className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
           </button>
         </div>
       </div>

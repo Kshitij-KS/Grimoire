@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { motion } from "framer-motion";
-import { AlertTriangle, ArrowRight, GitMerge, Loader2, Search } from "lucide-react";
+import { AlertTriangle, ArrowRight, GitMerge, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -177,7 +178,7 @@ export function EntityMergeModal({
             className="w-full"
           >
             {merging ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <LoadingSpinner className="mr-2 h-4 w-4" />
             ) : (
               <GitMerge className="mr-2 h-4 w-4" />
             )}
