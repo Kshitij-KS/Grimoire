@@ -1,5 +1,5 @@
-import { LoadingSpinner } from "@/components/shared/loading-spinner";
 "use client";
+import { LoadingSpinner } from "@/components/shared/loading-spinner";
 
 import { motion, AnimatePresence } from "framer-motion";
 import { Check } from "lucide-react";

@@ -1,11 +1,9 @@
 import { z } from "zod";
-import { getGeminiClient } from "@/lib/gemini";
+import { getGeminiModel, getEmbeddingModel } from "@/lib/gemini";
 import { repairAndParseJSON } from "@/lib/json-repair";
 
 export async function embedText(text: string): Promise<number[]> {
-  const model = getGeminiClient().getGenerativeModel({
-    model: "gemini-embedding-2-preview",
-  });
+  const model = getEmbeddingModel();
   const result = await model.embedContent(text);
   return result.embedding.values ?? [];
 }
@@ -29,7 +27,7 @@ const entitiesResponseSchema = z.object({
 });
 
 export async function extractEntities(text: string) {
-  const model = getGeminiClient().getGenerativeModel({ model: "gemini-2.5-pro" });
+  const model = getGeminiModel();
   const prompt = `Extract named entities from this lore. Return strict JSON in the shape:
 {"entities":[{"name":"", "type":"character|location|faction|artifact|event|rule", "summary":"short summary"}]}
 
@@ -81,7 +79,7 @@ export async function checkConsistency(
 ) {
   if (referenceChunks.length === 0) return [];
 
-  const model = getGeminiClient().getGenerativeModel({ model: "gemini-2.5-pro" });
+  const model = getGeminiModel();
   const prompt = `You are a strict canon consistency checker for a fictional world.
 Find ALL factual contradictions between the new writing and the established lore.
 
@@ -140,7 +138,7 @@ export async function generateAutocomplete(
   context: string,
   wordCount: number = 15,
 ): Promise<string> {
-  const model = getGeminiClient().getGenerativeModel({ model: "gemini-2.5-pro" });
+  const model = getGeminiModel();
   const prompt = `Continue this story/lore text with exactly ${wordCount} words. 
 Return ONLY the continuation text, no quotes, no explanation.
 Match the tone and style of the existing text.
@@ -162,7 +160,7 @@ export async function analyzeImpact(
   orphaned: string[];
   invalidated: string[];
 }> {
-  const model = getGeminiClient().getGenerativeModel({ model: "gemini-2.5-pro" });
+  const model = getGeminiModel();
   const prompt = `You are analyzing a hypothetical scenario's impact on a fictional world.
 
 SCENARIO: "${scenario}"
@@ -195,7 +193,7 @@ export async function detectBlankSpots(
   entities: Array<{ name: string; type: string; summary: string | null; mention_count?: number }>,
   loreContext: string[],
 ): Promise<Array<{ entity: string; missing: string; suggestion: string }>> {
-  const model = getGeminiClient().getGenerativeModel({ model: "gemini-2.5-pro" });
+  const model = getGeminiModel();
   const prompt = `Analyze these entities from a fictional world and identify missing information.
 Focus on the most referenced entities that lack important details.
 
@@ -225,7 +223,7 @@ export async function orderEventsChronologically(
 ): Promise<Array<{ id: string; name: string; era: string; order: number }>> {
   if (events.length === 0) return [];
 
-  const model = getGeminiClient().getGenerativeModel({ model: "gemini-2.5-pro" });
+  const model = getGeminiModel();
   const prompt = `Analyze these fictional world events and arrange them in chronological order.
 Infer the timeline from context clues in the summaries (e.g. "before", "after", "during", "following").
 
@@ -290,7 +288,7 @@ async function generateSingleSoulResponse(
     directedToName: string | null;
   },
 ): Promise<{ soulName: string; response: string } | null> {
-  const model = getGeminiClient().getGenerativeModel({ model: "gemini-2.5-pro" });
+  const model = getGeminiModel();
 
   const isAddressed = context.directedToName === null || context.directedToName === soul.name;
 
@@ -361,7 +359,7 @@ async function generateDuoResponse(
     directedToName: string | null;
   },
 ): Promise<Array<{ soulName: string; response: string }>> {
-  const model = getGeminiClient().getGenerativeModel({ model: "gemini-2.5-pro" });
+  const model = getGeminiModel();
 
   const [soulA, soulB] = souls;
   const directedClause = context.directedToName
@@ -469,7 +467,7 @@ export async function generateTavernResponse(
 export async function detectDeclarativeFact(
   message: string,
 ): Promise<{ isFact: boolean; summary: string | null }> {
-  const model = getGeminiClient().getGenerativeModel({ model: "gemini-2.5-pro" });
+  const model = getGeminiModel();
   const prompt = `Analyze if this message from a worldbuilder contains a declarative fact about their world that should be recorded as lore.
 
 Examples of declarative facts:

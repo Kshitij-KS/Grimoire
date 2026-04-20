@@ -59,6 +59,7 @@ export function SoulCreationModal({
   worldId,
   onCreated,
   prefillName,
+  prefillDescription,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;

@@ -53,3 +53,8 @@ export function getGeminiModel() {
 export function getChatModel() {
   return withFallback("gemini-2.5-flash");
 }
+
+/** Embedding model for semantic search. */
+export function getEmbeddingModel() {
+  return withFallback("text-embedding-004"); // Or gemini-embedding-2-preview depending on what is needed
+}

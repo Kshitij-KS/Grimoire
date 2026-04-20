@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -26,7 +26,7 @@ import { SectionLoadingScreen } from "@/components/shared/loading-shimmer";
 import { useWorkspaceStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { FREE_TIER_LIMITS } from "@/lib/constants";
-import type { ConsistencyCheck, Entity, EntityRelationship, Soul, WorldWorkspaceData } from "@/lib/types";
+import type { ConsistencyCheck, Entity, EntityRelationship, Soul, UsageMeter, WorldWorkspaceData } from "@/lib/types";
 
 const SECTION_META: Record<string, { label: string; subtitle: string; description: string }> = {
   lore: {
