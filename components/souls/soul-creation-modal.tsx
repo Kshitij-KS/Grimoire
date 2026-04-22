@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { initialsFromName } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import type { Soul } from "@/lib/types";
@@ -32,8 +33,7 @@ const AVATAR_COLORS = [
   { label: "Midnight", value: "#2a2a5c" },
 ];
 
-// Decorative rune glyphs — four corners
-const RUNES = ["ᚠ", "ᚢ", "ᚦ", "ᚨ"];
+const RUNES = ["*", "+", ":", "~"];
 
 const schema = z.object({
   name: z.string().min(2),
@@ -93,7 +93,6 @@ export function SoulCreationModal({
   const watchedDesc = form.watch("description") ?? "";
   const descLen = watchedDesc.length;
 
-  // Progress bar color: red → gold → purple
   const descBarColor =
     descLen < 40 ? "rgb(192,74,74)" : descLen < 200 ? "rgb(212,168,83)" : "rgb(124,92,191)";
   const descBarWidth = `${Math.min(100, (descLen / 300) * 100)}%`;
@@ -105,7 +104,6 @@ export function SoulCreationModal({
   };
 
   const spawnParticles = () => {
-    // Wave 1 — 12 large particles
     const wave1: Particle[] = Array.from({ length: 12 }, (_, i) => ({
       id: Date.now() + i,
       x: 50,
@@ -115,7 +113,6 @@ export function SoulCreationModal({
       duration: 0.55 + Math.random() * 0.35,
       size: 8,
     }));
-    // Wave 2 — 8 small particles with 60ms offset
     const wave2: Particle[] = Array.from({ length: 8 }, (_, i) => ({
       id: Date.now() + 100 + i,
       x: 50,
@@ -149,7 +146,6 @@ export function SoulCreationModal({
       if (response.status === 429) throw new Error("RATE_LIMIT");
       if (!response.ok) throw new Error(payload.error || "Soul forging failed.");
       toast.success("Soul forged. The archive has a new voice.");
-      // Three-beat ritual: dim → pulse → close
       setTimeout(() => {
         setForging(false);
         onOpenChange(false);
@@ -165,18 +161,17 @@ export function SoulCreationModal({
     }
   });
 
-  const handleOpenChange = (open: boolean) => {
-    if (!open) {
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
       setStep(0);
       form.reset();
     }
-    onOpenChange(open);
+    onOpenChange(nextOpen);
   };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="pb-4 max-w-lg overflow-x-hidden">
-        {/* Three-beat forge ritual overlay */}
+      <DialogContent className="max-w-lg overflow-x-hidden pb-4">
         <AnimatePresence>
           {forging && (
             <motion.div
@@ -184,21 +179,30 @@ export function SoulCreationModal({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              style={{ background: "color-mix(in srgb, var(--bg) 70%, transparent)", backdropFilter: "blur(4px)" }}
+              style={{
+                background: "color-mix(in srgb, var(--bg) 70%, transparent)",
+                backdropFilter: "blur(4px)",
+              }}
             >
               <motion.div
-                animate={{ scale: [1, 1.18, 1, 1.18, 1], opacity: [0.6, 1, 0.6, 1, 0.6] }}
-                transition={{ duration: 0.9, ease: "easeInOut" }}
-                className="font-heading text-5xl"
-                style={{ color: "var(--accent)" }}
+                initial={{ scale: 0.96, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.98, opacity: 0 }}
+                className="flex flex-col items-center gap-4"
               >
-                ᚷ
+                <div className="relative flex h-20 w-20 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--accent)_20%,transparent)] bg-[color-mix(in_srgb,var(--surface-raised)_92%,transparent)] shadow-[0_0_40px_color-mix(in_srgb,var(--accent)_12%,transparent)]">
+                  <div className="absolute inset-2 rounded-full border border-[color-mix(in_srgb,var(--ai-pulse)_18%,transparent)]" />
+                  <LoadingSpinner className="text-[var(--accent)]" size={34} />
+                </div>
+                <div className="text-center">
+                  <p className="font-heading text-2xl text-foreground">Forging Soul</p>
+                  <p className="text-sm text-secondary">Weaving memory into voice...</p>
+                </div>
               </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* ── Decorative rune corners ── */}
         {RUNES.map((rune, i) => (
           <span
             key={i}
@@ -223,7 +227,6 @@ export function SoulCreationModal({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Step indicator */}
         <div className="space-y-2 py-1">
           <div className="flex items-center justify-between text-xs">
             <span style={{ color: step === 0 ? "rgb(212,168,83)" : "var(--text-secondary)" }}>
@@ -255,7 +258,6 @@ export function SoulCreationModal({
           >
             {step === 0 ? (
               <>
-                {/* Avatar preview with soul-glow-ring */}
                 <div className="flex justify-center py-2">
                   <motion.div
                     initial={{ scale: 0.6, opacity: 0 }}
@@ -317,7 +319,6 @@ export function SoulCreationModal({
               </>
             ) : (
               <>
-                {/* Avatar reminder strip */}
                 <div className="flex items-center gap-3 rounded-[18px] border border-border bg-[rgba(28,22,14,0.6)] p-3">
                   <div
                     className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border font-heading text-base"
@@ -340,9 +341,11 @@ export function SoulCreationModal({
                 <div className="space-y-2">
                   <Label>Character Description</Label>
                   <Textarea
-                    placeholder={watchedName
-                      ? `Describe ${watchedName}'s history, motivations, secrets, and voice. The more specific, the more alive they become…`
-                      : "Describe their history, motivations, secrets, and voice. The more specific, the more alive they become…"}
+                    placeholder={
+                      watchedName
+                        ? `Describe ${watchedName}'s history, motivations, secrets, and voice. The more specific, the more alive they become...`
+                        : "Describe their history, motivations, secrets, and voice. The more specific, the more alive they become..."
+                    }
                     className="min-h-[200px]"
                     {...form.register("description")}
                   />
@@ -352,7 +355,6 @@ export function SoulCreationModal({
                     </p>
                   )}
 
-                  {/* Char count progress bar */}
                   <div className="space-y-1">
                     <div className="h-1 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
                       <div
@@ -372,7 +374,6 @@ export function SoulCreationModal({
                     Back
                   </Button>
 
-                  {/* Forge button with particle burst */}
                   <div className="relative">
                     <Button
                       ref={forgeButtonRef}
@@ -382,11 +383,7 @@ export function SoulCreationModal({
                     >
                       {loading ? (
                         <>
-                          {/* Spinning arcane ring */}
-                          <span
-                            className="h-4 w-4 rounded-full border-t-2 border-[rgb(212,168,83)] animate-spin"
-                            style={{ borderRightColor: "transparent", borderBottomColor: "transparent", borderLeftColor: "transparent" }}
-                          />
+                          <LoadingSpinner className="text-current" size={16} />
                           Weaving into memory...
                         </>
                       ) : (
@@ -394,7 +391,6 @@ export function SoulCreationModal({
                       )}
                     </Button>
 
-                    {/* Particle burst */}
                     <AnimatePresence>
                       {particles.map((particle) => {
                         const rad = (particle.angle * Math.PI) / 180;

@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getDemoData, getSessionUser, getWorldChecks, getWorldWorkspaceData } from "@/lib/data";
-import { hasSupabaseEnv } from "@/lib/env";
+import { hasSupabaseEnv } from "@/lib/public-env";
 import { WORLD_SECTIONS } from "@/lib/constants";
 import { WorldWorkspace } from "@/components/worlds/world-workspace";
 

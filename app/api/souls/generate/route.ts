@@ -16,6 +16,36 @@ const schema = z.object({
   soulId: z.string().uuid().optional(), // if provided, regenerate existing soul
 });
 
+async function generateSoulCard(userPrompt: string, name: string) {
+  const model = getGeminiModel();
+  const attempts = [
+    {
+      systemInstruction: soulCardPrompt,
+      contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+    },
+    `${soulCardPrompt}
+
+Character name: ${name}
+
+${userPrompt}
+
+Return only valid JSON matching the required shape exactly.`,
+  ];
+
+  let lastError: unknown;
+
+  for (const attempt of attempts) {
+    try {
+      const result = await model.generateContent(attempt);
+      return parseSoulCard(result.response.text().trim());
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError ?? new Error("Soul forge failed.");
+}
+
 export async function POST(request: Request) {
   const auth = await requireUser();
   if ("error" in auth) return auth.error;
@@ -62,14 +92,7 @@ ${(loreChunks ?? []).map((chunk) => chunk.content).join("\n\n")}`;
 
   let soulCard;
   try {
-    const model = getGeminiModel();
-    const result = await model.generateContent({
-      systemInstruction: soulCardPrompt,
-      contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-    });
-
-    const raw = result.response.text().trim();
-    soulCard = parseSoulCard(raw);
+    soulCard = await generateSoulCard(userPrompt, parsed.data.name);
   } catch (error) {
     console.error("Soul Forge Error:", error);
     return Response.json(

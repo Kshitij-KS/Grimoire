@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { getProfile, getSessionUser, getUsageMeters } from "@/lib/data";
-import { hasSupabaseEnv } from "@/lib/env";
+import { hasSupabaseEnv } from "@/lib/public-env";
 import { FREE_TIER_LIMITS, DAILY_LIMITS } from "@/lib/constants";
 import type { UsageMeter } from "@/lib/types";
 

@@ -1,5 +1,5 @@
 import { DAILY_LIMITS } from "@/lib/constants";
-import { hasSupabaseEnv } from "@/lib/env";
+import { hasSupabaseEnv } from "@/lib/public-env";
 import {
   demoChecks,
   demoEntities,

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { DashboardNav } from "@/components/layout/dashboard-nav";
 import { DashboardOverview } from "@/components/dashboard/dashboard-overview";
 import { getSessionUser } from "@/lib/data";
-import { hasSupabaseEnv } from "@/lib/env";
+import { hasSupabaseEnv } from "@/lib/public-env";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export default async function DashboardPage() {

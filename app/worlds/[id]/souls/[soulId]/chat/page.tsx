@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { EchoesInterface } from "@/components/echoes/echoes-interface";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getDemoData, getSessionUser } from "@/lib/data";
-import { hasSupabaseEnv } from "@/lib/env";
+import { hasSupabaseEnv } from "@/lib/public-env";
 import type { Message, Soul } from "@/lib/types";
 
 export default async function SoulChatPage({

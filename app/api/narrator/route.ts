@@ -1,7 +1,8 @@
 export const dynamic = "force-dynamic";
 import { z } from "zod";
 import { DAILY_LIMITS } from "@/lib/constants";
-import { hasAiEnv, hasSupabaseEnv } from "@/lib/env";
+import { hasAiEnv } from "@/lib/env";
+import { hasSupabaseEnv } from "@/lib/public-env";
 import { analyzeImpact, detectBlankSpots, orderEventsChronologically, embedText } from "@/lib/embeddings";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
