@@ -18,7 +18,7 @@ export function getGeminiClients() {
 function withFallback(modelName: string) {
   const { primary, fallback } = getGeminiClients();
   const primaryModel = primary.getGenerativeModel({ model: modelName });
-  
+
   if (!fallback) return primaryModel;
 
   const fallbackModel = fallback.getGenerativeModel({ model: modelName });
@@ -46,12 +46,12 @@ function withFallback(modelName: string) {
 
 /** Heavy generation model — soul generation, entity extraction, consistency checks. */
 export function getGeminiModel() {
-  return withFallback("gemini-3.0-flash");
+  return withFallback("gemini-2.5-flash");
 }
 
 /** Fast conversational model — soul chat, demo chat. */
 export function getChatModel() {
-  return withFallback("gemini-3.0-flash-live");
+  return withFallback("gemini-2.5-flash");
 }
 
 /** Embedding model for semantic search. */
