@@ -24,3 +24,28 @@ export async function checkAndIncrement(
     limit: typeof first.limit === "number" ? first.limit : limit,
   };
 }
+
+export async function decrementRateLimit(
+  supabase: SupabaseClient,
+  userId: string,
+  action: string,
+) {
+  const today = new Date().toISOString().split("T")[0];
+
+  const { data } = await supabase
+    .from("rate_limits")
+    .select("count")
+    .eq("user_id", userId)
+    .eq("action", action)
+    .eq("date", today)
+    .maybeSingle();
+
+  if (data && data.count > 0) {
+    await supabase
+      .from("rate_limits")
+      .update({ count: data.count - 1 })
+      .eq("user_id", userId)
+      .eq("action", action)
+      .eq("date", today);
+  }
+}

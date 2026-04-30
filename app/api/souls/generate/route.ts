@@ -3,7 +3,7 @@ import { z } from "zod";
 import { DAILY_LIMITS, FREE_TIER_LIMITS } from "@/lib/constants";
 import { hasAiEnv } from "@/lib/env";
 import { getGeminiModel } from "@/lib/gemini";
-import { checkAndIncrement } from "@/lib/rate-limit";
+import { checkAndIncrement, decrementRateLimit } from "@/lib/rate-limit";
 import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
 import { parseSoulCard, soulCardPrompt } from "@/lib/soul-card";
 import { initialsFromName } from "@/lib/utils";
@@ -95,6 +95,7 @@ ${(loreChunks ?? []).map((chunk) => chunk.content).join("\n\n")}`;
     soulCard = await generateSoulCard(userPrompt, parsed.data.name);
   } catch (error) {
     console.error("Soul Forge Error:", error);
+    await decrementRateLimit(supabase, user.id, "soul_generate");
     return Response.json(
       { error: "Failed to forge soul. The oracle may be resting or overwhelmed." },
       { status: 500 }
@@ -110,7 +111,10 @@ ${(loreChunks ?? []).map((chunk) => chunk.content).join("\n\n")}`;
       .select("*")
       .single();
 
-    if (error) return Response.json({ error: error.message }, { status: 500 });
+    if (error) {
+      await decrementRateLimit(supabase, user.id, "soul_generate");
+      return Response.json({ error: error.message }, { status: 500 });
+    }
     return Response.json({ success: true, soul, soul_card: soulCard });
   }
 
@@ -128,6 +132,9 @@ ${(loreChunks ?? []).map((chunk) => chunk.content).join("\n\n")}`;
     .select("*")
     .single();
 
-  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (error) {
+    await decrementRateLimit(supabase, user.id, "soul_generate");
+    return Response.json({ error: error.message }, { status: 500 });
+  }
   return Response.json({ success: true, soul, soul_card: soulCard });
 }
