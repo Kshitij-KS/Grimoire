@@ -144,7 +144,7 @@ export function SoulCreationModal({
       });
       const payload = await response.json();
       if (response.status === 429) throw new Error("RATE_LIMIT");
-      if (!response.ok) throw new Error(payload.error || "Soul forging failed.");
+      if (!response.ok) throw new Error(payload.detail || payload.error || "Soul forging failed.");
       toast.success("Soul forged. The archive has a new voice.");
       setTimeout(() => {
         setForging(false);

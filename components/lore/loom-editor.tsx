@@ -173,6 +173,38 @@ export function LoomEditor({
   const updateStep = (id: ProcessingStep["id"], status: ProcessingStep["status"]) =>
     setSteps((curr) => curr.map((s) => (s.id === id ? { ...s, status } : s)));
 
+  const pollProcessingStatus = useCallback(async (entryId: string) => {
+    updateStep("saved", "complete");
+    updateStep("chunking", "active");
+
+    for (let attempt = 0; attempt < 60; attempt += 1) {
+      const res = await fetch(`/api/lore/status?entryId=${encodeURIComponent(entryId)}`);
+      if (!res.ok) throw new Error("Could not verify lore processing status.");
+
+      const statusPayload = await res.json() as { status?: string };
+      if (statusPayload.status === "processing") {
+        updateStep("chunking", "complete");
+        updateStep("embedding", "active");
+      }
+      if (statusPayload.status === "complete") {
+        updateStep("chunking", "complete");
+        updateStep("embedding", "complete");
+        updateStep("entities", "complete");
+        updateStep("complete", "complete");
+        return;
+      }
+      if (statusPayload.status === "failed") {
+        updateStep("embedding", "idle");
+        updateStep("entities", "idle");
+        throw new Error("Lore processing failed. Retry the failed job after checking the Jobs panel.");
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+
+    throw new Error("Lore processing is still running. Check back in a moment.");
+  }, []);
+
   const handleDeleteLore = async () => {
     if (!deletingLore) return;
     try {
@@ -262,16 +294,12 @@ export function LoomEditor({
       if (contentType && contentType.includes("application/json")) {
         const payload = await response.json();
         if (payload.processing === "background") {
-          updateStep("saved", "complete");
-          updateStep("chunking", "complete");
-          updateStep("embedding", "complete");
-          updateStep("entities", "complete");
-          updateStep("complete", "complete");
           if (payload.entry) {
             setEntries((prev) => [payload.entry as LoreEntry, ...prev.filter((e) => e.id !== payload.entry.id)]);
             setSelectedEntry(payload.entry);
           }
-          toast.success("Lore sent to the archive for background weaving.");
+          await pollProcessingStatus(payload.entry.id);
+          toast.success("Lore woven into memory.");
           onUsageIncrement?.("lore_ingest");
           return;
         }
@@ -314,7 +342,7 @@ export function LoomEditor({
     } finally {
       setProcessing(false);
     }
-  }, [editor, isReadonly, title, worldId, selectedEntry]);
+  }, [editor, isReadonly, title, worldId, selectedEntry, onUsageIncrement, pollProcessingStatus]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

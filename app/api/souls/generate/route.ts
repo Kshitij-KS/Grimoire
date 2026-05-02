@@ -7,6 +7,7 @@ import { checkAndIncrement, decrementRateLimit } from "@/lib/rate-limit";
 import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
 import { parseSoulCard, soulCardPrompt } from "@/lib/soul-card";
 import { initialsFromName } from "@/lib/utils";
+import { requireWorldAccess } from "@/lib/world-access";
 
 const schema = z.object({
   worldId: z.string().uuid(),
@@ -46,6 +47,42 @@ Return only valid JSON matching the required shape exactly.`,
   throw lastError ?? new Error("Soul forge failed.");
 }
 
+function soulForgeErrorResponse(error: unknown) {
+  const message = error instanceof Error ? error.message : "Unknown soul forge error.";
+  if (error instanceof z.ZodError || message.includes("JSON repair failed")) {
+    return Response.json(
+      {
+        error: "SOUL_CARD_INVALID_JSON",
+        detail: "The AI returned a malformed soul card. Try again with a more specific character description.",
+      },
+      { status: 502 },
+    );
+  }
+
+  if (
+    message.includes("GoogleGenerativeAI") ||
+    message.includes("fetching from https://generativelanguage.googleapis.com") ||
+    message.includes("API key") ||
+    message.includes("quota")
+  ) {
+    return Response.json(
+      {
+        error: "SOUL_FORGE_MODEL_FAILED",
+        detail: "Gemini could not complete the soul forge request.",
+      },
+      { status: 502 },
+    );
+  }
+
+  return Response.json(
+    {
+      error: "SOUL_FORGE_FAILED",
+      detail: message,
+    },
+    { status: 500 },
+  );
+}
+
 export async function POST(request: Request) {
   const auth = await requireUser();
   if ("error" in auth) return auth.error;
@@ -55,12 +92,30 @@ export async function POST(request: Request) {
     });
   }
 
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError("INVALID_JSON", 400);
+  }
   const parsed = schema.safeParse(body);
   if (!parsed.success) return zodErrorResponse(parsed.error);
 
   const { user, supabase } = auth;
   const isRegeneration = Boolean(parsed.data.soulId);
+  const access = await requireWorldAccess(supabase, user.id, parsed.data.worldId, "editor");
+  if (!access.allowed) return jsonError("FORBIDDEN", 403);
+
+  if (parsed.data.soulId) {
+    const { data: existingSoul } = await supabase
+      .from("souls")
+      .select("id, world_id")
+      .eq("id", parsed.data.soulId)
+      .maybeSingle();
+
+    if (!existingSoul) return jsonError("SOUL_NOT_FOUND", 404);
+    if (existingSoul.world_id !== parsed.data.worldId) return jsonError("FORBIDDEN_WORLD_MISMATCH", 403);
+  }
 
   // Only check soul count limit for new souls (not regenerations)
   if (!isRegeneration) {
@@ -96,10 +151,7 @@ ${(loreChunks ?? []).map((chunk) => chunk.content).join("\n\n")}`;
   } catch (error) {
     console.error("Soul Forge Error:", error);
     await decrementRateLimit(supabase, user.id, "soul_generate");
-    return Response.json(
-      { error: "Failed to forge soul. The oracle may be resting or overwhelmed." },
-      { status: 500 }
-    );
+    return soulForgeErrorResponse(error);
   }
 
   if (isRegeneration && parsed.data.soulId) {
@@ -113,7 +165,10 @@ ${(loreChunks ?? []).map((chunk) => chunk.content).join("\n\n")}`;
 
     if (error) {
       await decrementRateLimit(supabase, user.id, "soul_generate");
-      return Response.json({ error: error.message }, { status: 500 });
+      return Response.json(
+        { error: "SOUL_UPDATE_FAILED", detail: error.message },
+        { status: 500 },
+      );
     }
     return Response.json({ success: true, soul, soul_card: soulCard });
   }
@@ -134,7 +189,10 @@ ${(loreChunks ?? []).map((chunk) => chunk.content).join("\n\n")}`;
 
   if (error) {
     await decrementRateLimit(supabase, user.id, "soul_generate");
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json(
+      { error: "SOUL_INSERT_FAILED", detail: error.message },
+      { status: 500 },
+    );
   }
   return Response.json({ success: true, soul, soul_card: soulCard });
 }

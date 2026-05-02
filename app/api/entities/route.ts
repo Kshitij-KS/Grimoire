@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { z } from "zod";
 import { requireUser, jsonError, zodErrorResponse } from "@/lib/api";
 import { entityTypeValues } from "@/lib/entity-validation";
+import { requireWorldAccess } from "@/lib/world-access";
 
 const createEntitySchema = z.object({
   worldId: z.string().uuid(),
@@ -28,15 +29,9 @@ export async function GET(request: Request) {
 
   if (!worldId) return jsonError("worldId is required", 400);
 
-  // Verify world ownership
-  const { data: world } = await supabase
-    .from("worlds")
-    .select("id, user_id")
-    .eq("id", worldId)
-    .maybeSingle();
-
-  if (!world) return jsonError("World not found", 404);
-  if (world.user_id !== user.id) return jsonError("Forbidden", 403);
+  const access = await requireWorldAccess(supabase, user.id, worldId, "viewer");
+  if (!access.role) return jsonError("World not found", 404);
+  if (!access.allowed) return jsonError("Forbidden", 403);
 
   let query = supabase
     .from("entities")
@@ -71,14 +66,9 @@ export async function POST(request: Request) {
   if (!parsed.success) return zodErrorResponse(parsed.error);
   const { worldId, name, type, summary } = parsed.data;
 
-  const { data: world } = await supabase
-    .from("worlds")
-    .select("id, user_id")
-    .eq("id", worldId)
-    .maybeSingle();
-
-  if (!world) return jsonError("World not found", 404);
-  if (world.user_id !== user.id) return jsonError("Forbidden", 403);
+  const access = await requireWorldAccess(supabase, user.id, worldId, "editor");
+  if (!access.role) return jsonError("World not found", 404);
+  if (!access.allowed) return jsonError("Forbidden", 403);
 
   // Normalize name for deduplication
   const normalizedName = name.trim().toLowerCase().replace(/\s+/g, " ");

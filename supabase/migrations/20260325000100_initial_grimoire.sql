@@ -1,4 +1,4 @@
-create extension if not exists vector;
+create extension if not exists vector with schema public;
 create extension if not exists pgcrypto;
 
 create table if not exists profiles (
@@ -37,7 +37,7 @@ create table if not exists lore_chunks (
   world_id uuid references worlds(id) on delete cascade,
   lore_entry_id uuid references lore_entries(id) on delete cascade,
   content text not null,
-  embedding vector(768),
+  embedding public.vector(768),
   entity_tags text[],
   chunk_index integer,
   created_at timestamptz default now()
@@ -118,7 +118,7 @@ create table if not exists rate_limits (
 );
 
 create index if not exists lore_chunks_embedding_idx
-  on lore_chunks using ivfflat (embedding vector_cosine_ops) with (lists = 100);
+  on lore_chunks using ivfflat (embedding public.vector_cosine_ops) with (lists = 100);
 
 create or replace function public.handle_new_user()
 returns trigger
@@ -145,7 +145,7 @@ $$;
 
 create or replace function public.match_lore_chunks(
   world_uuid uuid,
-  query_embedding vector(768),
+  query_embedding public.vector(768),
   match_count integer default 4,
   filter_tags text[] default null
 )

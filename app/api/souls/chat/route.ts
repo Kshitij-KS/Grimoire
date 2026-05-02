@@ -8,6 +8,7 @@ import { checkAndIncrement } from "@/lib/rate-limit";
 import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
 import crypto from "crypto";
 import { soulMatchesWorld } from "@/lib/soul-access";
+import { requireWorldAccess } from "@/lib/world-access";
 
 const schema = z.object({
   worldId: z.string().uuid(),
@@ -38,20 +39,11 @@ export async function POST(request: Request) {
   if (!parsed.success) return zodErrorResponse(parsed.error);
 
   const { user, supabase } = auth;
-  const rate = await checkAndIncrement(
-    supabase,
-    user.id,
-    "chat_message",
-    DAILY_LIMITS.chat_message,
-  );
-  if (!rate.allowed) return jsonRateLimited("chat_message", rate.limit);
-
   const [{ data: soul }, embedding] = await Promise.all([
     supabase
       .from("souls")
       .select("id, world_id, name, soul_card")
       .eq("id", parsed.data.soulId)
-      .eq("user_id", user.id)
       .maybeSingle(),
     embedText(parsed.data.message),
   ]);
@@ -64,6 +56,16 @@ export async function POST(request: Request) {
   }
 
   const soulWorldId = soul.world_id;
+  const access = await requireWorldAccess(supabase, user.id, soulWorldId, "editor");
+  if (!access.allowed) return jsonError("FORBIDDEN", 403);
+
+  const rate = await checkAndIncrement(
+    supabase,
+    user.id,
+    "chat_message",
+    DAILY_LIMITS.chat_message,
+  );
+  if (!rate.allowed) return jsonRateLimited("chat_message", rate.limit);
 
   // ── Semantic Cache Check ──────────────────────────────────────────────
   try {
@@ -95,7 +97,7 @@ export async function POST(request: Request) {
         .maybeSingle();
 
       if (!conversation) {
-        const { data } = await supabase
+        const { data: newConvo, error: insertErr } = await supabase
           .from("conversations")
           .insert({
             soul_id: parsed.data.soulId,
@@ -104,7 +106,8 @@ export async function POST(request: Request) {
           })
           .select("*")
           .single();
-        conversation = data;
+        if (insertErr || !newConvo) return jsonError("Failed to create conversation", 500);
+        conversation = newConvo;
       }
 
       if (conversation) {
@@ -168,7 +171,7 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (!conversation) {
-    const { data } = await supabase
+    const { data: newConvo, error: insertErr } = await supabase
       .from("conversations")
       .insert({
         soul_id: parsed.data.soulId,
@@ -177,7 +180,8 @@ export async function POST(request: Request) {
       })
       .select("*")
       .single();
-    conversation = data;
+    if (insertErr || !newConvo) return jsonError("Failed to create conversation", 500);
+    conversation = newConvo;
   }
 
   const [{ data: recentMessages }, { data: loreChunks }] = await Promise.all([

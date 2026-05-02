@@ -34,14 +34,14 @@ create table if not exists semantic_cache (
   soul_id uuid references souls(id) on delete cascade,
   prompt_hash text not null,
   prompt_text text not null,
-  embedding vector(768),
+  embedding public.vector(768),
   response text not null,
   hit_count integer default 0,
   created_at timestamptz default now()
 );
 
 create index if not exists semantic_cache_embedding_idx
-  on semantic_cache using ivfflat (embedding vector_cosine_ops) with (lists = 50);
+  on semantic_cache using ivfflat (embedding public.vector_cosine_ops) with (lists = 50);
 
 create index if not exists semantic_cache_soul_idx
   on semantic_cache (soul_id, world_id);
@@ -155,7 +155,7 @@ create trigger set_entity_relationships_updated_at before update on entity_relat
 -- ──────────────────────────────────────────────────────────────────────────────
 
 create or replace function public.match_semantic_cache(
-  query_embedding vector(768),
+  query_embedding public.vector(768),
   soul_uuid uuid,
   world_uuid uuid,
   threshold float default 0.98

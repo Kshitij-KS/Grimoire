@@ -5,7 +5,7 @@ import { embedText, generateTavernResponse } from "@/lib/embeddings";
 import { hasAiEnv } from "@/lib/env";
 import { checkAndIncrement } from "@/lib/rate-limit";
 import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
-import { userOwnsWorld } from "@/lib/world-access";
+import { requireWorldAccess } from "@/lib/world-access";
 
 const sendSchema = z.object({
   worldId: z.string().uuid(),
@@ -37,8 +37,8 @@ export async function POST(request: Request) {
     const parsed = createSchema.safeParse(body);
     if (!parsed.success) return zodErrorResponse(parsed.error);
 
-    const ownsWorld = await userOwnsWorld(supabase, user.id, parsed.data.worldId);
-    if (!ownsWorld) return jsonError("FORBIDDEN", 403);
+    const access = await requireWorldAccess(supabase, user.id, parsed.data.worldId, "editor");
+    if (!access.allowed) return jsonError("FORBIDDEN", 403);
 
     // ── Plan-gated soul count ───────────────────────────────────────────
     const { data: profile } = await supabase
@@ -105,8 +105,8 @@ export async function POST(request: Request) {
 
   const { sessionId, worldId, message, directedToSoulId } = parsed.data;
 
-  const ownsWorld = await userOwnsWorld(supabase, user.id, worldId);
-  if (!ownsWorld) return jsonError("FORBIDDEN", 403);
+  const access = await requireWorldAccess(supabase, user.id, worldId, "editor");
+  if (!access.allowed) return jsonError("FORBIDDEN", 403);
 
   // Fetch session and souls
   const { data: session } = await supabase
@@ -163,6 +163,7 @@ export async function POST(request: Request) {
     world_uuid: worldId,
     query_embedding: embedding,
     match_count: 4,
+    filter_tags: null,
   });
 
   const loreContext = (loreChunks ?? []).map(
@@ -248,8 +249,8 @@ export async function GET(request: Request) {
   }
 
   if (worldId) {
-    const ownsWorld = await userOwnsWorld(supabase, auth.user.id, worldId);
-    if (!ownsWorld) return jsonError("FORBIDDEN", 403);
+    const access = await requireWorldAccess(supabase, auth.user.id, worldId, "viewer");
+    if (!access.allowed) return jsonError("FORBIDDEN", 403);
 
     const { data: sessions } = await supabase
       .from("tavern_sessions")

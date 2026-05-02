@@ -7,7 +7,7 @@ import { analyzeImpact, detectBlankSpots, orderEventsChronologically, embedText 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
 import { checkAndIncrement } from "@/lib/rate-limit";
-import { userOwnsWorld } from "@/lib/world-access";
+import { requireWorldAccess } from "@/lib/world-access";
 
 // Accept any non-empty string worldId — "demo-world" is valid for demo mode
 const worldIdSchema = z.string().min(1);
@@ -48,13 +48,7 @@ export async function POST(request: Request) {
   const auth = await requireUser();
   if ("error" in auth) return auth.error;
   const { user, supabase: authSupabase } = auth;
-  const rate = await checkAndIncrement(
-    authSupabase,
-    user.id,
-    "narrator_action",
-    DAILY_LIMITS.narrator_action,
-  );
-  if (!rate.allowed) return jsonRateLimited("narrator_action", rate.limit);
+  // Rate limit moved to individual action blocks
   const action = typeof body === "object" && body !== null && "action" in body
     ? String((body as { action: unknown }).action)
     : "";
@@ -68,9 +62,17 @@ export async function POST(request: Request) {
     const isDemoWorld = worldId === "demo-world";
     if (!isDemoWorld) {
       if (!supabase) return jsonError("SUPABASE_NOT_CONFIGURED", 500);
-      const ownsWorld = await userOwnsWorld(supabase, user.id, worldId);
-      if (!ownsWorld) return jsonError("FORBIDDEN", 403);
+      const access = await requireWorldAccess(supabase, user.id, worldId, "viewer");
+      if (!access.allowed) return jsonError("FORBIDDEN", 403);
     }
+
+    const rate = await checkAndIncrement(
+      authSupabase,
+      user.id,
+      "narrator_action",
+      DAILY_LIMITS.narrator_action,
+    );
+    if (!rate.allowed) return jsonRateLimited("narrator_action", rate.limit);
 
     // For demo world or no supabase, return mocked plausible result
     if (!supabase || worldId === "demo-world") {
@@ -99,6 +101,7 @@ export async function POST(request: Request) {
       world_uuid: worldId,
       query_embedding: embedding,
       match_count: 8,
+      filter_tags: null,
     });
 
     const loreContext = (loreChunks ?? []).map((c: { content: string }) => c.content);
@@ -114,9 +117,17 @@ export async function POST(request: Request) {
     const isDemoWorld = worldId === "demo-world";
     if (!isDemoWorld) {
       if (!supabase) return jsonError("SUPABASE_NOT_CONFIGURED", 500);
-      const ownsWorld = await userOwnsWorld(supabase, user.id, worldId);
-      if (!ownsWorld) return jsonError("FORBIDDEN", 403);
+      const access = await requireWorldAccess(supabase, user.id, worldId, "viewer");
+      if (!access.allowed) return jsonError("FORBIDDEN", 403);
     }
+
+    const rate = await checkAndIncrement(
+      authSupabase,
+      user.id,
+      "narrator_action",
+      DAILY_LIMITS.narrator_action,
+    );
+    if (!rate.allowed) return jsonRateLimited("narrator_action", rate.limit);
 
     if (!supabase || worldId === "demo-world") {
       return Response.json({
@@ -159,9 +170,17 @@ export async function POST(request: Request) {
     const isDemoWorld = worldId === "demo-world";
     if (!isDemoWorld) {
       if (!supabase) return jsonError("SUPABASE_NOT_CONFIGURED", 500);
-      const ownsWorld = await userOwnsWorld(supabase, user.id, worldId);
-      if (!ownsWorld) return jsonError("FORBIDDEN", 403);
+      const access = await requireWorldAccess(supabase, user.id, worldId, "viewer");
+      if (!access.allowed) return jsonError("FORBIDDEN", 403);
     }
+
+    const rate = await checkAndIncrement(
+      authSupabase,
+      user.id,
+      "narrator_action",
+      DAILY_LIMITS.narrator_action,
+    );
+    if (!rate.allowed) return jsonRateLimited("narrator_action", rate.limit);
 
     if (!supabase || worldId === "demo-world") {
       return Response.json({
@@ -188,8 +207,14 @@ export async function POST(request: Request) {
       return Response.json({ timeline: [] });
     }
 
-    const timeline = await orderEventsChronologically(events);
-    return Response.json({ timeline });
+    const flat = await orderEventsChronologically(events);
+    const grouped = Object.entries(
+      flat.reduce<Record<string, typeof flat>>((acc, e) => {
+        (acc[e.era] ??= []).push(e);
+        return acc;
+      }, {})
+    ).map(([era, evts]) => ({ era, events: evts }));
+    return Response.json({ timeline: grouped });
   }
 
   return Response.json({ error: "Unknown action" }, { status: 400 });

@@ -72,6 +72,52 @@ export async function POST(request: Request) {
     return Response.json({ success: true, status: "retrying" });
   }
 
+  if (body.action === "retry-world") {
+    const worldId = body.worldId;
+    if (!worldId) return Response.json({ error: "Missing worldId" }, { status: 400 });
+
+    const { data: jobs } = await supabase
+      .from("failed_jobs")
+      .select("*")
+      .eq("world_id", worldId)
+      .eq("user_id", user.id)
+      .eq("status", "failed");
+
+    const retryableJobs = (jobs ?? []).filter((job) => job.retry_count < job.max_retries);
+    const queued: string[] = [];
+    const failed: Array<{ id: string; error: string }> = [];
+
+    for (const job of retryableJobs) {
+      await supabase
+        .from("failed_jobs")
+        .update({ status: "retrying", retry_count: job.retry_count + 1 })
+        .eq("id", job.id);
+
+      try {
+        await inngest.send({
+          name: job.event_name,
+          data: job.payload,
+        });
+        queued.push(job.id);
+      } catch (error) {
+        await supabase
+          .from("failed_jobs")
+          .update({ status: "failed" })
+          .eq("id", job.id);
+        failed.push({
+          id: job.id,
+          error: error instanceof Error ? error.message : "Failed to re-queue job",
+        });
+      }
+    }
+
+    return Response.json({
+      success: failed.length === 0,
+      queued,
+      failed,
+    });
+  }
+
   if (body.action === "resolve") {
     const jobId = body.jobId;
     if (!jobId) return Response.json({ error: "Missing jobId" }, { status: 400 });

@@ -86,7 +86,7 @@ The aesthetic is **dark parchment, warm candlelight, arcane purple** — NOT col
 **Implementation:**
 - POST `/api/souls/generate` — Gemini 2.5 Pro, Zod-validated via `lib/soul-card.ts` + `repairAndParseJSON`
 - POST `/api/souls/chat` — **semantic cache layer** (pgvector similarity on recent prompts, threshold 0.98); cached responses served instantly; new responses streamed and cached
-- Soul-specific chat: POST `/api/souls/[id]/chat` — same logic, soul ID from URL
+- Soul-specific chat: DELETE `/api/souls/[id]/chat` — clear conversation history
 - Manual overrides: PATCH `/api/souls/[id]` — edits `description`, `voice`, `core` fields without regeneration
 - Soul delete: DELETE `/api/souls/[id]`
 - Source attribution: `source_chunk_ids` stored on messages for traceable lore references
@@ -236,6 +236,7 @@ All per-user, per-day (reset midnight UTC):
 | Consistency checks | 5/day |
 | Soul generate | 3/day |
 | Tavern messages | 30/day |
+| Narrator actions | 20/day |
 
 **Key copy:** "The spellwork needs to rest.", "Today's Ink" (usage meter label)
 
@@ -427,7 +428,7 @@ User sends message
 | `app/api/entities/route.ts` | GET `/api/entities?worldId=&since=<ISO>` — incremental entity fetch for archive refresh |
 | `app/api/entities/[id]/route.ts` | DELETE/PATCH `/api/entities/[id]` — entity management |
 | `app/api/souls/[id]/route.ts` | DELETE/PATCH `/api/souls/[id]` — soul management + manual card overrides |
-| `app/api/souls/[id]/chat/route.ts` | POST chat for soul by URL param (same logic as `/api/souls/chat`) |
+| `app/api/souls/[id]/chat/route.ts` | DELETE chat history for soul by URL param |
 | `app/api/worlds/[id]/export/route.ts` | GET — full world JSON export (lore, entities, souls, consistency, tavern, chat history) |
 | `app/api/jobs/route.ts` | Failed jobs endpoint |
 | `app/api/consistency/unresolve/route.ts` | POST — undo flag resolution |

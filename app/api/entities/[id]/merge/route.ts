@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { z } from "zod";
 import { requireUser, jsonError, zodErrorResponse } from "@/lib/api";
+import { requireWorldAccess } from "@/lib/world-access";
 
 const mergeSchema = z.object({
   targetEntityId: z.string().uuid(),
@@ -49,14 +50,8 @@ export async function POST(
   if (!target) return jsonError("Target entity not found", 404);
   if (source.world_id !== target.world_id) return jsonError("Entities must be in the same world", 400);
 
-  // Verify ownership
-  const { data: world } = await supabase
-    .from("worlds")
-    .select("user_id")
-    .eq("id", source.world_id)
-    .maybeSingle();
-
-  if (!world || world.user_id !== user.id) return jsonError("Forbidden", 403);
+  const access = await requireWorldAccess(supabase, user.id, source.world_id, "editor");
+  if (!access.allowed) return jsonError("Forbidden", 403);
 
   // 1. Fetch affected lore_chunks and update entity_tags in JS (Supabase doesn't support array element replacement natively)
   const { data: chunks } = await supabase

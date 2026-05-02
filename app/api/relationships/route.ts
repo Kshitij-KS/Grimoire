@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 import { z } from "zod";
 import { jsonError, requireUser, zodErrorResponse } from "@/lib/api";
-import { userOwnsWorld } from "@/lib/world-access";
+import { requireWorldAccess } from "@/lib/world-access";
 
 const createSchema = z.object({
   worldId: z.string().uuid(),
@@ -28,8 +28,8 @@ export async function GET(request: Request) {
     return jsonError("INVALID_WORLD_ID", 400);
   }
 
-  const ownsWorld = await userOwnsWorld(supabase, auth.user.id, worldId);
-  if (!ownsWorld) return jsonError("FORBIDDEN", 403);
+  const access = await requireWorldAccess(supabase, auth.user.id, worldId, "viewer");
+  if (!access.allowed) return jsonError("FORBIDDEN", 403);
 
   const { data: relationships } = await supabase
     .from("entity_relationships")
@@ -67,8 +67,8 @@ export async function POST(request: Request) {
 
     if (!existing) return jsonError("RELATIONSHIP_NOT_FOUND", 404);
 
-    const ownsWorld = await userOwnsWorld(supabase, user.id, existing.world_id);
-    if (!ownsWorld) return jsonError("FORBIDDEN", 403);
+    const access = await requireWorldAccess(supabase, user.id, existing.world_id, "editor");
+    if (!access.allowed) return jsonError("FORBIDDEN", 403);
 
     const { error } = await supabase
       .from("entity_relationships")
@@ -87,8 +87,8 @@ export async function POST(request: Request) {
     return Response.json({ error: "Cannot create self-referencing relationship" }, { status: 400 });
   }
 
-  const ownsWorld = await userOwnsWorld(supabase, user.id, parsed.data.worldId);
-  if (!ownsWorld) return jsonError("FORBIDDEN", 403);
+  const access = await requireWorldAccess(supabase, user.id, parsed.data.worldId, "editor");
+  if (!access.allowed) return jsonError("FORBIDDEN", 403);
 
   const { data: entities } = await supabase
     .from("entities")

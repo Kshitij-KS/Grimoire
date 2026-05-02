@@ -5,6 +5,7 @@ import { checkConsistency, embedText } from "@/lib/embeddings";
 import { hasAiEnv } from "@/lib/env";
 import { checkAndIncrement } from "@/lib/rate-limit";
 import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
+import { requireWorldAccess } from "@/lib/world-access";
 
 const schema = z.object({
   worldId: z.string().uuid(),
@@ -25,6 +26,8 @@ export async function POST(request: Request) {
   if (!parsed.success) return zodErrorResponse(parsed.error);
 
   const { user, supabase } = auth;
+  const access = await requireWorldAccess(supabase, user.id, parsed.data.worldId, "editor");
+  if (!access.allowed) return jsonError("FORBIDDEN", 403);
   const rate = await checkAndIncrement(
     supabase,
     user.id,

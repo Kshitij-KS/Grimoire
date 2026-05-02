@@ -4,7 +4,10 @@ import { repairAndParseJSON } from "@/lib/json-repair";
 
 export async function embedText(text: string): Promise<number[]> {
   const model = getEmbeddingModel();
-  const result = await model.embedContent(text);
+  const result = await model.embedContent({
+    content: { parts: [{ text }] },
+    outputDimensionality: 768,
+  } as Parameters<typeof model.embedContent>[0] & { outputDimensionality: number });
   return result.embedding.values ?? [];
 }
 

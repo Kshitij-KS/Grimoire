@@ -63,7 +63,7 @@ export function SoulCardPanel({ soul, worldId, onClose, onRegenerated }: SoulCar
         }),
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "Regeneration failed.");
+      if (!response.ok) throw new Error(payload.detail || payload.error || "Regeneration failed.");
       toast.success("Soul card reforged.");
       onRegenerated?.(payload.soul ?? { ...soul, soul_card: payload.soul_card });
     } catch (err) {

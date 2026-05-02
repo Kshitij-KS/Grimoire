@@ -1,12 +1,12 @@
 export const dynamic = "force-dynamic";
 import { z } from "zod";
 import { DAILY_LIMITS, FREE_TIER_LIMITS } from "@/lib/constants";
-import { chunkLoreText } from "@/lib/chunker";
-import { embedText, extractEntities } from "@/lib/embeddings";
 import { hasAiEnv } from "@/lib/env";
 import { checkAndIncrement } from "@/lib/rate-limit";
 import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
 import { inngest } from "@/lib/inngest-client";
+import { requireWorldAccess } from "@/lib/world-access";
+import { processLoreEntry } from "@/lib/lore-processing";
 
 const schema = z.object({
   worldId: z.string().uuid().or(z.literal("demo-world")),
@@ -36,12 +36,17 @@ export async function POST(request: Request) {
   const { user, supabase } = auth;
   const { worldId, title, content, entryId, useBackground } = parsed.data;
 
+  if (worldId !== "demo-world") {
+    const access = await requireWorldAccess(supabase, user.id, worldId, "editor");
+    if (!access.allowed) return jsonError("FORBIDDEN", 403);
+  }
+
   const [{ data: profile }, { count: loreCount }] = await Promise.all([
     supabase.from("profiles").select("plan").eq("id", user.id).maybeSingle(),
     supabase
       .from("lore_entries")
       .select("*", { head: true, count: "exact" })
-      .eq("user_id", user.id),
+      .eq("world_id", worldId),
   ]);
 
   const isFree = !profile || profile.plan === "free";
@@ -62,29 +67,33 @@ export async function POST(request: Request) {
 
   // Save/update the lore entry immediately
   let entry;
-  if (entryId) {
-    const { data, error } = await supabase
-      .from("lore_entries")
-      .update({ title, content, processing_status: "pending" })
-      .eq("id", entryId)
-      .select("*")
-      .single();
-    if (error) throw error;
-    entry = data;
-  } else {
-    const { data, error } = await supabase
-      .from("lore_entries")
-      .insert({
-        world_id: worldId,
-        user_id: user.id,
-        title,
-        content,
-        processing_status: "pending",
-      })
-      .select("*")
-      .single();
-    if (error) throw error;
-    entry = data;
+  try {
+    if (entryId) {
+      const { data, error } = await supabase
+        .from("lore_entries")
+        .update({ title, content, processing_status: "pending" })
+        .eq("id", entryId)
+        .select("*")
+        .single();
+      if (error) return jsonError(error.message, 500);
+      entry = data;
+    } else {
+      const { data, error } = await supabase
+        .from("lore_entries")
+        .insert({
+          world_id: worldId,
+          user_id: user.id,
+          title,
+          content,
+          processing_status: "pending",
+        })
+        .select("*")
+        .single();
+      if (error) return jsonError(error.message, 500);
+      entry = data;
+    }
+  } catch (e) {
+    return jsonError(e instanceof Error ? e.message : "Database error", 500);
   }
 
   // Try background processing via Inngest first
@@ -125,114 +134,41 @@ export async function POST(request: Request) {
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        await supabase
-          .from("lore_entries")
-          .update({ processing_status: "processing" })
-          .eq("id", entry.id);
-
         controller.enqueue(encoder.encode(sseEvent("saved", { entry })));
-        controller.enqueue(
-          encoder.encode(sseEvent("chunking", { status: "started" })),
-        );
-
-        const chunks = chunkLoreText(content);
-        const extractedEntities = await extractEntities(content).catch(
-          () => [],
-        );
-        const chunkRows = [];
-
-        for (const chunk of chunks) {
-          controller.enqueue(
-            encoder.encode(
-              sseEvent("embedding_progress", {
-                index: chunk.chunkIndex,
-                total: chunks.length,
-              }),
-            ),
-          );
-
-          let embedding: number[] = [];
-          let attempts = 0;
-          while (attempts < 3) {
-            try {
-              embedding = await embedText(chunk.content);
-              break;
-            } catch (e) {
-              attempts++;
-              if (attempts >= 3) {
-                console.error("Embedding failed after 3 attempts:", e);
-                embedding = [];
-                break;
-              }
-              await new Promise((r) =>
-                setTimeout(r, Math.pow(2, attempts) * 1000),
+        const result = await processLoreEntry({
+          supabase,
+          worldId,
+          entryId: entry.id,
+          content,
+          onEvent: (event) => {
+            if (event.type === "chunking") {
+              controller.enqueue(encoder.encode(sseEvent("chunking", { status: "started" })));
+            }
+            if (event.type === "embedding_progress") {
+              controller.enqueue(
+                encoder.encode(
+                  sseEvent("embedding_progress", {
+                    index: event.index,
+                    total: event.total,
+                  }),
+                ),
               );
             }
-          }
-
-          const entityTags = extractedEntities
-            .filter((entity) =>
-              chunk.content
-                .toLowerCase()
-                .includes(entity.name.toLowerCase()),
-            )
-            .map((entity) => entity.name);
-
-          chunkRows.push({
-            world_id: worldId,
-            lore_entry_id: entry.id,
-            content: chunk.content,
-            embedding: embedding.length > 0 ? embedding : null,
-            entity_tags: entityTags,
-            chunk_index: chunk.chunkIndex,
-          });
-        }
-
-        // Delete old chunks if re-processing
-        if (entryId) {
-          await supabase
-            .from("lore_chunks")
-            .delete()
-            .eq("lore_entry_id", entryId);
-        }
-
-        await supabase.from("lore_chunks").insert(chunkRows);
-        controller.enqueue(
-          encoder.encode(
-            sseEvent("embedding_complete", { count: chunkRows.length }),
-          ),
-        );
-        controller.enqueue(
-          encoder.encode(
-            sseEvent("entity_extraction", {
-              count: extractedEntities.length,
-            }),
-          ),
-        );
-
-        for (const entity of extractedEntities) {
-          await supabase.from("entities").upsert(
-            {
-              world_id: worldId,
-              name: entity.name,
-              type: entity.type,
-              summary: entity.summary ?? null,
-            },
-            { onConflict: "world_id,normalized_name,type" },
-          );
-        }
-
-        await supabase
-          .from("lore_entries")
-          .update({ processing_status: "complete" })
-          .eq("id", entry.id);
+            if (event.type === "embedding_complete") {
+              controller.enqueue(encoder.encode(sseEvent("embedding_complete", { count: event.count })));
+            }
+            if (event.type === "entity_extraction") {
+              controller.enqueue(encoder.encode(sseEvent("entity_extraction", { count: event.count })));
+            }
+          },
+        });
 
         controller.enqueue(
           encoder.encode(
             sseEvent("complete", {
               entry,
-              chunksCreated: chunkRows.length,
-              entitiesFound: extractedEntities,
+              chunksCreated: result.chunksCreated,
+              entitiesFound: result.entitiesFound,
             }),
           ),
         );

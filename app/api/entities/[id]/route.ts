@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { requireUser, jsonError, zodErrorResponse } from "@/lib/api";
 import { entityPatchSchema } from "@/lib/entity-validation";
+import { requireWorldAccess } from "@/lib/world-access";
 
 export async function DELETE(
   request: Request,
@@ -18,14 +19,9 @@ export async function DELETE(
 
   if (!entity) return jsonError("Entity not found", 404);
 
-  const { data: world } = await supabase
-    .from("worlds")
-    .select("id, user_id")
-    .eq("id", entity.world_id)
-    .maybeSingle();
-
-  if (!world) return jsonError("World not found", 404);
-  if (world.user_id !== user.id) return jsonError("Forbidden", 403);
+  const access = await requireWorldAccess(supabase, user.id, entity.world_id, "editor");
+  if (!access.role) return jsonError("World not found", 404);
+  if (!access.allowed) return jsonError("Forbidden", 403);
 
   const { error } = await supabase
     .from("entities")
@@ -57,14 +53,9 @@ export async function PATCH(
 
   if (!entity) return jsonError("Entity not found", 404);
 
-  const { data: world } = await supabase
-    .from("worlds")
-    .select("id, user_id")
-    .eq("id", entity.world_id)
-    .maybeSingle();
-
-  if (!world) return jsonError("World not found", 404);
-  if (world.user_id !== user.id) return jsonError("Forbidden", 403);
+  const access = await requireWorldAccess(supabase, user.id, entity.world_id, "editor");
+  if (!access.role) return jsonError("World not found", 404);
+  if (!access.allowed) return jsonError("Forbidden", 403);
 
   const { data, error } = await supabase
     .from("entities")
@@ -77,7 +68,10 @@ export async function PATCH(
     .select()
     .single();
 
-  if (error) return jsonError(error.message, 500);
+  if (error) {
+    if (error.code === "23505") return jsonError("An entity with this name already exists", 409);
+    return jsonError(error.message, 500);
+  }
 
   return Response.json({ success: true, entity: data });
 }

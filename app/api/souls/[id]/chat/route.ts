@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 import { requireUser, jsonError } from "@/lib/api";
+import { requireWorldAccess } from "@/lib/world-access";
 
 export async function DELETE(
   request: Request,
@@ -16,14 +17,9 @@ export async function DELETE(
     .maybeSingle();
 
   if (!soul) return jsonError("Soul not found", 404);
-  const { data: world } = await supabase
-    .from("worlds")
-    .select("id, user_id")
-    .eq("id", soul.world_id)
-    .maybeSingle();
-
-  if (!world) return jsonError("World not found", 404);
-  if (world.user_id !== user.id) return jsonError("Forbidden", 403);
+  const access = await requireWorldAccess(supabase, user.id, soul.world_id, "editor");
+  if (!access.role) return jsonError("World not found", 404);
+  if (!access.allowed) return jsonError("Forbidden", 403);
 
   const { data: convos } = await supabase
     .from("conversations")

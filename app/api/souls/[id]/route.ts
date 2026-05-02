@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { z } from "zod";
 import { requireUser, jsonError, zodErrorResponse } from "@/lib/api";
+import { requireWorldAccess } from "@/lib/world-access";
 
 const patchSchema = z.object({
   description: z.string().trim().min(10).max(4000).optional(),
@@ -24,14 +25,9 @@ export async function DELETE(
 
   if (!soul) return jsonError("Soul not found", 404);
 
-  const { data: world } = await supabase
-    .from("worlds")
-    .select("id, user_id")
-    .eq("id", soul.world_id)
-    .maybeSingle();
-
-  if (!world) return jsonError("World not found", 404);
-  if (world.user_id !== user.id) return jsonError("Forbidden", 403);
+  const access = await requireWorldAccess(supabase, user.id, soul.world_id, "editor");
+  if (!access.role) return jsonError("World not found", 404);
+  if (!access.allowed) return jsonError("Forbidden", 403);
 
   const { error } = await supabase
     .from("souls")
@@ -63,14 +59,9 @@ export async function PATCH(
 
   if (!soul) return jsonError("Soul not found", 404);
 
-  const { data: world } = await supabase
-    .from("worlds")
-    .select("id, user_id")
-    .eq("id", soul.world_id)
-    .maybeSingle();
-
-  if (!world) return jsonError("World not found", 404);
-  if (world.user_id !== user.id) return jsonError("Forbidden", 403);
+  const access = await requireWorldAccess(supabase, user.id, soul.world_id, "editor");
+  if (!access.role) return jsonError("World not found", 404);
+  if (!access.allowed) return jsonError("Forbidden", 403);
 
   const currentCard = (soul.soul_card ?? {}) as Record<string, unknown>;
   const nextCard = {

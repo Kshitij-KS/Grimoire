@@ -3,6 +3,7 @@ import { z } from "zod";
 import { embedText } from "@/lib/embeddings";
 import { jsonError, requireUser, zodErrorResponse } from "@/lib/api";
 import { hasAiEnv } from "@/lib/env";
+import { requireWorldAccess } from "@/lib/world-access";
 
 const schema = z.object({
   worldId: z.string().uuid(),
@@ -22,6 +23,9 @@ export async function POST(request: Request) {
   const body = await request.json();
   const parsed = schema.safeParse(body);
   if (!parsed.success) return zodErrorResponse(parsed.error);
+
+  const access = await requireWorldAccess(auth.supabase, auth.user.id, parsed.data.worldId, "viewer");
+  if (!access.allowed) return jsonError("FORBIDDEN", 403);
 
   const embedding = await embedText(parsed.data.query);
   const { data, error } = await auth.supabase.rpc("match_lore_chunks", {
