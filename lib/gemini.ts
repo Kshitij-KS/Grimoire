@@ -20,7 +20,7 @@ async function tryFallback<T>(
   actions: (() => Promise<T>)[],
   message: string,
 ) {
-  let lastError: any;
+  let lastError: unknown;
   for (let i = 0; i < actions.length; i++) {
     try {
       return await actions[i]();
