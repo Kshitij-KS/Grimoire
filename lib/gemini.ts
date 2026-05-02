@@ -17,70 +17,75 @@ export function getGeminiClients() {
 }
 
 async function tryFallback<T>(
-  primaryCall: () => Promise<T>,
-  fallbackCall: (() => Promise<T>) | null,
+  actions: (() => Promise<T>)[],
   message: string,
 ) {
-  try {
-    return await primaryCall();
-  } catch (error) {
-    if (!fallbackCall) throw error;
-    console.warn(message, error);
-    return fallbackCall();
+  let lastError: any;
+  for (let i = 0; i < actions.length; i++) {
+    try {
+      return await actions[i]();
+    } catch (error) {
+      lastError = error;
+      if (i < actions.length - 1) {
+        console.warn(`${message} (Attempt ${i + 1} failed)`, error);
+      }
+    }
   }
+  throw lastError;
 }
 
-function withFallback(modelName: string): GeminiModel {
+function withFallback(modelNames: string[]): GeminiModel {
   const { primary, fallback } = getGeminiClients();
-  const primaryModel = primary.getGenerativeModel({ model: modelName });
+  const models: GeminiModel[] = [];
+  
+  for (const modelName of modelNames) {
+    models.push(primary.getGenerativeModel({ model: modelName }));
+    if (fallback) {
+      models.push(fallback.getGenerativeModel({ model: modelName }));
+    }
+  }
 
-  if (!fallback) return primaryModel;
+  const baseModel = models[0];
+  const proxyModel = Object.assign(Object.create(Object.getPrototypeOf(baseModel)), baseModel) as GeminiModel;
 
-  const fallbackModel = fallback.getGenerativeModel({ model: modelName });
-  const model = Object.assign(Object.create(Object.getPrototypeOf(primaryModel)), primaryModel) as GeminiModel;
-
-  model.generateContent = (...args: Parameters<typeof primaryModel.generateContent>) =>
+  proxyModel.generateContent = (...args: Parameters<typeof baseModel.generateContent>) =>
     tryFallback(
-      () => primaryModel.generateContent(...args),
-      () => fallbackModel.generateContent(...args),
-      "Primary Gemini API failed, trying fallback...",
+      models.map(m => () => m.generateContent(...args)),
+      "Gemini generateContent failed, trying fallback...",
     );
 
-  model.generateContentStream = (...args: Parameters<typeof primaryModel.generateContentStream>) =>
+  proxyModel.generateContentStream = (...args: Parameters<typeof baseModel.generateContentStream>) =>
     tryFallback(
-      () => primaryModel.generateContentStream(...args),
-      () => fallbackModel.generateContentStream(...args),
-      "Primary Gemini API stream failed, trying fallback...",
+      models.map(m => () => m.generateContentStream(...args)),
+      "Gemini generateContentStream failed, trying fallback...",
     );
 
-  model.embedContent = (...args: Parameters<typeof primaryModel.embedContent>) =>
+  proxyModel.embedContent = (...args: Parameters<typeof baseModel.embedContent>) =>
     tryFallback(
-      () => primaryModel.embedContent(...args),
-      () => fallbackModel.embedContent(...args),
-      "Primary Gemini embedding API failed, trying fallback...",
+      models.map(m => () => m.embedContent(...args)),
+      "Gemini embedContent failed, trying fallback...",
     );
 
-  model.batchEmbedContents = (...args: Parameters<typeof primaryModel.batchEmbedContents>) =>
+  proxyModel.batchEmbedContents = (...args: Parameters<typeof baseModel.batchEmbedContents>) =>
     tryFallback(
-      () => primaryModel.batchEmbedContents(...args),
-      () => fallbackModel.batchEmbedContents(...args),
-      "Primary Gemini batch embedding API failed, trying fallback...",
+      models.map(m => () => m.batchEmbedContents(...args)),
+      "Gemini batchEmbedContents failed, trying fallback...",
     );
 
-  return model;
+  return proxyModel;
 }
 
 /** Heavy generation model — soul generation, entity extraction, consistency checks. */
 export function getGeminiModel() {
-  return withFallback("gemini-2.5-pro");
+  return withFallback(["gemini-3.1-pro", "gemini-2.5-pro"]);
 }
 
 /** Fast conversational model — soul chat, demo chat. */
 export function getChatModel() {
-  return withFallback("gemini-2.5-flash");
+  return withFallback(["gemini-3-flash", "gemini-2.5-flash"]);
 }
 
 /** Embedding model for semantic search. */
 export function getEmbeddingModel() {
-  return withFallback("gemini-embedding-2-preview");
+  return withFallback(["gemini-embedding-2-preview", "text-embedding-004"]);
 }
