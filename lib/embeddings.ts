@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getGeminiModel, getEmbeddingModel } from "@/lib/gemini";
+import { getGeminiModel, getEmbeddingModel, getChatModel } from "@/lib/gemini";
 import { repairAndParseJSON } from "@/lib/json-repair";
 
 export async function embedText(text: string): Promise<number[]> {
