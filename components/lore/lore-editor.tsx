@@ -17,9 +17,9 @@ import { stripHtml } from "@/lib/utils";
 
 const baseSteps: ProcessingStep[] = [
   { id: "saved", label: "Saving this lore entry...", status: "idle" },
+  { id: "entities", label: "Extracting characters & locations...", status: "idle" },
   { id: "chunking", label: "Chunking your writing...", status: "idle" },
   { id: "embedding", label: "Embedding into world memory...", status: "idle" },
-  { id: "entities", label: "Extracting characters & locations...", status: "idle" },
   { id: "complete", label: "Your world remembers.", status: "idle" },
 ];
 
@@ -134,7 +134,15 @@ export function LoreEditor({
           const payload = dataLine ? JSON.parse(dataLine) : undefined;
 
           if (eventName === "saved") updateStep("saved", "complete");
-          if (eventName === "chunking") updateStep("chunking", "active");
+          if (eventName === "entity_extraction_started") {
+            updateStep("saved", "complete");
+            updateStep("entities", "active");
+          }
+          if (eventName === "entity_extraction") updateStep("entities", "complete");
+          if (eventName === "chunking") {
+            updateStep("entities", "complete");
+            updateStep("chunking", "active");
+          }
           if (eventName === "embedding_progress") {
             updateStep("chunking", "complete");
             updateStep("embedding", "active");

@@ -157,6 +157,9 @@ export async function POST(request: Request) {
             if (event.type === "embedding_complete") {
               controller.enqueue(encoder.encode(sseEvent("embedding_complete", { count: event.count })));
             }
+            if (event.type === "entity_extraction_started") {
+              controller.enqueue(encoder.encode(sseEvent("entity_extraction_started", {})));
+            }
             if (event.type === "entity_extraction") {
               controller.enqueue(encoder.encode(sseEvent("entity_extraction", { count: event.count })));
             }

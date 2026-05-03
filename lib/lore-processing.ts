@@ -5,6 +5,7 @@ type ProcessingEvent =
   | { type: "chunking"; total: number }
   | { type: "embedding_progress"; index: number; total: number }
   | { type: "embedding_complete"; count: number }
+  | { type: "entity_extraction_started" }
   | { type: "entity_extraction"; count: number };
 
 type SupabaseMutationResult = PromiseLike<{ error?: unknown }>;
@@ -66,7 +67,11 @@ export async function processLoreEntry({
   const chunks = chunkLoreText(content);
   await onEvent?.({ type: "chunking", total: chunks.length });
 
-  const extractedEntities = await extractEntities(content).catch(() => []);
+  await onEvent?.({ type: "entity_extraction_started" });
+  const extractedEntities = await extractEntities(content).catch((err) => {
+    console.error("Entity extraction failed:", err);
+    return [];
+  });
   const chunkRows = [];
 
   for (const chunk of chunks) {

@@ -30,7 +30,7 @@ const entitiesResponseSchema = z.object({
 });
 
 export async function extractEntities(text: string) {
-  const model = getGeminiModel();
+  const model = getChatModel();
   const prompt = `Extract named entities from this lore. Return strict JSON in the shape:
 {"entities":[{"name":"", "type":"character|location|faction|artifact|event|rule", "summary":"short summary"}]}
 
