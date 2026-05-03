@@ -77,12 +77,12 @@ function withFallback(modelNames: string[]): GeminiModel {
 
 /** Heavy generation model — soul generation, entity extraction, consistency checks. */
 export function getGeminiModel() {
-  return withFallback(["gemini-3.1-pro", "gemini-2.5-pro"]);
+  return withFallback(["gemini-3.1-pro-preview", "gemini-2.5-pro"]);
 }
 
 /** Fast conversational model — soul chat, demo chat. */
 export function getChatModel() {
-  return withFallback(["gemini-3-flash", "gemini-2.5-flash"]);
+  return withFallback(["gemini-3-flash-preview", "gemini-2.5-flash"]);
 }
 
 /** Embedding model for semantic search. */

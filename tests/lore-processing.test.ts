@@ -40,6 +40,11 @@ describe("processLoreEntry", () => {
           },
         };
       },
+      rpc(name: string, params: unknown) {
+        upserts.entities ??= [];
+        upserts.entities.push(params);
+        return Promise.resolve({ error: null });
+      },
     };
 
     const { processLoreEntry } = await import("@/lib/lore-processing");
