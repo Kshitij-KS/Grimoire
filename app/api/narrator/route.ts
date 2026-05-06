@@ -88,7 +88,7 @@ export async function POST(request: Request) {
     }
     if (!hasAiEnv()) {
       return jsonError("AI_NOT_CONFIGURED", 503, {
-        detail: "Missing GEMINI_API_KEY on the server.",
+        detail: "Missing GROQ_API_KEY or GEMINI_API_KEY on the server.",
       });
     }
 
@@ -140,7 +140,7 @@ export async function POST(request: Request) {
     }
     if (!hasAiEnv()) {
       return jsonError("AI_NOT_CONFIGURED", 503, {
-        detail: "Missing GEMINI_API_KEY on the server.",
+        detail: "Missing GROQ_API_KEY or GEMINI_API_KEY on the server.",
       });
     }
 
@@ -193,7 +193,7 @@ export async function POST(request: Request) {
     }
     if (!hasAiEnv()) {
       return jsonError("AI_NOT_CONFIGURED", 503, {
-        detail: "Missing GEMINI_API_KEY on the server.",
+        detail: "Missing GROQ_API_KEY or GEMINI_API_KEY on the server.",
       });
     }
 

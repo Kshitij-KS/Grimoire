@@ -6,6 +6,7 @@ export const env = {
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
   geminiApiKey: process.env.GEMINI_API_KEY,
   geminiFallbackApiKey: process.env.GEMINI_FALLBACK_API_KEY,
+  groqApiKey: process.env.GROQ_API_KEY,
   inngestSigningKey: process.env.INNGEST_SIGNING_KEY,
   inngestEventKey: process.env.INNGEST_EVENT_KEY,
 };
@@ -19,5 +20,7 @@ export function hasServerSupabaseEnv() {
 }
 
 export function hasAiEnv() {
-  return Boolean(env.geminiApiKey);
+  // Groq is the primary generation engine; Gemini is kept for embeddings only.
+  // We require Groq for generation and Gemini for embeddings.
+  return Boolean(env.groqApiKey && env.geminiApiKey);
 }

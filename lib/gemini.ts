@@ -1,6 +1,14 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { env } from "@/lib/env";
 
+// ─────────────────────────────────────────────────────────────────────────────
+// NOTE: Gemini is now used ONLY for embeddings (text-embedding-004 /
+// gemini-embedding-2-preview).  All text-generation tasks (soul forge, chat,
+// narrator, tavern) have been migrated to Groq — see lib/groq.ts.
+// The generation helpers below (getGeminiModel, getChatModel) are commented
+// out to preserve the original code while routing generation through Groq.
+// ─────────────────────────────────────────────────────────────────────────────
+
 let primaryClient: GoogleGenerativeAI | null = null;
 let fallbackClient: GoogleGenerativeAI | null = null;
 type GeminiModel = ReturnType<GoogleGenerativeAI["getGenerativeModel"]>;
@@ -75,17 +83,19 @@ function withFallback(modelNames: string[]): GeminiModel {
   return proxyModel;
 }
 
-/** Heavy generation model — soul generation, entity extraction, consistency checks. */
-export function getGeminiModel() {
-  return withFallback(["gemini-3.1-pro-preview", "gemini-2.5-pro"]);
-}
+// ── COMMENTED OUT: Generation models — now handled by Groq (see lib/groq.ts) ──
+// /** Heavy generation model — soul generation, entity extraction, consistency checks. */
+// export function getGeminiModel() {
+//   return withFallback(["gemini-3.1-pro-preview", "gemini-2.5-pro"]);
+// }
 
-/** Fast conversational model — soul chat, demo chat. */
-export function getChatModel() {
-  return withFallback(["gemini-3-flash-preview", "gemini-2.5-flash"]);
-}
+// /** Fast conversational model — soul chat, demo chat. */
+// export function getChatModel() {
+//   return withFallback(["gemini-3-flash-preview", "gemini-2.5-flash"]);
+// }
+// ──────────────────────────────────────────────────────────────────────────────
 
-/** Embedding model for semantic search. */
+/** Embedding model for semantic search. STILL USES GEMINI — not migrated. */
 export function getEmbeddingModel() {
   return withFallback(["gemini-embedding-2-preview", "text-embedding-004"]);
 }

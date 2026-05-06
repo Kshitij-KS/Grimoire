@@ -2,7 +2,8 @@ export const dynamic = "force-dynamic";
 import { z } from "zod";
 import { DAILY_LIMITS, SEMANTIC_CACHE_THRESHOLD } from "@/lib/constants";
 import { hasAiEnv } from "@/lib/env";
-import { getChatModel } from "@/lib/gemini";
+// import { getChatModel } from "@/lib/gemini"; // REPLACED — Groq handles generation now
+import { groqStream, GROQ_MODEL_FAST, type GroqMessage } from "@/lib/groq";
 import { embedText } from "@/lib/embeddings";
 import { checkAndIncrement } from "@/lib/rate-limit";
 import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
   if ("error" in auth) return auth.error;
   if (!hasAiEnv()) {
     return jsonError("AI_NOT_CONFIGURED", 503, {
-      detail: "Missing GEMINI_API_KEY on the server.",
+      detail: "Missing GROQ_API_KEY or GEMINI_API_KEY on the server.",
     });
   }
 
@@ -243,25 +244,31 @@ RULES:
 - Do not reference that you are an AI.
 - When you rely heavily on a specific piece of lore for your answer, naturally mention the fact. The system tracks sources automatically.`;
 
-  const history = lastMessages.map(
+  // Convert message history from Gemini's {role, parts} format to Groq's {role, content} format
+  // Previously: const history = lastMessages.map(m => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }));
+  const history: GroqMessage[] = lastMessages.map(
     (m: { role: string; content: string }) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
+      role: (m.role === "assistant" ? "assistant" : "user") as "assistant" | "user",
+      content: m.content,
     }),
   );
 
-  let geminiStream;
+  // ── Cache Miss: Generate via Groq (was: Gemini) ───────────────────────
+  // Previously: let geminiStream; const model = getChatModel(); geminiStream = await model.generateContentStream({...})
+  let groqStreamResponse;
   try {
-    const model = getChatModel();
-    geminiStream = await model.generateContentStream({
-      systemInstruction,
-      contents: [
+    groqStreamResponse = await groqStream({
+      model: GROQ_MODEL_FAST,
+      messages: [
+        { role: "system", content: systemInstruction },
         ...history,
-        { role: "user", parts: [{ text: parsed.data.message }] },
+        { role: "user", content: parsed.data.message },
       ],
+      temperature: 0.8,
+      max_tokens: 2048,
     });
   } catch (error: unknown) {
-    console.error("Gemini API error:", error);
+    console.error("Groq API error:", error);
     return Response.json(
       { error: error instanceof Error ? error.message : "Failed to speak with the soul." },
       { status: 500 }
@@ -274,15 +281,17 @@ RULES:
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        for await (const chunk of geminiStream.stream) {
-          const text = chunk.text();
+        // Previously: for await (const chunk of geminiStream.stream) { const text = chunk.text(); ... }
+        // Now: Groq OpenAI-compatible streaming with delta.content
+        for await (const chunk of groqStreamResponse) {
+          const text = chunk.choices[0]?.delta?.content ?? "";
           if (text) {
             assistantText += text;
             controller.enqueue(encoder.encode(text));
           }
         }
       } catch (e) {
-        console.error("Gemini stream error:", e);
+        console.error("Groq stream error:", e);
       } finally {
         controller.close();
 

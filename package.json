@@ -45,6 +45,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.38.0",
+    "groq-sdk": "^1.1.2",
     "inngest": "^4.1.0",
     "jszip": "^3.10.1",
     "lucide-react": "^1.6.0",

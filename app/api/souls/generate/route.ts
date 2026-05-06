@@ -2,7 +2,8 @@ export const dynamic = "force-dynamic";
 import { z } from "zod";
 import { DAILY_LIMITS, FREE_TIER_LIMITS } from "@/lib/constants";
 import { hasAiEnv } from "@/lib/env";
-import { getGeminiModel } from "@/lib/gemini";
+// import { getGeminiModel } from "@/lib/gemini"; // REPLACED — Groq handles generation now
+import { groqGenerate, GROQ_MODEL_HEAVY } from "@/lib/groq";
 import { checkAndIncrement, decrementRateLimit } from "@/lib/rate-limit";
 import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
 import { parseSoulCard, soulCardPrompt } from "@/lib/soul-card";
@@ -18,27 +19,44 @@ const schema = z.object({
 });
 
 async function generateSoulCard(userPrompt: string, name: string) {
-  const model = getGeminiModel();
+  // Previously: const model = getGeminiModel(); await model.generateContent(attempt);
+  // Now: groqGenerate with GROQ_MODEL_HEAVY (llama-3.3-70b-versatile) — best for soul card quality
   const attempts = [
-    {
-      systemInstruction: soulCardPrompt,
-      contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+    // Attempt 1: clean system + user separation
+    async () => {
+      const raw = await groqGenerate({
+        model: GROQ_MODEL_HEAVY,
+        messages: [
+          { role: "system", content: soulCardPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.8,
+        max_tokens: 4096,
+      });
+      return parseSoulCard(raw.trim());
     },
-    `${soulCardPrompt}
-
-Character name: ${name}
-
-${userPrompt}
-
-Return only valid JSON matching the required shape exactly.`,
+    // Attempt 2: combined fallback prompt
+    async () => {
+      const raw = await groqGenerate({
+        model: GROQ_MODEL_HEAVY,
+        messages: [
+          {
+            role: "user",
+            content: `${soulCardPrompt}\n\nCharacter name: ${name}\n\n${userPrompt}\n\nReturn only valid JSON matching the required shape exactly.`,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 4096,
+      });
+      return parseSoulCard(raw.trim());
+    },
   ];
 
   let lastError: unknown;
 
   for (const attempt of attempts) {
     try {
-      const result = await model.generateContent(attempt);
-      return parseSoulCard(result.response.text().trim());
+      return await attempt();
     } catch (error) {
       lastError = error;
     }
@@ -60,15 +78,20 @@ function soulForgeErrorResponse(error: unknown) {
   }
 
   if (
-    message.includes("GoogleGenerativeAI") ||
-    message.includes("fetching from https://generativelanguage.googleapis.com") ||
+    // Groq error patterns
+    message.includes("groq") ||
+    message.includes("GROQ") ||
+    // Legacy Gemini error patterns (kept for reference, commented out)
+    // message.includes("GoogleGenerativeAI") ||
+    // message.includes("fetching from https://generativelanguage.googleapis.com") ||
     message.includes("API key") ||
-    message.includes("quota")
+    message.includes("quota") ||
+    message.includes("rate_limit")
   ) {
     return Response.json(
       {
         error: "SOUL_FORGE_MODEL_FAILED",
-        detail: "Gemini could not complete the soul forge request.",
+        detail: "The AI model could not complete the soul forge request.",
       },
       { status: 502 },
     );
@@ -88,7 +111,7 @@ export async function POST(request: Request) {
   if ("error" in auth) return auth.error;
   if (!hasAiEnv()) {
     return jsonError("AI_NOT_CONFIGURED", 503, {
-      detail: "Missing GEMINI_API_KEY on the server.",
+      detail: "Missing GROQ_API_KEY or GEMINI_API_KEY on the server.",
     });
   }
 

@@ -2,7 +2,8 @@ export const dynamic = "force-dynamic";
 import { z } from "zod";
 import { jsonError } from "@/lib/api";
 import { hasAiEnv } from "@/lib/env";
-import { getChatModel } from "@/lib/gemini";
+// import { getChatModel } from "@/lib/gemini"; // REPLACED — Groq handles generation now
+import { groqStream, GROQ_MODEL_FAST } from "@/lib/groq";
 import { demoLoreEntries, demoSoulCard } from "@/lib/mock-data";
 
 const schema = z.object({
@@ -27,7 +28,7 @@ RULES:
 export async function POST(request: Request) {
   if (!hasAiEnv()) {
     return jsonError("AI_NOT_CONFIGURED", 503, {
-      detail: "Missing GEMINI_API_KEY on the server.",
+      detail: "Missing GROQ_API_KEY or GEMINI_API_KEY on the server.",
     });
   }
 
@@ -43,16 +44,22 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  let geminiStream;
+  // Previously: let geminiStream; const model = getChatModel();
+  //   geminiStream = await model.generateContentStream({ systemInstruction, contents: [...] });
+  // Now: groqStream with GROQ_MODEL_FAST (llama-3.1-8b-instant) — ultra-fast for demo chat
+  let groqStreamResponse;
   try {
-    const model = getChatModel();
-    // Use true streaming from Gemini — avoids Vercel timeout on slow generations
-    geminiStream = await model.generateContentStream({
-      systemInstruction,
-      contents: [{ role: "user", parts: [{ text: parsed.data.message }] }],
+    groqStreamResponse = await groqStream({
+      model: GROQ_MODEL_FAST,
+      messages: [
+        { role: "system", content: systemInstruction },
+        { role: "user", content: parsed.data.message },
+      ],
+      temperature: 0.8,
+      max_tokens: 1024,
     });
   } catch (error: unknown) {
-    console.error("Gemini API error:", error);
+    console.error("Groq API error:", error);
     return Response.json(
       { error: error instanceof Error ? error.message : "Failed to speak with the soul." },
       { status: 500 }
@@ -63,12 +70,14 @@ export async function POST(request: Request) {
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        for await (const chunk of geminiStream.stream) {
-          const text = chunk.text();
+        // Previously: for await (const chunk of geminiStream.stream) { const text = chunk.text(); ... }
+        // Now: Groq OpenAI-compatible streaming with delta.content
+        for await (const chunk of groqStreamResponse) {
+          const text = chunk.choices[0]?.delta?.content ?? "";
           if (text) controller.enqueue(encoder.encode(text));
         }
       } catch (e) {
-        console.error("Gemini stream error:", e);
+        console.error("Groq stream error:", e);
       } finally {
         controller.close();
       }

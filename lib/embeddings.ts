@@ -1,9 +1,19 @@
 import { z } from "zod";
-import { getGeminiModel, getEmbeddingModel, getChatModel } from "@/lib/gemini";
+// NOTE: getGeminiModel and getChatModel have been removed from gemini.ts and replaced by Groq.
+// getEmbeddingModel is still used below for vector embeddings (Gemini).
+import { getEmbeddingModel } from "@/lib/gemini";
+// Groq replaces Gemini for all text generation tasks.
+import { groqGenerate, GROQ_MODEL_HEAVY, GROQ_MODEL_FAST } from "@/lib/groq";
 import { repairAndParseJSON } from "@/lib/json-repair";
 
+// ─────────────────────────────────────────────────────────────────────────────
+// The original import line was:
+// import { getGeminiModel, getEmbeddingModel, getChatModel } from "@/lib/gemini";
+// getGeminiModel and getChatModel are now replaced with groqGenerate calls below.
+// ─────────────────────────────────────────────────────────────────────────────
+
 export async function embedText(text: string): Promise<number[]> {
-  const model = getEmbeddingModel();
+  const model = getEmbeddingModel(); // Gemini embedding — unchanged
   const result = await model.embedContent({
     content: { parts: [{ text }] },
     outputDimensionality: 768,
@@ -30,15 +40,20 @@ const entitiesResponseSchema = z.object({
 });
 
 export async function extractEntities(text: string) {
-  const model = getChatModel();
+  // Previously: const model = getChatModel(); await model.generateContent(prompt);
+  // Now: groqGenerate with GROQ_MODEL_FAST (llama-3.1-8b-instant) — fast enough for extraction
   const prompt = `Extract named entities from this lore. Return strict JSON in the shape:
 {"entities":[{"name":"", "type":"character|location|faction|artifact|event|rule", "summary":"short summary"}]}
 
 Lore:
 ${text}`;
 
-  const response = await model.generateContent(prompt);
-  const raw = response.response.text();
+  const raw = await groqGenerate({
+    model: GROQ_MODEL_FAST,
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.1,
+    max_tokens: 2048,
+  });
 
   // Use json-repair for robust parsing
   const parsed = repairAndParseJSON<{ entities: Array<{ name: string; type: string; summary?: string }> }>(raw);
@@ -82,7 +97,8 @@ export async function checkConsistency(
 ) {
   if (referenceChunks.length === 0) return [];
 
-  const model = getGeminiModel();
+  // Previously: const model = getGeminiModel(); await model.generateContent(prompt);
+  // Now: groqGenerate with GROQ_MODEL_HEAVY (llama-3.3-70b-versatile) — needs high accuracy
   const prompt = `You are a strict canon consistency checker for a fictional world.
 Find ALL factual contradictions between the new writing and the established lore.
 
@@ -107,8 +123,12 @@ ${newWriting}
 Established lore (check new writing against ALL of these):
 ${referenceChunks.map((chunk, i) => `[${i + 1}] ${chunk}`).join("\n\n")}`;
 
-  const response = await model.generateContent(prompt);
-  const raw = response.response.text();
+  const raw = await groqGenerate({
+    model: GROQ_MODEL_HEAVY,
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.1,
+    max_tokens: 2048,
+  });
 
   try {
     const parsed = repairAndParseJSON<{ flags: Array<{ severity: string; flagged_text: string; contradiction: string; reference: string }> }>(raw);
@@ -141,7 +161,8 @@ export async function generateAutocomplete(
   context: string,
   wordCount: number = 15,
 ): Promise<string> {
-  const model = getGeminiModel();
+  // Previously: const model = getGeminiModel(); await model.generateContent(prompt);
+  // Now: groqGenerate with GROQ_MODEL_FAST for ultra-low latency autocomplete
   const prompt = `Continue this story/lore text with exactly ${wordCount} words. 
 Return ONLY the continuation text, no quotes, no explanation.
 Match the tone and style of the existing text.
@@ -149,8 +170,13 @@ Match the tone and style of the existing text.
 Text to continue:
 ${context}`;
 
-  const response = await model.generateContent(prompt);
-  return response.response.text().trim();
+  const raw = await groqGenerate({
+    model: GROQ_MODEL_FAST,
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.8,
+    max_tokens: 128,
+  });
+  return raw.trim();
 }
 
 // ── New: Impact analysis ────────────────────────────────────────────────
@@ -163,7 +189,8 @@ export async function analyzeImpact(
   orphaned: string[];
   invalidated: string[];
 }> {
-  const model = getGeminiModel();
+  // Previously: const model = getGeminiModel(); await model.generateContent(prompt);
+  // Now: groqGenerate with GROQ_MODEL_HEAVY for reasoning-heavy impact analysis
   const prompt = `You are analyzing a hypothetical scenario's impact on a fictional world.
 
 SCENARIO: "${scenario}"
@@ -181,8 +208,12 @@ Analyze the cascading effects. Return strict JSON:
   "invalidated": ["world rules or facts that would no longer hold true"]
 }`;
 
-  const response = await model.generateContent(prompt);
-  const raw = response.response.text();
+  const raw = await groqGenerate({
+    model: GROQ_MODEL_HEAVY,
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.3,
+    max_tokens: 2048,
+  });
 
   try {
     return repairAndParseJSON(raw);
@@ -196,7 +227,8 @@ export async function detectBlankSpots(
   entities: Array<{ name: string; type: string; summary: string | null; mention_count?: number }>,
   loreContext: string[],
 ): Promise<Array<{ entity: string; missing: string; suggestion: string }>> {
-  const model = getGeminiModel();
+  // Previously: const model = getGeminiModel(); await model.generateContent(prompt);
+  // Now: groqGenerate with GROQ_MODEL_HEAVY
   const prompt = `Analyze these entities from a fictional world and identify missing information.
 Focus on the most referenced entities that lack important details.
 
@@ -209,8 +241,12 @@ ${loreContext.slice(0, 10).join("\n\n")}
 Find 3-8 "lore holes" — important missing information. Return strict JSON:
 {"holes": [{"entity": "entity name", "missing": "what information is missing", "suggestion": "what the writer should consider adding"}]}`;
 
-  const response = await model.generateContent(prompt);
-  const raw = response.response.text();
+  const raw = await groqGenerate({
+    model: GROQ_MODEL_HEAVY,
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.3,
+    max_tokens: 2048,
+  });
 
   try {
     const parsed = repairAndParseJSON<{ holes: Array<{ entity: string; missing: string; suggestion: string }> }>(raw);
@@ -226,7 +262,8 @@ export async function orderEventsChronologically(
 ): Promise<Array<{ id: string; name: string; era: string; order: number }>> {
   if (events.length === 0) return [];
 
-  const model = getGeminiModel();
+  // Previously: const model = getGeminiModel(); await model.generateContent(prompt);
+  // Now: groqGenerate with GROQ_MODEL_HEAVY for accurate timeline reasoning
   const prompt = `Analyze these fictional world events and arrange them in chronological order.
 Infer the timeline from context clues in the summaries (e.g. "before", "after", "during", "following").
 
@@ -237,8 +274,12 @@ Return strict JSON with events in chronological order:
 {"timeline": [{"id": "event id", "name": "event name", "era": "inferred era/period name", "order": 1}]}
 Order numbers should start at 1.`;
 
-  const response = await model.generateContent(prompt);
-  const raw = response.response.text();
+  const raw = await groqGenerate({
+    model: GROQ_MODEL_HEAVY,
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.2,
+    max_tokens: 2048,
+  });
 
   try {
     const parsed = repairAndParseJSON<{ timeline: Array<{ id: string; name: string; era: string; order: number }> }>(raw);
@@ -291,8 +332,8 @@ async function generateSingleSoulResponse(
     directedToName: string | null;
   },
 ): Promise<{ soulName: string; response: string } | null> {
-  const model = getGeminiModel();
-
+  // Previously: const model = getGeminiModel(); await model.generateContent(prompt);
+  // Now: groqGenerate with GROQ_MODEL_HEAVY for rich character roleplay
   const isAddressed = context.directedToName === null || context.directedToName === soul.name;
 
   const directedClause = context.directedToName
@@ -336,8 +377,12 @@ Return ONLY valid JSON, no other text:
 If this soul would stay silent, return: {"responses": []}`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const raw = result.response.text();
+    const raw = await groqGenerate({
+      model: GROQ_MODEL_HEAVY,
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.8,
+      max_tokens: 512,
+    });
     const parsed = repairAndParseJSON<{
       responses: Array<{ soulName: string; reasoning: string; response: string }>;
     }>(raw);
@@ -362,8 +407,8 @@ async function generateDuoResponse(
     directedToName: string | null;
   },
 ): Promise<Array<{ soulName: string; response: string }>> {
-  const model = getGeminiModel();
-
+  // Previously: const model = getGeminiModel(); await model.generateContent(prompt);
+  // Now: groqGenerate with GROQ_MODEL_HEAVY
   const [soulA, soulB] = souls;
   const directedClause = context.directedToName
     ? `The Director is speaking directly to ${context.directedToName}.`
@@ -405,8 +450,12 @@ Return ONLY valid JSON, no other text:
 }`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const raw = result.response.text();
+    const raw = await groqGenerate({
+      model: GROQ_MODEL_HEAVY,
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.8,
+      max_tokens: 1024,
+    });
     const parsed = repairAndParseJSON<{
       responses: Array<{ soulName: string; reasoning: string; response: string }>;
     }>(raw);
@@ -470,7 +519,8 @@ export async function generateTavernResponse(
 export async function detectDeclarativeFact(
   message: string,
 ): Promise<{ isFact: boolean; summary: string | null }> {
-  const model = getGeminiModel();
+  // Previously: const model = getGeminiModel(); await model.generateContent(prompt);
+  // Now: groqGenerate with GROQ_MODEL_FAST — quick binary classification
   const prompt = `Analyze if this message from a worldbuilder contains a declarative fact about their world that should be recorded as lore.
 
 Examples of declarative facts:
@@ -487,8 +537,12 @@ Message: "${message}"
 
 Return strict JSON: {"is_fact": true/false, "summary": "one-line summary of the fact" or null}`;
 
-  const response = await model.generateContent(prompt);
-  const raw = response.response.text();
+  const raw = await groqGenerate({
+    model: GROQ_MODEL_FAST,
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.1,
+    max_tokens: 128,
+  });
 
   try {
     const parsed = repairAndParseJSON<{ is_fact: boolean; summary: string | null }>(raw);
