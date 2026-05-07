@@ -23,11 +23,7 @@ interface LoreBountyModalProps {
   onResolved?: () => void;
 }
 
-const SEVERITY_COLOR: Record<string, string> = {
-  high: "var(--danger)",
-  medium: "var(--accent)",
-  low: "var(--text-muted)",
-};
+
 
 export function LoreBountyModal({
   open,
