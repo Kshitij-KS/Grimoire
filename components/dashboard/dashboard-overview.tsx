@@ -81,8 +81,8 @@ function Sparkline({ value, colorVar }: { value: number; colorVar: string }) {
     });
     const max = Math.max(...raw, 1);
     return raw.map((v, i) => ({
-      x: (i / 4) * 28,
-      y: 16 - (v / max) * 13,
+      x: 2 + (i / 4) * 24,
+      y: 14 - (v / max) * 12,
     }));
   }, [value]);
 
