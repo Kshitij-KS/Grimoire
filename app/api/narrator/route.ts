@@ -59,9 +59,9 @@ export async function POST(request: Request) {
     if (!parsed.success) return zodErrorResponse(parsed.error);
     const { worldId, scenario } = parsed.data;
 
+    if (!supabase) return jsonError("SUPABASE_NOT_CONFIGURED", 500);
     const isDemoWorld = worldId === "demo-world";
     if (!isDemoWorld) {
-      if (!supabase) return jsonError("SUPABASE_NOT_CONFIGURED", 500);
       const access = await requireWorldAccess(supabase, user.id, worldId, "viewer");
       if (!access.allowed) return jsonError("FORBIDDEN", 403);
     }
@@ -74,18 +74,7 @@ export async function POST(request: Request) {
     );
     if (!rate.allowed) return jsonRateLimited("narrator_action", rate.limit);
 
-    // For demo world or no supabase, return mocked plausible result
-    if (!supabase || worldId === "demo-world") {
-      return Response.json({
-        affected: [
-          { name: "Mira Ashveil", type: "character", impact: "Her loyalties and mission would be fundamentally altered by this change.", severity: "high" },
-          { name: "Ember Cult", type: "faction", impact: "The faction's influence and presence would shift dramatically.", severity: "high" },
-          { name: "Ashveil", type: "location", impact: "The city's political balance would be destabilized.", severity: "medium" },
-        ],
-        orphaned: [],
-        invalidated: ["The western bells have been silent for nine winters — this may no longer hold."],
-      });
-    }
+
     if (!hasAiEnv()) {
       return jsonError("AI_NOT_CONFIGURED", 503, {
         detail: "Missing GROQ_API_KEY or GEMINI_API_KEY on the server.",
@@ -114,9 +103,9 @@ export async function POST(request: Request) {
     if (!parsed.success) return zodErrorResponse(parsed.error);
     const { worldId } = parsed.data;
 
+    if (!supabase) return jsonError("SUPABASE_NOT_CONFIGURED", 500);
     const isDemoWorld = worldId === "demo-world";
     if (!isDemoWorld) {
-      if (!supabase) return jsonError("SUPABASE_NOT_CONFIGURED", 500);
       const access = await requireWorldAccess(supabase, user.id, worldId, "viewer");
       if (!access.allowed) return jsonError("FORBIDDEN", 403);
     }
@@ -129,15 +118,7 @@ export async function POST(request: Request) {
     );
     if (!rate.allowed) return jsonRateLimited("narrator_action", rate.limit);
 
-    if (!supabase || worldId === "demo-world") {
-      return Response.json({
-        holes: [
-          { entity: "Mira Ashveil", missing: "Childhood and origin before the Ember Cult", suggestion: "Consider writing a lore entry about her early life in Ashveil's lower wards." },
-          { entity: "Ember Cult", missing: "Founding history and original purpose", suggestion: "A document about the Cult's founding ideology would enrich the faction." },
-          { entity: "Ember Bridge", missing: "Construction history and who controls it now", suggestion: "Add a lore entry describing the bridge's origin and current guardians." },
-        ],
-      });
-    }
+
     if (!hasAiEnv()) {
       return jsonError("AI_NOT_CONFIGURED", 503, {
         detail: "Missing GROQ_API_KEY or GEMINI_API_KEY on the server.",
@@ -167,9 +148,9 @@ export async function POST(request: Request) {
     if (!parsed.success) return zodErrorResponse(parsed.error);
     const { worldId } = parsed.data;
 
+    if (!supabase) return jsonError("SUPABASE_NOT_CONFIGURED", 500);
     const isDemoWorld = worldId === "demo-world";
     if (!isDemoWorld) {
-      if (!supabase) return jsonError("SUPABASE_NOT_CONFIGURED", 500);
       const access = await requireWorldAccess(supabase, user.id, worldId, "viewer");
       if (!access.allowed) return jsonError("FORBIDDEN", 403);
     }
@@ -182,15 +163,7 @@ export async function POST(request: Request) {
     );
     if (!rate.allowed) return jsonRateLimited("narrator_action", rate.limit);
 
-    if (!supabase || worldId === "demo-world") {
-      return Response.json({
-        timeline: [
-          { era: "The Founding Age", events: [{ id: "e1", name: "Ashveil's Creation", summary: "Seven archmages bound their names into the city's foundation." }] },
-          { era: "The Ember Years", events: [{ id: "e2", name: "Rise of the Ember Cult", summary: "The Cult rose to prominence, wrapping civic ritual in fire-lit obedience." }] },
-          { era: "The Fracture", events: [{ id: "e3", name: "Night of Hollow Glass", summary: "Mira deserted the cult after this pivotal event." }] },
-        ],
-      });
-    }
+
     if (!hasAiEnv()) {
       return jsonError("AI_NOT_CONFIGURED", 503, {
         detail: "Missing GROQ_API_KEY or GEMINI_API_KEY on the server.",

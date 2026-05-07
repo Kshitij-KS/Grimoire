@@ -487,7 +487,7 @@ export function DashboardOverview({
             <h2 className="font-heading text-2xl text-[var(--text-main)]">Recent Activity</h2>
           </div>
 
-          <div className="glass-panel relative rounded-[14px]">
+          <div className="glass-panel relative rounded-[14px] max-h-[380px] overflow-y-auto custom-scrollbar">
             {/* Vertical timeline line */}
             <div
               className="pointer-events-none absolute bottom-4 left-[27px] top-4 w-px"

@@ -31,39 +31,39 @@ export function UserNav({ email }: { email?: string }) {
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content
-          className="z-50 min-w-[220px] overflow-hidden rounded-[16px] border border-border bg-[rgba(15,18,25,0.95)] p-1 text-foreground shadow-2xl backdrop-blur-xl animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
+          className="z-50 min-w-[220px] overflow-hidden rounded-[16px] glass-panel-elevated p-1 text-[var(--text-main)] animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
           align="end"
           sideOffset={8}
         >
           <div className="px-3 py-2.5">
-            <p className="text-xs font-medium text-secondary">Signed in as</p>
-            <p className="truncate text-sm font-medium text-foreground">
+            <p className="text-xs font-medium text-[var(--text-muted)]">Signed in as</p>
+            <p className="truncate text-sm font-medium text-[var(--text-main)]">
               {email || "User"}
             </p>
           </div>
-          <DropdownMenu.Separator className="-mx-1 my-1 h-px bg-border" />
-          <DropdownMenu.Item asChild className="relative flex cursor-pointer select-none items-center gap-2 rounded-xl px-3 py-2 text-sm outline-none transition-colors focus:bg-[rgba(255,255,255,0.06)] focus:text-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
+          <DropdownMenu.Separator className="-mx-1 my-1 h-px bg-[var(--border)]" />
+          <DropdownMenu.Item asChild className="relative flex cursor-pointer select-none items-center gap-2 rounded-xl px-3 py-2 text-sm outline-none transition-colors hover:bg-[color-mix(in_srgb,var(--text-main)_8%,transparent)] focus:bg-[color-mix(in_srgb,var(--text-main)_8%,transparent)] focus:text-[var(--text-main)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
             <Link href="/dashboard/settings">
-              <User className="h-4 w-4 text-secondary" />
+              <User className="h-4 w-4 text-[var(--text-muted)]" />
               <span>Profile</span>
             </Link>
           </DropdownMenu.Item>
-          <DropdownMenu.Item asChild className="relative flex cursor-pointer select-none items-center gap-2 rounded-xl px-3 py-2 text-sm outline-none transition-colors focus:bg-[rgba(255,255,255,0.06)] focus:text-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
+          <DropdownMenu.Item asChild className="relative flex cursor-pointer select-none items-center gap-2 rounded-xl px-3 py-2 text-sm outline-none transition-colors hover:bg-[color-mix(in_srgb,var(--text-main)_8%,transparent)] focus:bg-[color-mix(in_srgb,var(--text-main)_8%,transparent)] focus:text-[var(--text-main)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
             <Link href="/dashboard/settings">
-              <Settings className="h-4 w-4 text-secondary" />
+              <Settings className="h-4 w-4 text-[var(--text-muted)]" />
               <span>Account Settings</span>
             </Link>
           </DropdownMenu.Item>
-          <DropdownMenu.Item asChild className="relative flex cursor-pointer select-none items-center gap-2 rounded-xl px-3 py-2 text-sm outline-none transition-colors focus:bg-[rgba(255,255,255,0.06)] focus:text-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
+          <DropdownMenu.Item asChild className="relative flex cursor-pointer select-none items-center gap-2 rounded-xl px-3 py-2 text-sm outline-none transition-colors hover:bg-[color-mix(in_srgb,var(--text-main)_8%,transparent)] focus:bg-[color-mix(in_srgb,var(--text-main)_8%,transparent)] focus:text-[var(--text-main)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
             <Link href="/dashboard/settings#billing">
-              <CreditCard className="h-4 w-4 text-secondary" />
+              <CreditCard className="h-4 w-4 text-[var(--text-muted)]" />
               <span>Billing & Plan</span>
             </Link>
           </DropdownMenu.Item>
-          <DropdownMenu.Separator className="-mx-1 my-1 h-px bg-border" />
+          <DropdownMenu.Separator className="-mx-1 my-1 h-px bg-[var(--border)]" />
           <DropdownMenu.Item
             onClick={handleSignOut}
-            className="relative flex cursor-pointer select-none items-center gap-2 rounded-xl px-3 py-2 text-sm text-[rgb(212,168,83)] outline-none transition-colors focus:bg-[rgba(212,168,83,0.15)] focus:text-[rgb(212,168,83)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+            className="relative flex cursor-pointer select-none items-center gap-2 rounded-xl px-3 py-2 text-sm text-[var(--accent)] outline-none transition-colors hover:bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] focus:bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] focus:text-[var(--accent)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
           >
             <LogOut className="h-4 w-4" />
             <span>Sign Out</span>
