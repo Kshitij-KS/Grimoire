@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import { motion } from "framer-motion";
+import { useMemo, useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   BookOpenText,
   Users,
@@ -13,11 +13,15 @@ import {
   Compass,
   TrendingUp,
   Share2,
+  ChevronDown,
+  Target,
+  Loader2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useCountUp } from "@/lib/hooks/use-count-up";
+import { LoreBountyModal } from "@/components/dashboard/lore-bounty-modal";
 
 interface WorldWithStats {
   id: string;
@@ -39,6 +43,12 @@ interface ActivityItem {
   world_name: string;
   world_id: string;
   created_at: string;
+}
+
+interface BountyHole {
+  entity: string;
+  missing: string;
+  suggestion: string;
 }
 
 interface DashboardOverviewProps {
@@ -219,6 +229,36 @@ export function DashboardOverview({
   displayName,
 }: DashboardOverviewProps) {
   const activityGroups = useMemo(() => groupActivityByDate(recentActivity), [recentActivity]);
+
+  // ── Lore Bounties state ───────────────────────────────────────────────────
+  const [selectedWorldId, setSelectedWorldId] = useState<string>(worlds[0]?.id ?? "");
+  const [bounties, setBounties] = useState<BountyHole[]>([]);
+  const [bountiesLoading, setBountiesLoading] = useState(false);
+  const [bountiesFetched, setBountiesFetched] = useState<Record<string, boolean>>({});
+  const [activeBounty, setActiveBounty] = useState<BountyHole | null>(null);
+  const [bountyModalOpen, setBountyModalOpen] = useState(false);
+
+  const selectedWorld = worlds.find((w) => w.id === selectedWorldId);
+
+  useEffect(() => {
+    if (!selectedWorldId || bountiesFetched[selectedWorldId]) return;
+    setBountiesLoading(true);
+    fetch(`/api/narrator?action=blank-spots&worldId=${selectedWorldId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setBounties(data.holes ?? []);
+        setBountiesFetched((prev) => ({ ...prev, [selectedWorldId]: true }));
+      })
+      .catch(() => setBounties([]))
+      .finally(() => setBountiesLoading(false));
+  }, [selectedWorldId, bountiesFetched]);
+
+  const handleBountyClaimed = () => {
+    // Invalidate cache for this world so next open re-fetches
+    setBountiesFetched((prev) => { const n = { ...prev }; delete n[selectedWorldId]; return n; });
+    setBounties((prev) => prev.filter((b) => b !== activeBounty));
+  };
+
 
   return (
     <div className="space-y-8">
@@ -536,6 +576,103 @@ export function DashboardOverview({
           </div>
         </div>
       </div>
+
+      {/* ── Lore Bounties ── */}
+      {worlds.length > 0 && (
+        <motion.div
+          className="space-y-4"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.35 }}
+        >
+          {/* Header + World Picker */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Target className="h-4 w-4 text-[var(--danger)]" />
+              <h2 className="font-heading text-2xl text-[var(--text-main)]">Lore Bounties</h2>
+              <Badge variant="danger" className="text-[9px] uppercase tracking-widest">
+                Quest Board
+              </Badge>
+            </div>
+            <p className="text-sm text-[var(--text-muted)] hidden sm:block">
+              — gaps in your world&apos;s knowledge, waiting to be filled.
+            </p>
+            {/* World Picker */}
+            {worlds.length > 1 && (
+              <div className="ml-auto relative">
+                <select
+                  value={selectedWorldId}
+                  onChange={(e) => setSelectedWorldId(e.target.value)}
+                  className="appearance-none rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1.5 pl-3 pr-8 text-xs text-[var(--text-main)] outline-none focus:border-[var(--border-focus)] transition-colors cursor-pointer"
+                >
+                  {worlds.map((w) => (
+                    <option key={w.id} value={w.id}>{w.name}</option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-[var(--text-muted)]" />
+              </div>
+            )}
+          </div>
+
+          {/* Bounty Cards */}
+          <div className="glass-panel rounded-[16px] overflow-hidden">
+            {bountiesLoading ? (
+              <div className="flex items-center justify-center gap-2 py-10 text-sm text-[var(--text-muted)]">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Scanning the archive for gaps…
+              </div>
+            ) : bounties.length === 0 && bountiesFetched[selectedWorldId] ? (
+              <div className="py-10 text-center text-sm text-[var(--text-muted)]">
+                <p className="font-heading text-4xl opacity-20 mb-3">✦</p>
+                <p>No knowledge gaps detected in <span className="text-[var(--text-main)]">{selectedWorld?.name}</span>.</p>
+                <p className="mt-1 text-xs opacity-60">Your world&apos;s archive is impressively complete.</p>
+              </div>
+            ) : (
+              <AnimatePresence>
+                {bounties.slice(0, 5).map((bounty, i) => (
+                  <motion.div
+                    key={`${bounty.entity}-${i}`}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 8 }}
+                    transition={{ duration: 0.25, delay: i * 0.05 }}
+                    className="group flex items-start gap-4 border-b border-[var(--border)] px-5 py-4 last:border-0 hover:bg-[color-mix(in_srgb,var(--text-main)_2%,transparent)] transition-colors duration-150 cursor-pointer"
+                    onClick={() => { setActiveBounty(bounty); setBountyModalOpen(true); }}
+                  >
+                    {/* Quest number */}
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] border border-[color-mix(in_srgb,var(--danger)_20%,transparent)]">
+                      <span className="font-heading text-xs font-bold text-[var(--danger)]">{String(i + 1).padStart(2, "0")}</span>
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-baseline gap-2">
+                        <span className="font-medium text-sm text-[var(--text-main)]">{bounty.entity}</span>
+                        <span className="text-xs text-[var(--danger)] opacity-80">missing: {bounty.missing}</span>
+                      </div>
+                      <p className="mt-1 text-xs text-[var(--text-muted)] line-clamp-1 italic">{bounty.suggestion}</p>
+                    </div>
+
+                    <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="rounded-lg border border-[color-mix(in_srgb,var(--accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] px-3 py-1.5 text-[11px] font-medium text-[var(--accent)]">
+                        Claim →
+                      </span>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            )}
+          </div>
+        </motion.div>
+      )}
+
+      <LoreBountyModal
+        open={bountyModalOpen}
+        onOpenChange={setBountyModalOpen}
+        bounty={activeBounty}
+        worldId={selectedWorldId}
+        onResolved={handleBountyClaimed}
+      />
     </div>
   );
 }
+

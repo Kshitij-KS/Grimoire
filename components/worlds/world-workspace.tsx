@@ -284,12 +284,8 @@ export function WorldWorkspace({
                   }}
                   canCreateSoul={souls.length < FREE_TIER_LIMITS.soulsPerWorld}
                   onEntityCreated={(entity) => setEntities((prev) => [entity, ...prev])}
-                  onEntityMerged={(sourceId, updatedTarget) =>
-                    setEntities((prev) =>
-                      prev
-                        .filter((e) => e.id !== sourceId)
-                        .map((e) => (e.id === updatedTarget.id ? updatedTarget : e)),
-                    )
+                  onEntityMerged={(deletedId) =>
+                    setEntities((prev) => prev.filter((e) => e.id !== deletedId))
                   }
                 />
               </div>

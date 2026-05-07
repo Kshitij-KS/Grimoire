@@ -130,6 +130,7 @@ export function EntityGrid({
         {selectedEntity ? (
           <EntityDetailPanel
             entity={selectedEntity}
+            allEntities={entities}
             onClose={() => setSelectedEntity(null)}
             canCreateSoul={createableSoulCount > 0}
             onCreateSoul={handleCreateSoulFromEntity}
@@ -139,6 +140,10 @@ export function EntityGrid({
             }}
             onDelete={(id: string) => {
               if (onEntityDelete) onEntityDelete(id);
+              setSelectedEntity(null);
+            }}
+            onMerge={(deletedId: string) => {
+              if (onEntityDelete) onEntityDelete(deletedId);
               setSelectedEntity(null);
             }}
             isReadonly={isReadonly}

@@ -9,6 +9,7 @@ const createSchema = z.object({
   targetEntityId: z.string().uuid(),
   label: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
+  tensionScore: z.union([z.literal(-1), z.literal(0), z.literal(1)]).default(0),
 });
 
 const deleteSchema = z.object({
@@ -113,6 +114,7 @@ export async function POST(request: Request) {
       target_entity_id: parsed.data.targetEntityId,
       label: parsed.data.label,
       description: parsed.data.description ?? null,
+      tension_score: parsed.data.tensionScore ?? 0,
     })
     .select("*")
     .single();

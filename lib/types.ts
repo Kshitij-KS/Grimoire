@@ -185,6 +185,8 @@ export interface EntityRelationship {
   target_entity_id: string;
   label: string;
   description: string | null;
+  /** -1 = hostile, 0 = neutral, 1 = allied */
+  tension_score: -1 | 0 | 1;
   created_at: string;
   updated_at: string;
   source_entity?: Entity;
@@ -197,6 +199,9 @@ export interface TavernSession {
   user_id: string;
   name: string;
   soul_ids: string[];
+  premise?: string | null;
+  canonized?: boolean;
+  canonized_lore_entry_id?: string | null;
   created_at: string;
   last_active: string;
   souls?: Soul[];

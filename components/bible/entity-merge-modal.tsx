@@ -1,191 +1,223 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { LoadingSpinner } from "@/components/shared/loading-spinner";
-import { motion } from "framer-motion";
-import { AlertTriangle, ArrowRight, GitMerge, Search } from "lucide-react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { GitMerge, X, AlertTriangle, Loader2, Check } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import type { Entity } from "@/lib/types";
 
 interface EntityMergeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  sourceEntity: Entity;
+  worldId: string;
+  primaryEntity: Entity;
   allEntities: Entity[];
-  onMergeComplete: (sourceId: string, updatedTarget: Entity) => void;
+  onMerged: (deletedId: string) => void;
 }
 
 export function EntityMergeModal({
   open,
   onOpenChange,
-  sourceEntity,
+  worldId,
+  primaryEntity,
   allEntities,
-  onMergeComplete,
+  onMerged,
 }: EntityMergeModalProps) {
-  const [search, setSearch] = useState("");
-  const [targetEntity, setTargetEntity] = useState<Entity | null>(null);
-  const [confirmText, setConfirmText] = useState("");
+  const [selectedId, setSelectedId] = useState<string>("");
   const [merging, setMerging] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
 
-  const required = `merge ${sourceEntity.name}`;
-  const canConfirm = confirmText.toLowerCase() === required.toLowerCase() && targetEntity !== null;
-
-  const candidates = useMemo(
-    () =>
-      allEntities
-        .filter((e) => e.id !== sourceEntity.id)
-        .filter((e) =>
-          search.trim()
-            ? e.name.toLowerCase().includes(search.toLowerCase())
-            : true,
-        )
-        .slice(0, 8),
-    [allEntities, sourceEntity.id, search],
+  const candidates = allEntities.filter(
+    (e) => e.id !== primaryEntity.id && e.type === primaryEntity.type
   );
 
-  const reset = () => {
-    setSearch("");
-    setTargetEntity(null);
-    setConfirmText("");
+  const selectedEntity = candidates.find((e) => e.id === selectedId);
+
+  const handleClose = () => {
+    if (merging) return;
+    onOpenChange(false);
+    setTimeout(() => {
+      setSelectedId("");
+      setConfirmed(false);
+    }, 250);
   };
 
   const handleMerge = async () => {
-    if (!canConfirm || merging || !targetEntity) return;
+    if (!selectedId || !confirmed || merging) return;
     setMerging(true);
     try {
-      const res = await fetch(`/api/entities/${sourceEntity.id}/merge`, {
+      const res = await fetch("/api/entities/merge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetEntityId: targetEntity.id }),
+        body: JSON.stringify({
+          worldId,
+          primaryEntityId: primaryEntity.id,
+          secondaryEntityId: selectedId,
+        }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Merge failed");
-      onMergeComplete(sourceEntity.id, data.target as Entity);
-      toast.success(`${sourceEntity.name} absorbed into ${targetEntity.name}.`);
-      reset();
+      if (!res.ok) {
+        toast.error(data.error ?? "Merge failed. The oracle resisted.");
+        return;
+      }
+      toast.success(
+        `"${data.secondaryName}" has been absorbed into "${data.primaryName}".`,
+        { duration: 4000 }
+      );
+      onMerged(selectedId);
       onOpenChange(false);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Merge failed.");
+    } catch {
+      toast.error("Merge failed — the ritual was interrupted.");
     } finally {
       setMerging(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
-      <DialogContent className="glass-panel-elevated rounded-[32px] border-[var(--border)] p-0 sm:max-w-lg">
-        <span aria-hidden className="pointer-events-none absolute left-4 top-4 select-none font-heading text-2xl text-[var(--danger)] opacity-15">ᚠ</span>
-        <span aria-hidden className="pointer-events-none absolute right-4 top-4 select-none font-heading text-2xl text-[var(--danger)] opacity-15">ᚢ</span>
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            key="backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            onClick={handleClose}
+          />
 
-        <DialogHeader className="px-7 pb-4 pt-7">
-          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-[14px] bg-[color-mix(in_srgb,var(--danger)_12%,transparent)]">
-            <GitMerge className="h-5 w-5 text-[var(--danger)]" />
-          </div>
-          <DialogTitle className="font-heading text-2xl text-[var(--text-main)]">Merge Entity</DialogTitle>
-          <DialogDescription className="text-sm text-[var(--text-muted)]">
-            Absorb <span className="text-[var(--text-main)]">{sourceEntity.name}</span> into another entity.
-            All lore references and relationships will transfer to the target.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-5 px-7 pb-7">
-          {/* Target search */}
-          <div className="space-y-2">
-            <p className="text-xs uppercase tracking-widest text-[var(--text-muted)]">Absorb into</p>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--text-muted)]" />
-              <Input
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setTargetEntity(null); }}
-                placeholder="Search entities..."
-                className="pl-9 rounded-[12px]"
-              />
-            </div>
-
-            {candidates.length > 0 && (
-              <div className="max-h-48 overflow-y-auto rounded-[14px] border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_70%,transparent)]">
-                {candidates.map((e) => (
-                  <button
-                    key={e.id}
-                    type="button"
-                    onClick={() => { setTargetEntity(e); setSearch(e.name); }}
-                    className={`flex w-full items-center justify-between px-4 py-2.5 text-sm transition-colors hover:bg-[var(--surface-raised)] ${
-                      targetEntity?.id === e.id ? "bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] text-[var(--accent)]" : "text-[var(--text-main)]"
-                    }`}
-                  >
-                    <span>{e.name}</span>
-                    <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] capitalize">{e.type}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Merge preview */}
-          {targetEntity && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-3 rounded-[14px] border border-[color-mix(in_srgb,var(--accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--accent)_6%,transparent)] px-4 py-3"
+              key="panel"
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+              className="glass-panel-elevated w-full max-w-md overflow-hidden rounded-[24px] shadow-arcane"
             >
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-[var(--text-main)]">{sourceEntity.name}</p>
-                <p className="text-[10px] text-[var(--text-muted)]">{sourceEntity.mention_count ?? 0} mentions</p>
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-[var(--border)] p-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--danger)_12%,transparent)]">
+                    <GitMerge className="h-4 w-4 text-[var(--danger)]" />
+                  </div>
+                  <div>
+                    <h2 className="font-heading text-xl text-[var(--text-main)]">Merge Entity</h2>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      Absorb one entity into another permanently
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleClose}
+                  className="rounded-xl p-2 text-[var(--text-muted)] transition-colors hover:bg-[color-mix(in_srgb,var(--text-main)_8%,transparent)] hover:text-[var(--text-main)]"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-              <ArrowRight className="h-4 w-4 shrink-0 text-[var(--accent)]" />
-              <div className="min-w-0 flex-1 text-right">
-                <p className="truncate text-sm font-medium text-[var(--text-main)]">{targetEntity.name}</p>
-                <p className="text-[10px] text-[var(--text-muted)]">{targetEntity.mention_count ?? 0} mentions</p>
+
+              <div className="space-y-5 p-6">
+                {/* Primary Entity */}
+                <div>
+                  <label className="mb-2 block text-[10px] uppercase tracking-[0.22em] text-[var(--text-muted)] font-bold">
+                    Primary (survives)
+                  </label>
+                  <div className="flex items-center gap-3 rounded-xl border border-[color-mix(in_srgb,var(--success)_30%,transparent)] bg-[color-mix(in_srgb,var(--success)_6%,transparent)] px-4 py-3">
+                    <Check className="h-4 w-4 shrink-0 text-[var(--success)]" />
+                    <div>
+                      <p className="font-medium text-sm text-[var(--text-main)]">{primaryEntity.name}</p>
+                      <p className="text-xs text-[var(--text-muted)] capitalize">{primaryEntity.type}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Secondary Entity Picker */}
+                <div>
+                  <label className="mb-2 block text-[10px] uppercase tracking-[0.22em] text-[var(--text-muted)] font-bold">
+                    Absorbed into Primary (deleted)
+                  </label>
+                  {candidates.length === 0 ? (
+                    <p className="text-sm text-[var(--text-muted)] italic">
+                      No other {primaryEntity.type} entities to merge with.
+                    </p>
+                  ) : (
+                    <select
+                      value={selectedId}
+                      onChange={(e) => { setSelectedId(e.target.value); setConfirmed(false); }}
+                      className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--text-main)] outline-none focus:border-[var(--border-focus)] transition-colors"
+                    >
+                      <option value="">— Select entity to absorb —</option>
+                      {candidates.map((e) => (
+                        <option key={e.id} value={e.id}>{e.name}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                {/* Confirmation */}
+                {selectedId && selectedEntity && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-3"
+                  >
+                    <div className="flex items-start gap-3 rounded-xl border border-[color-mix(in_srgb,var(--danger)_25%,transparent)] bg-[color-mix(in_srgb,var(--danger)_6%,transparent)] px-4 py-3">
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--danger)]" />
+                      <div className="text-xs text-[var(--text-muted)] leading-relaxed">
+                        <span className="text-[var(--danger)] font-medium">{selectedEntity.name}</span>{" "}
+                        will be permanently deleted. All its relationships and lore chunk references
+                        will be remapped to{" "}
+                        <span className="text-[var(--text-main)] font-medium">{primaryEntity.name}</span>.
+                        This cannot be undone.
+                      </div>
+                    </div>
+
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <div
+                        onClick={() => setConfirmed((v) => !v)}
+                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-all"
+                        style={confirmed ? {
+                          borderColor: "var(--danger)",
+                          background: "color-mix(in srgb, var(--danger) 20%, transparent)",
+                        } : { borderColor: "var(--border)" }}
+                      >
+                        {confirmed && <Check className="h-3 w-3 text-[var(--danger)]" />}
+                      </div>
+                      <span className="text-xs text-[var(--text-muted)] group-hover:text-[var(--text-main)] transition-colors">
+                        I understand this action is irreversible
+                      </span>
+                    </label>
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-end gap-3 border-t border-[var(--border)] px-6 py-4">
+                <button
+                  onClick={handleClose}
+                  disabled={merging}
+                  className="rounded-xl px-4 py-2 text-sm text-[var(--text-muted)] transition-colors hover:text-[var(--text-main)] disabled:opacity-40"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleMerge}
+                  disabled={!selectedId || !confirmed || merging}
+                  className="flex items-center gap-2 rounded-xl border border-[color-mix(in_srgb,var(--danger)_40%,transparent)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] px-5 py-2 text-sm font-medium text-[var(--danger)] transition-all hover:bg-[color-mix(in_srgb,var(--danger)_16%,transparent)] active:scale-[0.97] active:transition-none disabled:opacity-30"
+                >
+                  {merging ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <GitMerge className="h-3.5 w-3.5" />
+                  )}
+                  {merging ? "Merging…" : "Execute Merge"}
+                </button>
               </div>
             </motion.div>
-          )}
-
-          {/* Warning */}
-          <div className="flex items-start gap-2.5 rounded-[12px] border border-[color-mix(in_srgb,var(--danger)_25%,transparent)] bg-[color-mix(in_srgb,var(--danger)_6%,transparent)] px-3.5 py-3">
-            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--danger)]" />
-            <p className="text-xs leading-5 text-[var(--text-muted)]">
-              <span className="text-[var(--danger)]">{sourceEntity.name} will be permanently deleted.</span>{" "}
-              This cannot be undone.
-            </p>
           </div>
-
-          {/* Confirm input */}
-          <div className="space-y-1.5">
-            <p className="text-xs text-[var(--text-muted)]">
-              Type <span className="font-mono text-[var(--text-main)]">{required}</span> to confirm
-            </p>
-            <Input
-              value={confirmText}
-              onChange={(e) => setConfirmText(e.target.value)}
-              placeholder={required}
-              className="rounded-[12px] font-mono text-sm"
-            />
-          </div>
-
-          <Button
-            onClick={handleMerge}
-            disabled={!canConfirm || merging}
-            variant="danger"
-            className="w-full"
-          >
-            {merging ? (
-              <LoadingSpinner className="mr-2 h-4 w-4" />
-            ) : (
-              <GitMerge className="mr-2 h-4 w-4" />
-            )}
-            Merge and Delete {sourceEntity.name}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </>
+      )}
+    </AnimatePresence>
   );
 }

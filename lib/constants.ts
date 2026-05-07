@@ -1,5 +1,5 @@
 export const DAILY_LIMITS = {
-  chat_message: 50,
+  chat_message: 5,
   lore_ingest: 10,
   consistency_check: 5,
   soul_generate: 3,

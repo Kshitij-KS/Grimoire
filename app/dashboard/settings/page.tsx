@@ -22,6 +22,9 @@ const USAGE_LABELS: Partial<Record<UsageMeter["action"], string>> = {
   lore_ingest: "Lore inscriptions",
   consistency_check: "Consistency checks",
   soul_generate: "Soul forges",
+  tavern_message: "Tavern messages",
+  narrator_action: "Narrator actions",
+  world_export: "World exports",
 };
 
 export default async function DashboardSettingsPage() {

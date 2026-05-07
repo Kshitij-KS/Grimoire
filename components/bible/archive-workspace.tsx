@@ -224,7 +224,7 @@ interface ArchiveWorkspaceProps {
   onCreateSoul?: (entityName: string) => void;
   canCreateSoul?: boolean;
   onEntityCreated?: (entity: Entity) => void;
-  onEntityMerged?: (sourceId: string, updatedTarget: Entity) => void;
+  onEntityMerged?: (deletedId: string) => void;
 }
 
 const SPLIT_VIEW_OPTIONS: { mode: ArchiveViewMode; icon: React.ElementType; label: string }[] = [

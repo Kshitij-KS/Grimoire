@@ -219,3 +219,48 @@ export async function POST(request: Request) {
 
   return Response.json({ error: "Unknown action" }, { status: 400 });
 }
+
+// ── GET /api/narrator?action=blank-spots&worldId=<id> ─────────────────────
+// Used by the dashboard Lore Bounties panel. No rate limit — read-only analysis.
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const action = searchParams.get("action");
+  const worldId = searchParams.get("worldId");
+
+  if (action !== "blank-spots" || !worldId) {
+    return jsonError("INVALID_PARAMS", 400);
+  }
+
+  const auth = await requireUser();
+  if ("error" in auth) return auth.error;
+  const { user } = auth;
+
+  if (!hasAiEnv()) {
+    return jsonError("AI_NOT_CONFIGURED", 503, {
+      detail: "Missing GROQ_API_KEY or GEMINI_API_KEY on the server.",
+    });
+  }
+
+  const supabase = await getSupabase();
+  if (!supabase) return jsonError("SUPABASE_NOT_CONFIGURED", 500);
+
+  const access = await requireWorldAccess(supabase, user.id, worldId, "viewer");
+  if (!access.allowed) return jsonError("FORBIDDEN", 403);
+
+  const { data: entities } = await supabase
+    .from("entities")
+    .select("*")
+    .eq("world_id", worldId)
+    .order("mention_count", { ascending: false })
+    .limit(20);
+
+  const { data: loreChunks } = await supabase
+    .from("lore_chunks")
+    .select("content")
+    .eq("world_id", worldId)
+    .limit(10);
+
+  const loreContext = (loreChunks ?? []).map((c: { content: string }) => c.content);
+  const holes = await detectBlankSpots(entities ?? [], loreContext);
+  return Response.json({ holes });
+}

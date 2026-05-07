@@ -13,6 +13,9 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const isInline = searchParams.get("inline") === "true";
+
   const auth = await requireUser();
   if ("error" in auth) return auth.error;
   if (!hasAiEnv()) {
@@ -28,13 +31,17 @@ export async function POST(request: Request) {
   const { user, supabase } = auth;
   const access = await requireWorldAccess(supabase, user.id, parsed.data.worldId, "editor");
   if (!access.allowed) return jsonError("FORBIDDEN", 403);
-  const rate = await checkAndIncrement(
-    supabase,
-    user.id,
-    "consistency_check",
-    DAILY_LIMITS.consistency_check,
-  );
-  if (!rate.allowed) return jsonRateLimited("consistency_check", rate.limit);
+
+  // Inline debounce checks bypass rate limiting — they are background, user-transparent calls.
+  if (!isInline) {
+    const rate = await checkAndIncrement(
+      supabase,
+      user.id,
+      "consistency_check",
+      DAILY_LIMITS.consistency_check,
+    );
+    if (!rate.allowed) return jsonRateLimited("consistency_check", rate.limit);
+  }
 
   // Extract likely entity names (capitalized words/phrases) from the new text
   const entityNames = Array.from(

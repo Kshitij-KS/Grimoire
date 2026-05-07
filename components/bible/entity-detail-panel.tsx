@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Check, Copy, UserPlus, X, Edit2, Save, Trash2 } from "lucide-react";
+import { Check, Copy, UserPlus, X, Edit2, Save, Trash2, GitMerge } from "lucide-react";
 import { toast } from "sonner";
 import { DestructiveActionModal } from "@/components/shared/destructive-action-modal";
+import { EntityMergeModal } from "@/components/bible/entity-merge-modal";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type { Entity, EntityType } from "@/lib/types";
@@ -20,19 +21,23 @@ const ENTITY_TYPES: { value: EntityType; label: string }[] = [
 
 export function EntityDetailPanel({
   entity,
+  allEntities,
   onClose,
   canCreateSoul,
   onCreateSoul,
   onUpdate,
   onDelete,
+  onMerge,
   isReadonly,
 }: {
   entity: Entity | null;
+  allEntities: Entity[];
   onClose: () => void;
   canCreateSoul: boolean;
   onCreateSoul?: (name: string) => void;
   onUpdate?: (updated: Entity) => void;
   onDelete?: (id: string) => void;
+  onMerge?: (deletedId: string) => void;
   isReadonly?: boolean;
 }) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -42,6 +47,7 @@ export function EntityDetailPanel({
   const [editSummary, setEditSummary] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [mergeModalOpen, setMergeModalOpen] = useState(false);
 
   useEffect(() => {
     if (entity) {
@@ -228,7 +234,17 @@ export function EntityDetailPanel({
         )}
 
         {!isEditing && !isReadonly && (
-          <div className="mt-8 flex justify-end">
+          <div className="mt-8 flex items-center justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setMergeModalOpen(true)}
+              className="gap-2 text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[color-mix(in_srgb,var(--text-main)_8%,transparent)]"
+              title="Merge with another entity"
+            >
+              <GitMerge className="h-4 w-4" />
+              Merge
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -251,6 +267,20 @@ export function EntityDetailPanel({
         onConfirm={handleDelete}
         isDemo={isReadonly}
       />
+
+      {entity && (
+        <EntityMergeModal
+          open={mergeModalOpen}
+          onOpenChange={setMergeModalOpen}
+          worldId={entity.world_id}
+          primaryEntity={entity}
+          allEntities={allEntities ?? []}
+          onMerged={(deletedId) => {
+            onMerge?.(deletedId);
+            onClose();
+          }}
+        />
+      )}
     </>
   );
 }

@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef } from "react";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Copy, Crown, Lock, Pencil, Send, Users, Plus } from "lucide-react";
+import { Check, Copy, Crown, Lock, Pencil, Send, Users, Plus, BookMarked, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { FREE_TIER_LIMITS } from "@/lib/constants";
 import type { PlanTier, Soul, TavernMessage } from "@/lib/types";
 
@@ -19,6 +20,8 @@ interface SessionState {
   id: string;
   name: string;
   soulIds: string[];
+  canonized: boolean;
+  canonizedLoreEntryId?: string | null;
 }
 
 export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
@@ -26,7 +29,9 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
   const [messages, setMessages] = useState<TavernMessage[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [canonizing, setCanonizing] = useState(false);
   const [selectedSouls, setSelectedSouls] = useState<string[]>([]);
+  const [premise, setPremise] = useState("");
   const [directedTo, setDirectedTo] = useState<string | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [sessionName, setSessionName] = useState("");
@@ -53,6 +58,7 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
           worldId,
           soulIds: selectedSouls,
           name: "The Tavern",
+          premise: premise.trim() || undefined,
         }),
       });
       const data = await res.json();
@@ -65,6 +71,8 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
           id: data.session.id,
           name: data.session.name,
           soulIds: data.session.soul_ids,
+          canonized: data.session.canonized ?? false,
+          canonizedLoreEntryId: data.session.canonized_lore_entry_id ?? null,
         });
         setSessionName(data.session.name ?? "The Tavern");
       }
@@ -120,6 +128,30 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
     }
   };
 
+  const handleCanonize = async () => {
+    if (!session || canonizing || session.canonized) return;
+    setCanonizing(true);
+    try {
+      const res = await fetch("/api/tavern/canonize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ worldId, sessionId: session.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        const msg = data.detail ?? data.error ?? "Failed to inscribe to canon.";
+        toast.error(msg);
+        return;
+      }
+      setSession((prev) => prev ? { ...prev, canonized: true, canonizedLoreEntryId: data.loreEntryId } : prev);
+      toast.success(`Scene inscribed as "${data.loreTitle}". The oracle remembers.`, { duration: 4000 });
+    } catch {
+      toast.error("The ritual failed. Try again.");
+    } finally {
+      setCanonizing(false);
+    }
+  };
+
   const saveSessionName = async () => {
     setEditingName(false);
     if (!session || !sessionName.trim()) return;
@@ -158,28 +190,25 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
     return (
       <div className="mx-auto max-w-2xl py-8">
         <div className="mb-6 text-center">
-          <h2 className="font-heading text-3xl text-foreground">The Tavern</h2>
+          <h2 className="font-heading text-3xl text-foreground">The Scene Forge</h2>
           <p className="mt-1 text-sm text-secondary">
             Gather your souls together. Watch them speak, argue, and reveal.
           </p>
         </div>
 
-        <div className="glass-panel rounded-2xl p-6 space-y-4">
+        <div className="glass-panel rounded-2xl p-6 space-y-5">
           <p className="chapter-label">— Select 2–{soulLimit} Souls —</p>
 
           <div className="grid gap-3 sm:grid-cols-2">
             {souls.map((soul) => {
               const isSelected = selectedSouls.includes(soul.id);
               const isAtLimit = !isSelected && selectedSouls.length >= soulLimit;
-              // Show a locked upsell slot when a free user already has 3 souls selected
-              // and tries to select a 4th (which doesn't exist yet for free), or just
-              // grey out excess souls when at limit.
               return (
                 <motion.button
                   key={soul.id}
                   whileTap={isAtLimit ? undefined : { scale: 0.97 }}
                   onClick={() => {
-                    if (isAtLimit) return; // locked at free limit
+                    if (isAtLimit) return;
                     if (isSelected) {
                       setSelectedSouls((prev) => prev.filter((id) => id !== soul.id));
                     } else {
@@ -223,7 +252,7 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
             })}
           </div>
 
-          {/* Upsell slot — shown when a free user hits the 3-soul limit */}
+          {/* Upsell slot */}
           {isFree && souls.length >= FREE_TIER_LIMITS.tavernSouls && (
             <motion.div
               initial={{ opacity: 0, y: 6 }}
@@ -249,11 +278,10 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
 
           {souls.length < 2 && (
             <p className="text-xs text-secondary text-center">
-              You need at least 2 bound souls to use the Tavern.
+              You need at least 2 bound souls to use the Scene Forge.
             </p>
           )}
 
-          {/* Contextual generation note when 3 souls selected */}
           <AnimatePresence>
             {selectedSouls.length === FREE_TIER_LIMITS.tavernSouls && (
               <motion.p
@@ -268,13 +296,31 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
             )}
           </AnimatePresence>
 
+          {/* Scene Premise */}
+          <div className="space-y-2">
+            <label className="text-[10px] uppercase tracking-[0.22em] text-[var(--text-muted)] font-bold">
+              Scene Premise <span className="opacity-50 normal-case tracking-normal font-normal">(optional)</span>
+            </label>
+            <textarea
+              value={premise}
+              onChange={(e) => setPremise(e.target.value)}
+              rows={2}
+              maxLength={400}
+              placeholder="e.g. The heroes have just returned from the dungeon. Tensions are high after a betrayal..."
+              className="w-full resize-none rounded-xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_60%,transparent)] px-4 py-3 text-sm text-[var(--text-main)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--border-focus)] transition-colors"
+            />
+            <p className="text-[10px] text-[var(--text-muted)] text-right opacity-60">
+              {premise.length}/400 — this context guides soul responses and canon inscription.
+            </p>
+          </div>
+
           <Button
             className="w-full"
             onClick={createSession}
             disabled={selectedSouls.length < 2}
           >
             <Plus className="mr-2 h-4 w-4" />
-            Open the Tavern ({selectedSouls.length}/{soulLimit} souls)
+            Open the Scene ({selectedSouls.length}/{soulLimit} souls)
           </Button>
         </div>
       </div>
@@ -314,6 +360,14 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
               <Pencil className="h-3 w-3 text-[var(--text-muted)]" />
             </button>
           </div>
+        )}
+
+        {/* Canonized badge */}
+        {session.canonized && (
+          <Badge variant="gold" className="ml-1 gap-1">
+            <Sparkles className="h-2.5 w-2.5" />
+            Canonized
+          </Badge>
         )}
 
         <div className="ml-auto flex items-center gap-2">
@@ -409,6 +463,38 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Inscribe to Canon — shown after 5+ messages */}
+      <AnimatePresence>
+        {messages.length >= 5 && !session.canonized && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+            className="shrink-0 border-t border-[color-mix(in_srgb,var(--accent)_15%,transparent)] bg-[color-mix(in_srgb,var(--accent)_4%,transparent)] px-4 py-3"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-[var(--accent)]">This scene has lore worth remembering.</p>
+                <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Inscribe it to your world&apos;s canon — the Oracle will transform it into lore prose.</p>
+              </div>
+              <button
+                onClick={handleCanonize}
+                disabled={canonizing}
+                className="flex shrink-0 items-center gap-2 rounded-xl border border-[color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] px-4 py-2 text-xs font-medium text-[var(--accent)] transition-all hover:bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] active:scale-[0.97] active:transition-none disabled:opacity-50"
+              >
+                {canonizing ? (
+                  <LoadingSpinner className="h-3 w-3" />
+                ) : (
+                  <BookMarked className="h-3.5 w-3.5" />
+                )}
+                {canonizing ? "Inscribing…" : "Inscribe to Canon"}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Direction Selector */}
       <div className="flex items-center gap-2 border-t border-border px-4 py-2">
         <span className="text-[10px] text-secondary">Direct to:</span>
@@ -452,7 +538,7 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
             placeholder={
               directedTo
                 ? `Speak to ${souls.find((s) => s.id === directedTo)?.name ?? "soul"}...`
-                : "Address the tavern..."
+                : "Address the scene..."
             }
             className="flex-1 rounded-[14px] border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_70%,transparent)] px-4 py-2.5 text-sm text-foreground placeholder:text-dim focus:border-[var(--border-focus)] focus:outline-none transition-colors"
             disabled={sending}

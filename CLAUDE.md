@@ -16,7 +16,8 @@ The aesthetic is **dark parchment, warm candlelight, arcane purple** — NOT col
 | Styling | Tailwind CSS + shadcn/ui + Framer Motion |
 | Auth | Supabase Auth (email/password + Google OAuth) |
 | Database | Supabase PostgreSQL + pgvector (768-dim embeddings) |
-| AI — All features | Google Gemini (`gemini-2.5-pro` for generation, `gemini-2.5-flash` for chat, `gemini-embedding-2-preview` for embeddings) |
+| AI — Generation | Groq (`llama-3.3-70b-versatile` for heavy tasks, `llama-3.1-8b-instant` for fast/streaming) |
+| AI — Embeddings | Google Gemini (`gemini-embedding-2-preview`, 768-dim) — embeddings ONLY |
 | Background Jobs | Inngest (multi-step functions, retry/backoff, dead-letter queue) |
 | Rich Text | TipTap (StarterKit + CharacterCount + Placeholder) |
 | State | Zustand (`useWorkspaceStore`, `useDraftStore`, `useAmbientStore`) |
@@ -24,7 +25,7 @@ The aesthetic is **dark parchment, warm candlelight, arcane purple** — NOT col
 | Command Palette | cmdk |
 | Notifications | Sonner |
 
-**Important:** All AI runs through Gemini. `GEMINI_API_KEY` is the only AI key required. The `@anthropic-ai/sdk` package is present in `package.json` but is not used by any current feature — do not introduce Anthropic calls.
+**Important:** Groq is the primary AI inference engine for all text generation tasks. Gemini is retained **only** for vector embeddings (`gemini-embedding-2-preview`). Both `GROQ_API_KEY` and `GEMINI_API_KEY` are required. The `@anthropic-ai/sdk` package is present in `package.json` but is not used by any current feature — do not introduce Anthropic calls.
 
 ---
 
@@ -84,8 +85,8 @@ The aesthetic is **dark parchment, warm candlelight, arcane purple** — NOT col
 - `voice`, `core`, `knows` (5-8), `doesnt_know` (3-5), `relationships` (3-5), `secrets` (2-3), `sample_lines` (exactly 3)
 
 **Implementation:**
-- POST `/api/souls/generate` — Gemini 2.5 Pro, Zod-validated via `lib/soul-card.ts` + `repairAndParseJSON`
-- POST `/api/souls/chat` — **semantic cache layer** (pgvector similarity on recent prompts, threshold 0.98); cached responses served instantly; new responses streamed and cached
+- POST `/api/souls/generate` — Groq `llama-3.3-70b-versatile`, Zod-validated via `lib/soul-card.ts` + `repairAndParseJSON`. Two-attempt fallback strategy (system+user split → combined prompt).
+- POST `/api/souls/chat` — **semantic cache layer** (pgvector similarity on recent prompts, threshold 0.98); cached responses served instantly; cache misses stream via Groq `llama-3.1-8b-instant` and are cached post-stream
 - Soul-specific chat: DELETE `/api/souls/[id]/chat` — clear conversation history
 - Manual overrides: PATCH `/api/souls/[id]` — edits `description`, `voice`, `core` fields without regeneration
 - Soul delete: DELETE `/api/souls/[id]`
@@ -94,7 +95,7 @@ The aesthetic is **dark parchment, warm candlelight, arcane purple** — NOT col
 - `SoulCardPanel` component — renders soul card details, manual override inputs, regenerate button
 - `EchoesOrb` and `EchoesOrbDynamic` — animated orb avatar for soul chat
 
-**Rate limits:** 3 soul generate/day, 50 chat messages/day
+**Rate limits:** 3 soul generate/day, 5 chat messages/day
 
 ---
 
@@ -103,7 +104,7 @@ The aesthetic is **dark parchment, warm candlelight, arcane purple** — NOT col
 **What it does:** AI-ordered timeline of all world events. The Oracle reads lore entries and arranges events in chronological order grouped by inferred era.
 
 **Implementation:**
-- POST `/api/narrator` with `action: "timeline"` → `orderEventsChronologically()` (Gemini)
+- POST `/api/narrator` with `action: "timeline"` → `orderEventsChronologically()` (Groq `llama-3.3-70b-versatile`)
 - Events grouped into eras (Early Age, Rise of Empires, etc.)
 - Visual vertical timeline with era dividers and animated event cards
 - Built-in `isDemo` mock data bypass for public demos without requiring backend auth.
@@ -132,7 +133,7 @@ The aesthetic is **dark parchment, warm candlelight, arcane purple** — NOT col
 **What it does:** Paste new writing; the archive checks it against established lore for contradictions.
 
 **Implementation:**
-- POST `/api/consistency/check` — dual retrieval (embedding similarity + entity-tag overlap), Gemini contradiction analysis
+- POST `/api/consistency/check` — dual retrieval (embedding similarity + entity-tag overlap), Groq `llama-3.3-70b-versatile` contradiction analysis
 - Returns `ConsistencyFlag[]` with severity (low/medium/high)
 - Flags stored in `consistency_flags`, resolvable via POST `/api/consistency/resolve`
 - Unresolve (undo) via POST `/api/consistency/unresolve`
@@ -231,7 +232,7 @@ All per-user, per-day (reset midnight UTC):
 
 | Action | Limit |
 |--------|-------|
-| Chat messages | 50/day |
+| Chat messages | 5/day |
 | Lore ingest | 10/day |
 | Consistency checks | 5/day |
 | Soul generate | 3/day |
@@ -381,13 +382,13 @@ onFailure: → insert failed_jobs record, mark entry "failed"
 ```
 User sends message
   → POST /api/souls/chat
-    → Embed prompt (Gemini gemini-embedding-2-preview)
+    → Embed prompt (Gemini gemini-embedding-2-preview — embeddings only)
     → Query semantic_cache (match_semantic_cache RPC, threshold 0.98)
     → Cache HIT: return cached response (instant, increment hit_count)
     → Cache MISS:
       → Fetch soul card + conversation history + lore_chunks
-      → Gemini 2.5 Flash streams response
-      → Store in semantic_cache for future hits
+      → Groq llama-3.1-8b-instant streams response (800+ tps)
+      → Post-stream: store in semantic_cache for future hits
       → Store message with source_chunk_ids
       → detectDeclarativeFact() → store as memory if applicable
 ```
@@ -406,9 +407,10 @@ User sends message
 |------|---------|
 | `app/globals.css` | CSS variables, design tokens, keyframes |
 | `lib/types.ts` | All TypeScript types + new interfaces (FailedJob, SemanticCacheEntry, LoreFolder, EntityRelationship, TavernSession, TavernMessage, DashboardData, ActivityItem) |
-| `lib/constants.ts` | DAILY_LIMITS, FREE_TIER_LIMITS, WORLD_SECTIONS (7 sections), SEMANTIC_CACHE_THRESHOLD (0.98), CHUNK_SIZE_WORDS (400), AUTOCOMPLETE_WORD_COUNT (15) |
-| `lib/gemini.ts` | Gemini client singleton; `getGeminiModel()` → `gemini-2.5-pro`, `getChatModel()` → `gemini-2.5-flash` |
-| `lib/embeddings.ts` | All AI functions (embedText, extractEntities, checkConsistency, generateAutocomplete, analyzeImpact, detectBlankSpots, orderEventsChronologically, generateTavernResponse, detectDeclarativeFact) + Zod validation |
+| `lib/constants.ts` | DAILY_LIMITS (`chat_message: 5`), FREE_TIER_LIMITS, WORLD_SECTIONS (7 sections), SEMANTIC_CACHE_THRESHOLD (0.98), CHUNK_SIZE_WORDS (400), AUTOCOMPLETE_WORD_COUNT (15) |
+| `lib/gemini.ts` | Gemini client — **embeddings only**; `getEmbeddingModel()` → `gemini-embedding-2-preview`. `getGeminiModel()` and `getChatModel()` removed (replaced by Groq). |
+| `lib/groq.ts` | Groq client singleton; `getGroqClient()`, `groqGenerate()` (non-streaming), `groqStream()` (streaming), `GROQ_MODEL_HEAVY` (`llama-3.3-70b-versatile`), `GROQ_MODEL_FAST` (`llama-3.1-8b-instant`) |
+| `lib/embeddings.ts` | All AI functions (embedText via Gemini, extractEntities via Groq, checkConsistency via Groq, generateAutocomplete via Groq, analyzeImpact via Groq, detectBlankSpots via Groq, orderEventsChronologically via Groq, generateTavernResponse via Groq, detectDeclarativeFact via Groq) + Zod validation |
 | `lib/json-repair.ts` | Robust JSON parsing for malformed AI outputs — `repairAndParseJSON<T>()` and `safeParseAIJSON<T>()` |
 | `lib/soul-card.ts` | Soul card Zod schema + prompt + `parseSoulCard()` (uses `repairAndParseJSON` internally) |
 | `lib/soul-access.ts` | `soulMatchesWorld(soulWorldId, requestWorldId)` — soul/world ownership guard |
@@ -511,7 +513,10 @@ All tables have RLS enforcing `user_id` ownership.
 NEXT_PUBLIC_SUPABASE_URL=       # Supabase project URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY=  # Supabase anonymous key (browser-safe)
 SUPABASE_SERVICE_ROLE_KEY=      # Supabase service role key (server only — used by Inngest worker)
-GEMINI_API_KEY=                 # Google Gemini API key (all AI features)
+GEMINI_API_KEY=                 # Google Gemini API key (embeddings only — gemini-embedding-2-preview)
+GEMINI_FALLBACK_API_KEY=        # Optional secondary Gemini API key for embedding fallover
+GROQ_API_KEY=                   # Groq API key (primary generation engine — all LLM tasks)
+INNGEST_SIGNING_KEY=            # Inngest signing key (use "test" for local dev)
 INNGEST_EVENT_KEY=              # Inngest event key (use "test" for local dev; get real key from app.inngest.com for production)
 ```
 
@@ -540,11 +545,11 @@ These are deliberate blockers, not bugs:
 | Account deletion | Blocked — needs audited cascade strategy |
 | Billing / Stripe checkout | Blocked — no provider integration |
 | World soft-delete / archive | Not implemented |
-| Entity merge | Not implemented |
+| Entity merge | **Implemented (Phase 5)** — see Phase 5 documentation |
 | Manual entity creation | Not implemented |
 | Lore edit vs. re-ingest differentiation | Partial — edits always re-run full pipeline |
 | Markdown/ZIP export | JSON-only currently |
-| `FractureLens` + `ConsistencyChecker` consolidation | Partial — both exist, overlapping |
+| `FractureLens` + `ConsistencyChecker` consolidation | Partial — Phase 6 inline popover largely replaces standalone checker, but both still exist |
 
 ---
 
@@ -576,7 +581,7 @@ These are deliberate blockers, not bugs:
 
 13. **`WorldSidebar`** with `isDemo=true`: Compass icon links to `/` instead of `/dashboard`. Mobile nav only shows first 5 of the 7 sections.
 
-14. **pgvector similarity search** (`match_lore_chunks`, `match_semantic_cache`) uses IVFFlat index, cosine similarity, 768 dimensions (Gemini `gemini-embedding-2-preview`).
+14. **pgvector similarity search** (`match_lore_chunks`, `match_semantic_cache`) uses IVFFlat index, cosine similarity, 768 dimensions (Gemini `gemini-embedding-2-preview`). Embeddings are still generated by Gemini — Groq does not provide embedding models.
 
 15. **Rate limits are not atomic** — theoretical race condition on concurrent requests. Acceptable at current scale.
 
@@ -586,7 +591,7 @@ These are deliberate blockers, not bugs:
 
 18. **Demo mode**: `WorldWorkspace` receives `data.world.is_demo`, passes `isDemo` down to sidebar and `EchoesInterface`. Demo soul chat uses `/api/demo/chat` (no auth, no rate limit). Demo header shows "Sign up free" instead of "← Dashboard".
 
-19. **Gemini model strings** (as of the current API key): `gemini-2.5-pro` for all heavy generation (entity extraction, consistency, autocomplete, impact analysis, timeline ordering, tavern, declarative fact detection), `gemini-2.5-flash` for conversational soul chat, `gemini-embedding-2-preview` for vector embeddings. The `gemini-1.5-*` series is **not supported** by the current API key. Do not revert to it.
+19. **AI model split (post-Groq migration):** Groq handles ALL text generation — `llama-3.3-70b-versatile` (`GROQ_MODEL_HEAVY`) for soul forge, entity extraction, consistency checks, impact analysis, timeline ordering, tavern, blank spot detection, declarative fact detection; `llama-3.1-8b-instant` (`GROQ_MODEL_FAST`) for soul chat streaming, autocomplete, and quick classification. Gemini is **embeddings only** — `gemini-embedding-2-preview` (768-dim). Do NOT call `getGeminiModel()` or `getChatModel()` — those functions no longer exist in `lib/gemini.ts`.
 
 20. **`DialogContent` base class** (`components/ui/dialog.tsx`) includes `max-h-[min(92vh,860px)] overflow-y-auto overflow-x-hidden` to ensure all modals are viewport-safe and scrollable on short screens. Do not pass redundant `max-h` or `overflow` overrides from individual modal components.
 
@@ -604,7 +609,7 @@ These are deliberate blockers, not bugs:
 
 27. **`LoomEditor` Oracle Whisper CTA** — the floating Sparkles button is only visible when the editor has focus AND `wordCount > 20` AND not in focus mode. It calls `POST /api/lore/autocomplete` with the current content and inserts the returned suggestion at the cursor.
 
-28. **`parseSoulCard` uses `repairAndParseJSON`** — like all other AI output parsers. Do not replace with raw `JSON.parse`; Gemini 2.5 Pro thinking mode emits preamble text before the JSON object.
+28. **`parseSoulCard` uses `repairAndParseJSON`** — like all other AI output parsers. Do not replace with raw `JSON.parse`; Groq's Llama models can occasionally emit preamble text or markdown fences before the JSON object.
 
 29. **`CommandPalette` must receive the live `entities` state** from `WorldWorkspace`, not the initial `data.entities` prop. The state is updated by `refreshArchive`. Using the prop directly would hide newly discovered entities.
 
@@ -614,7 +619,7 @@ These are deliberate blockers, not bugs:
 
 32. **Dashboard `/api/dashboard` route** has a per-world stats loop that makes 3 parallel queries per world (N×3 queries). Acceptable at current world count (free tier = 1 world), but watch this if limits increase.
 
-33. **`@anthropic-ai/sdk` in `package.json`** — present but unused. Do not introduce Anthropic API calls; all AI runs through Gemini exclusively.
+33. **`@anthropic-ai/sdk` in `package.json`** — present but unused. Do not introduce Anthropic API calls. All text generation runs through Groq; embeddings run through Gemini.
 
 34. **Lore Scribe toolbar uses `.loom-toolbar-btn` CSS class** (not Tailwind `transition`) — this class in `globals.css` pins transitions to exactly `background-color 120ms`, `color 120ms`, `transform 80ms` with `var(--ease-snap)` easing and an instant `active: scale(0.93)`. Reverting to `transition` class causes the global 0.45s transition to bleed in, making buttons feel laggy.
 
@@ -625,3 +630,76 @@ These are deliberate blockers, not bugs:
 37. **World creation tone cards** use tone-specific Lucide icons (Skull=Dark, Mountain=Epic, Wand2=Whimsical, Eye=Mystery, Ghost=Horror, Sun=Hopeful). Active state for both genre and tone cards: `border-2 border-[var(--accent)]` + accent background + `scale-[1.02]` + absolute `Check` icon in top-right. `rounded-xl` on all cards (was `rounded-[24px]`).
 
 38. **Global border-radius principle**: large container surfaces use `rounded-xl` (12px) or `rounded-2xl` (16px) max. Pill shapes (dock, badges, `rounded-full` avatars) are intentionally kept. Do NOT revert to `rounded-[28px]` or larger on container cards — the project intentionally moved away from the bubbly AI-app aesthetic.
+
+39. **Groq SDK message format** uses OpenAI-compatible `{role, content}` pairs (not Gemini's `{role, parts: [{text}]}` format). Soul chat history conversion: `role === "assistant"` maps to `"assistant"` (not `"model"` as in Gemini). The `GroqMessage` type from `lib/groq.ts` enforces this.
+
+40. **`hasAiEnv()` in `lib/env.ts`** now checks for both `GROQ_API_KEY` (generation) AND `GEMINI_API_KEY` (embeddings). Both must be present. The 503 error detail reads: `"Missing GROQ_API_KEY or GEMINI_API_KEY on the server."`
+
+41. **Daily chat limit is 5** (`DAILY_LIMITS.chat_message = 5` in `lib/constants.ts`), reduced from 50 during the Groq migration to manage resource usage. Update tests or any hardcoded `50` references accordingly.
+
+---
+
+## Architectural Upgrade — Phases 1–6 (May 2026)
+
+### Phase 1 — Database Schema Expansion
+Migration file: `supabase/migrations/20260507000001_phase1_expansion.sql`
+
+- `tavern_sessions` → added `premise TEXT`, `canonized BOOLEAN DEFAULT FALSE`, `canonized_lore_entry_id UUID FK → lore_entries`
+- `entity_relationships` → added `tension_score SMALLINT DEFAULT 0 CHECK (-1..1)` (`-1` hostile, `0` neutral, `1` allied)
+- `lore_chunks` → added `entity_id UUID FK → entities ON DELETE SET NULL` for direct merge targeting
+- All FKs on `lore_chunks`, `consistency_flags`, `entity_relationships` hardened with `ON DELETE CASCADE`
+
+### Phase 2 — Scene Forge Canonization Pipeline
+- `app/api/tavern/canonize/route.ts` — POST. Transforms a tavern session transcript into a canonical lore entry via Groq `llama-3.3-70b-versatile`. Creates a `lore_entries` record and marks the session `canonized=true` + `canonized_lore_entry_id`.
+- `components/tavern/tavern-chat.tsx` — "Inscribe to Canon" banner and premise textarea.
+- `app/api/tavern/route.ts` — updated INSERT to persist `premise`.
+
+### Phase 3 — Lore Bounties
+- `app/api/narrator/route.ts` → added `GET ?action=blank-spots&worldId=` handler. Bypasses standard POST rate limiting (uses narrator action limit separately).
+- `components/dashboard/lore-bounty-modal.tsx` — modal with embedded TipTap editor that seeds starting verses via the autocomplete API.
+- `components/dashboard/dashboard-overview.tsx` — world-picker `<select>` (hidden if only 1 world), bounties panel with animated quest cards. Clicking a card opens `LoreBountyModal`. Bounty cache invalidated on resolution.
+
+42. **Bounty cache** is per-world in `dashboard-overview.tsx`: `bountiesFetched: Record<string, boolean>`. Delete the world key to force a re-fetch (done automatically on `handleBountyClaimed`).
+
+### Phase 4 — Tension-Aware Relationship Mapping
+- `app/api/relationships/route.ts` — `tensionScore` field added to create schema (`-1|0|1`, default 0).
+- `components/bible/forge-relationship-modal.tsx` — three-button tension selector (Hostile/Neutral/Allied) renders above the label field. Colors: `var(--danger)` / `var(--text-muted)` / `var(--success)`.
+- `components/bible/archive-web.tsx`:
+  - `edgeColor(tensionScore, highlighted)` helper maps `-1→danger`, `1→success`, `0→accent/border`.
+  - Hostile/allied edges render solid (no dasharray); neutral edges remain dashed.
+  - **"Conflicts Only" toggle** (floating top-right, `Swords` icon) filters graph to show only hostile (`tension_score === -1`) relationships.
+
+43. **`ArchiveWeb` tension filter** sets `visibleRelationships = conflictsOnly ? relationships.filter(r => r.tension_score === -1) : relationships`. Both `visibleEntities` and the force layout `edges` array derive from `visibleRelationships`.
+
+### Phase 5 — Entity Merging Pipeline
+- `app/api/entities/merge/route.ts` — POST `{ worldId, primaryEntityId, secondaryEntityId }`.
+  - Re-points all `entity_relationships.source_entity_id` / `target_entity_id` rows from secondary → primary (guards against self-loop duplication).
+  - Re-points `lore_chunks.entity_id`.
+  - Calls `replace_entity_tag` Postgres RPC (best-effort; safe to not exist).
+  - Merges `mention_count` values.
+  - Deletes secondary entity (CASCADE removes straggler relations).
+- `components/bible/entity-merge-modal.tsx` — two-step UI: entity picker (filtered to same `type`), irreversible-action confirmation checkbox, and danger-styled "Execute Merge" button.
+- `components/bible/entity-detail-panel.tsx` — added `allEntities: Entity[]` prop, `onMerge?: (deletedId: string) => void` prop, `mergeModalOpen` state, "Merge" ghost button next to "Delete Entity" in the footer.
+
+44. **Entity merge guards**: the API rejects `primaryEntityId === secondaryEntityId` with `CANNOT_MERGE_SELF (400)` and verifies world membership before any mutations.
+
+### Phase 6 — Inline FractureLens Consistency Checking
+- `app/api/consistency/check/route.ts` — `?inline=true` query param skips `checkAndIncrement` rate limiting. Standard manual checks (no `inline` param) remain restricted to 5/day.
+- `components/lore/consistency-inline-popover.tsx` — compact popover rendered below TipTap editor showing:
+  - Loading spinner while checking
+  - Severity badges (Critical/Warning/Minor) using `var(--danger)`, `var(--accent)`, `var(--text-muted)`.
+  - Expandable flag detail rows (contradiction text + archive reference).
+  - Per-flag dismiss (X button) and "dismiss all" link.
+- `components/lore/loom-editor.tsx`:
+  - `inlineFlags: InlineFlag[]` + `inlineChecking: boolean` state.
+  - `inlineDebounceRef` — `setTimeout` handle cleared on each editor update.
+  - On editor `onUpdate`: if `!isReadonly && selectedEntry && text.length >= 80`, schedules an inline check after **5 seconds idle**. Sends `POST /api/consistency/check?inline=true` with `text.slice(0, 2000)`.
+  - `ConsistencyInlinePopover` rendered below `<EditorContent>`.
+
+45. **Inline FractureLens does not count against the 5/day limit.** Only direct user-initiated consistency checks via the Lore Lens panel are rate-limited. The inline call uses `?inline=true` to bypass the counter.
+
+46. **`InlineFlag` type** (`components/lore/consistency-inline-popover.tsx`) mirrors `ConsistencyFlag` from the database but with client-side `resolved: boolean` for optimistic dismissal without a network call.
+
+### Final Audit (Completed)
+- All legacy `.js`/`test` files have been purged.
+- The codebase passes `npx tsc --noEmit` with zero errors, ensuring strict type-safety across all new phase integrations (Entity Merge, Tension Scores, etc.).

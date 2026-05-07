@@ -25,6 +25,7 @@ export function ForgeRelationshipModal({
   onSuccess,
 }: ForgeRelationshipModalProps) {
   const [label, setLabel] = useState("");
+  const [tensionScore, setTensionScore] = useState<-1 | 0 | 1>(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,6 +34,7 @@ export function ForgeRelationshipModal({
       onOpenChange(false);
       setTimeout(() => {
         setLabel("");
+        setTensionScore(0);
         setError(null);
       }, 200);
     }
@@ -54,6 +56,7 @@ export function ForgeRelationshipModal({
           sourceEntityId: sourceEntity.id,
           targetEntityId: targetEntity.id,
           label: label.trim(),
+          tensionScore,
         }),
       });
 
@@ -123,6 +126,36 @@ export function ForgeRelationshipModal({
                 </div>
 
                 <div className="space-y-4">
+                  {/* Tension selector */}
+                  <div>
+                    <label className="mb-2 block text-xs uppercase tracking-widest text-secondary">
+                      Relationship Tension
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {([
+                        { score: -1 as const, label: "Hostile", color: "var(--danger)" },
+                        { score: 0 as const, label: "Neutral", color: "var(--text-muted)" },
+                        { score: 1 as const, label: "Allied", color: "var(--success)" },
+                      ] as const).map((opt) => (
+                        <button
+                          key={opt.score}
+                          type="button"
+                          onClick={() => setTensionScore(opt.score)}
+                          className="rounded-xl border py-2 text-xs font-medium transition-all active:scale-[0.97] active:transition-none"
+                          style={tensionScore === opt.score ? {
+                            borderColor: opt.color,
+                            background: `color-mix(in srgb, ${opt.color} 12%, transparent)`,
+                            color: opt.color,
+                          } : {
+                            borderColor: "var(--border)",
+                            color: "var(--text-muted)",
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <div>
                     <label className="mb-2 block text-xs uppercase tracking-widest text-secondary">
                       Relationship Label (e.g. &ldquo;Sworn Enemy&rdquo;, &ldquo;Secretly loves&rdquo;)

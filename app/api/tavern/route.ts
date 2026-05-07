@@ -18,6 +18,7 @@ const createSchema = z.object({
   worldId: z.string().uuid(),
   soulIds: z.array(z.string().uuid()).min(2).max(FREE_TIER_LIMITS.tavernSoulsPro),
   name: z.string().min(1).max(80).optional(),
+  premise: z.string().max(400).optional(),
 });
 
 export async function POST(request: Request) {
@@ -79,6 +80,7 @@ export async function POST(request: Request) {
         user_id: user.id,
         soul_ids: parsed.data.soulIds,
         name: parsed.data.name ?? "The Tavern",
+        premise: parsed.data.premise ?? null,
       })
       .select("*")
       .single();

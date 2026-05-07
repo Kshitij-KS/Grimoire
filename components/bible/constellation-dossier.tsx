@@ -8,6 +8,9 @@ import { useWorkspaceStore } from "@/lib/store";
 import type { Entity, EntityType, EntityRelationship, Soul } from "@/lib/types";
 import { EntityMergeModal } from "./entity-merge-modal";
 
+// ── World ID must be threaded through for the new merge modal ───────────────
+// ConstellationDossier receives worldId as a prop already.
+
 const TYPE_COLORS: Record<EntityType, string> = {
   character: "var(--accent)",
   location:  "var(--ai-pulse)",
@@ -52,7 +55,7 @@ function LoreFragment({ content }: { content: string }) {
 }
 
 export function ConstellationDossier({
-  worldId: _worldId, // eslint-disable-line @typescript-eslint/no-unused-vars
+  worldId,
   allEntities = [],
   relationships = [],
   souls = [],
@@ -65,7 +68,7 @@ export function ConstellationDossier({
   relationships?: EntityRelationship[];
   souls?: Soul[];
   onDeleteRelationship?: (id: string) => void;
-  onMergeComplete?: (sourceId: string, updatedTarget: Entity) => void;
+  onMergeComplete?: (deletedId: string) => void;
   isDemo?: boolean;
 }) {
   const { selectedEntity, setSelectedEntity, setForgeSoulName } = useWorkspaceStore();
@@ -392,15 +395,16 @@ export function ConstellationDossier({
     </motion.aside>
 
     {/* Merge modal — rendered outside the aside to avoid clipping */}
-    {onMergeComplete && (
+    {onMergeComplete && selectedEntity && (
       <EntityMergeModal
         open={mergeModalOpen}
         onOpenChange={setMergeModalOpen}
-        sourceEntity={selectedEntity}
+        worldId={worldId}
+        primaryEntity={selectedEntity}
         allEntities={allEntities}
-        onMergeComplete={(sourceId, updatedTarget) => {
+        onMerged={(deletedId) => {
           setSelectedEntity(null);
-          onMergeComplete(sourceId, updatedTarget);
+          onMergeComplete(deletedId);
         }}
       />
     )}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, User, MapPin, Users, Gem, Calendar, BookOpen } from "lucide-react";
+import { ChevronDown, User, MapPin, Users, Gem, Calendar, BookOpen, Swords } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Entity, EntityRelationship, EntityType } from "@/lib/types";
 
@@ -309,10 +309,29 @@ export function ArchiveWeb({
   const [isMobile, setIsMobile] = useState(false);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const [edgeTooltip, setEdgeTooltip] = useState<{ x: number; y: number; label: string } | null>(null);
+  const [conflictsOnly, setConflictsOnly] = useState(false);
+
+  // Tension-based edge color helper
+  const edgeColor = (tensionScore: -1 | 0 | 1, highlighted: boolean): string => {
+    if (tensionScore === -1) return highlighted
+      ? "color-mix(in srgb, var(--danger) 90%, transparent)"
+      : "color-mix(in srgb, var(--danger) 45%, transparent)";
+    if (tensionScore === 1) return highlighted
+      ? "color-mix(in srgb, var(--success) 90%, transparent)"
+      : "color-mix(in srgb, var(--success) 45%, transparent)";
+    return highlighted
+      ? "color-mix(in srgb, var(--accent) 70%, transparent)"
+      : "color-mix(in srgb, var(--border-focus) 40%, transparent)";
+  };
+
+  // Filter relationships based on conflict toggle
+  const visibleRelationships = conflictsOnly
+    ? relationships.filter((r) => (r.tension_score ?? 0) === -1)
+    : relationships;
 
   // Only show entities with at least one relationship
   const connectedIds = new Set(
-    relationships.flatMap((r) => [r.source_entity_id, r.target_entity_id])
+    visibleRelationships.flatMap((r) => [r.source_entity_id, r.target_entity_id])
   );
   const visibleEntities = entities.filter((e) => connectedIds.has(e.id));
 
@@ -334,7 +353,7 @@ export function ArchiveWeb({
   }, []);
 
   const nodeIds = visibleEntities.map((e) => e.id);
-  const edges = relationships.map((r) => ({ source: r.source_entity_id, target: r.target_entity_id }));
+  const edges = visibleRelationships.map((r) => ({ source: r.source_entity_id, target: r.target_entity_id }));
   const positions = useForceLayout(nodeIds, edges, size.w, size.h);
 
   const posMap = Object.fromEntries(positions.map((p) => [p.id, p]));
@@ -383,6 +402,25 @@ export function ArchiveWeb({
   // Desktop: force-directed SVG graph
   return (
     <div ref={containerRef} className="relative h-full w-full overflow-hidden" style={{ touchAction: "none" }}>
+      {/* Conflicts Only toggle */}
+      <div className="absolute right-3 top-3 z-10">
+        <button
+          onClick={() => setConflictsOnly((v) => !v)}
+          className="flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[11px] font-medium transition-all active:scale-[0.97] active:transition-none"
+          style={conflictsOnly ? {
+            borderColor: "color-mix(in srgb, var(--danger) 50%, transparent)",
+            background: "color-mix(in srgb, var(--danger) 12%, transparent)",
+            color: "var(--danger)",
+          } : {
+            borderColor: "var(--border)",
+            color: "var(--text-muted)",
+            background: "var(--surface)",
+          }}
+        >
+          <Swords className="h-3 w-3" />
+          Conflicts Only
+        </button>
+      </div>
       {/* SVG edges */}
       {size.w > 0 && (
         <svg
@@ -405,10 +443,11 @@ export function ArchiveWeb({
               />
             </marker>
           </defs>
-          {relationships.map((r) => {
+          {visibleRelationships.map((r) => {
             const src = posMap[r.source_entity_id];
             const tgt = posMap[r.target_entity_id];
             if (!src || !tgt) return null;
+            const tension = (r.tension_score ?? 0) as -1 | 0 | 1;
             const isHighlighted =
               hoveredEdgeId === r.id ||
               selectedEntityId === r.source_entity_id ||
@@ -434,13 +473,9 @@ export function ArchiveWeb({
                   y1={src.y}
                   x2={tgt.x}
                   y2={tgt.y}
-                  stroke={
-                    isHighlighted
-                      ? "color-mix(in srgb, var(--accent) 70%, transparent)"
-                      : "color-mix(in srgb, var(--border-focus) 40%, transparent)"
-                  }
-                  strokeWidth={isHighlighted ? 2 : 1}
-                  strokeDasharray={isHighlighted ? undefined : "4 3"}
+                  stroke={edgeColor(tension, isHighlighted)}
+                  strokeWidth={isHighlighted ? 2.5 : tension !== 0 ? 1.5 : 1}
+                  strokeDasharray={isHighlighted || tension !== 0 ? undefined : "4 3"}
                   style={{ transition: "stroke 200ms ease, stroke-width 200ms ease" }}
                 />
               </g>

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { ConsistencyChecker } from "@/components/consistency/consistency-checker";
+import { ConsistencyInlinePopover, type InlineFlag } from "@/components/lore/consistency-inline-popover";
 import { LoreImportModal } from "@/components/lore/lore-import-modal";
 import { LoreList } from "@/components/lore/lore-list";
 import { ProcessingStatus, type ProcessingStep } from "@/components/lore/processing-status";
@@ -82,6 +83,11 @@ export function LoomEditor({
   const [typewriterMode, setTypewriterMode] = useState(false);
   const [liveWordCount, setLiveWordCount] = useState(0);
 
+  // FractureLens inline state
+  const [inlineFlags, setInlineFlags] = useState<InlineFlag[]>([]);
+  const [inlineChecking, setInlineChecking] = useState(false);
+  const inlineDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -113,7 +119,31 @@ export function LoomEditor({
     ],
     content: selectedEntry?.content ?? "",
     onUpdate: ({ editor }) => {
-      setLiveWordCount(wordCount(stripHtml(editor.getHTML())));
+      const text = stripHtml(editor.getHTML());
+      setLiveWordCount(wordCount(text));
+
+      // FractureLens: debounce inline check (5s idle, bypass rate limit)
+      if (!isReadonly && selectedEntry && text.length >= 80) {
+        if (inlineDebounceRef.current) clearTimeout(inlineDebounceRef.current);
+        inlineDebounceRef.current = setTimeout(async () => {
+          setInlineChecking(true);
+          try {
+            const res = await fetch("/api/consistency/check?inline=true", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ worldId, text: text.slice(0, 2000) }),
+            });
+            if (res.ok) {
+              const data = await res.json();
+              setInlineFlags((data.flags ?? []) as InlineFlag[]);
+            }
+          } catch {
+            // Silent fail — inline checks are best-effort
+          } finally {
+            setInlineChecking(false);
+          }
+        }, 5000);
+      }
     },
     onCreate: ({ editor }) => {
       setLiveWordCount(wordCount(stripHtml(editor.getHTML())));
@@ -753,6 +783,22 @@ export function LoomEditor({
 
             {/* ── TipTap editor ── */}
             <EditorContent editor={editor} />
+
+            {/* ── FractureLens inline popover ── */}
+            {!isReadonly && (
+              <ConsistencyInlinePopover
+                flags={inlineFlags}
+                loading={inlineChecking}
+                onDismiss={(id) =>
+                  setInlineFlags((prev) =>
+                    prev.map((f) => (f.id === id ? { ...f, resolved: true } : f))
+                  )
+                }
+                onDismissAll={() =>
+                  setInlineFlags((prev) => prev.map((f) => ({ ...f, resolved: true })))
+                }
+              />
+            )}
 
             {/* ── Document watermark ── */}
             <div className="mt-20 flex flex-col items-center justify-center opacity-15 pointer-events-none select-none">
