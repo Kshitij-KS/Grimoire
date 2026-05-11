@@ -11,7 +11,7 @@ import { env } from "@/lib/env";
 // avoid anonymous rate limits. The model itself is always free.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const HF_MODEL = "nomic-ai/nomic-embed-text-v1";
+const HF_MODEL = "sentence-transformers/all-mpnet-base-v2";
 
 let hfClient: HfInference | null = null;
 
@@ -33,12 +33,9 @@ export function getEmbeddingModel() {
     }): Promise<{ embedding: { values: number[] } }> {
       const text = input.content.parts.map((p) => p.text).join(" ");
 
-      // Nomic models require a specific prefix for retrieval tasks
-      const queryText = `search_query: ${text}`;
-
       const result = await client.featureExtraction({
         model: HF_MODEL,
-        inputs: queryText,
+        inputs: text,
       });
 
       // featureExtraction returns number[] | number[][] depending on input
