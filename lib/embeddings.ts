@@ -1,23 +1,16 @@
 import { z } from "zod";
-// NOTE: getGeminiModel and getChatModel have been removed from gemini.ts and replaced by Groq.
-// getEmbeddingModel is still used below for vector embeddings (Gemini).
+// Embeddings are now served by HuggingFace BAAI/bge-base-en-v1.5 (768-dim, free).
+// getEmbeddingModel() in lib/gemini.ts wraps the HF client with the same interface.
 import { getEmbeddingModel } from "@/lib/gemini";
-// Groq replaces Gemini for all text generation tasks.
+// Groq handles all text generation tasks.
 import { groqGenerate, GROQ_MODEL_HEAVY, GROQ_MODEL_FAST } from "@/lib/groq";
 import { repairAndParseJSON } from "@/lib/json-repair";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// The original import line was:
-// import { getGeminiModel, getEmbeddingModel, getChatModel } from "@/lib/gemini";
-// getGeminiModel and getChatModel are now replaced with groqGenerate calls below.
-// ─────────────────────────────────────────────────────────────────────────────
-
 export async function embedText(text: string): Promise<number[]> {
-  const model = getEmbeddingModel(); // Gemini embedding — unchanged
+  const model = getEmbeddingModel(); // HuggingFace BAAI/bge-base-en-v1.5 — 768 dims
   const result = await model.embedContent({
     content: { parts: [{ text }] },
-    outputDimensionality: 768,
-  } as Parameters<typeof model.embedContent>[0] & { outputDimensionality: number });
+  });
   return result.embedding.values ?? [];
 }
 

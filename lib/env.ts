@@ -4,8 +4,9 @@ import { publicEnv } from "@/lib/public-env";
 export const env = {
   ...publicEnv,
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-  geminiApiKey: process.env.GEMINI_API_KEY,
-  geminiFallbackApiKey: process.env.GEMINI_FALLBACK_API_KEY,
+  // HuggingFace token for embeddings (BAAI/bge-base-en-v1.5).
+  // Free-tier anonymous access works but may be rate-limited; a free HF token removes that limit.
+  hfToken: process.env.HF_TOKEN,
   groqApiKey: process.env.GROQ_API_KEY,
   inngestSigningKey: process.env.INNGEST_SIGNING_KEY,
   inngestEventKey: process.env.INNGEST_EVENT_KEY,
@@ -20,7 +21,6 @@ export function hasServerSupabaseEnv() {
 }
 
 export function hasAiEnv() {
-  // Groq is the primary generation engine; Gemini is kept for embeddings only.
-  // We require Groq for generation and Gemini for embeddings.
-  return Boolean(env.groqApiKey && env.geminiApiKey);
+  // Groq for all generation; HuggingFace for embeddings (token optional but recommended).
+  return Boolean(env.groqApiKey);
 }

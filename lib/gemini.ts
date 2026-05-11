@@ -1,101 +1,59 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { HfInference } from "@huggingface/inference";
 import { env } from "@/lib/env";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// NOTE: Gemini is now used ONLY for embeddings (text-embedding-004 /
-// gemini-embedding-2-preview).  All text-generation tasks (soul forge, chat,
-// narrator, tavern) have been migrated to Groq — see lib/groq.ts.
-// The generation helpers below (getGeminiModel, getChatModel) are commented
-// out to preserve the original code while routing generation through Groq.
+// Gemini has been fully replaced. All text-generation tasks use Groq (lib/groq.ts).
+// Embeddings previously used Gemini text-embedding-004 (768-dim). They now use
+// HuggingFace BAAI/bge-base-en-v1.5 which also outputs 768 dimensions, keeping
+// the Supabase pgvector columns fully compatible.
+//
+// A free HuggingFace account token (HF_TOKEN) is optional but recommended to
+// avoid anonymous rate limits. The model itself is always free.
 // ─────────────────────────────────────────────────────────────────────────────
 
-let primaryClient: GoogleGenerativeAI | null = null;
-let fallbackClient: GoogleGenerativeAI | null = null;
-type GeminiModel = ReturnType<GoogleGenerativeAI["getGenerativeModel"]>;
+const HF_MODEL = "BAAI/bge-base-en-v1.5";
 
-export function getGeminiClients() {
-  if (!env.geminiApiKey) {
-    throw new Error("Missing GEMINI_API_KEY");
-  }
-  primaryClient ??= new GoogleGenerativeAI(env.geminiApiKey);
-  if (env.geminiFallbackApiKey) {
-    fallbackClient ??= new GoogleGenerativeAI(env.geminiFallbackApiKey);
-  }
-  return { primary: primaryClient, fallback: fallbackClient };
+let hfClient: HfInference | null = null;
+
+function getHfClient(): HfInference {
+  hfClient ??= new HfInference(env.hfToken ?? undefined);
+  return hfClient;
 }
 
-async function tryFallback<T>(
-  actions: (() => Promise<T>)[],
-  message: string,
-) {
-  let lastError: unknown;
-  for (let i = 0; i < actions.length; i++) {
-    try {
-      return await actions[i]();
-    } catch (error) {
-      lastError = error;
-      if (i < actions.length - 1) {
-        console.warn(`${message} (Attempt ${i + 1} failed)`, error);
-      }
-    }
-  }
-  throw lastError;
-}
-
-function withFallback(modelNames: string[]): GeminiModel {
-  const { primary, fallback } = getGeminiClients();
-  const models: GeminiModel[] = [];
-  
-  for (const modelName of modelNames) {
-    models.push(primary.getGenerativeModel({ model: modelName }));
-    if (fallback) {
-      models.push(fallback.getGenerativeModel({ model: modelName }));
-    }
-  }
-
-  const baseModel = models[0];
-  const proxyModel = Object.assign(Object.create(Object.getPrototypeOf(baseModel)), baseModel) as GeminiModel;
-
-  proxyModel.generateContent = (...args: Parameters<typeof baseModel.generateContent>) =>
-    tryFallback(
-      models.map(m => () => m.generateContent(...args)),
-      "Gemini generateContent failed, trying fallback...",
-    );
-
-  proxyModel.generateContentStream = (...args: Parameters<typeof baseModel.generateContentStream>) =>
-    tryFallback(
-      models.map(m => () => m.generateContentStream(...args)),
-      "Gemini generateContentStream failed, trying fallback...",
-    );
-
-  proxyModel.embedContent = (...args: Parameters<typeof baseModel.embedContent>) =>
-    tryFallback(
-      models.map(m => () => m.embedContent(...args)),
-      "Gemini embedContent failed, trying fallback...",
-    );
-
-  proxyModel.batchEmbedContents = (...args: Parameters<typeof baseModel.batchEmbedContents>) =>
-    tryFallback(
-      models.map(m => () => m.batchEmbedContents(...args)),
-      "Gemini batchEmbedContents failed, trying fallback...",
-    );
-
-  return proxyModel;
-}
-
-// ── COMMENTED OUT: Generation models — now handled by Groq (see lib/groq.ts) ──
-// /** Heavy generation model — soul generation, entity extraction, consistency checks. */
-// export function getGeminiModel() {
-//   return withFallback(["gemini-3.1-pro-preview", "gemini-2.5-pro"]);
-// }
-
-// /** Fast conversational model — soul chat, demo chat. */
-// export function getChatModel() {
-//   return withFallback(["gemini-3-flash-preview", "gemini-2.5-flash"]);
-// }
-// ──────────────────────────────────────────────────────────────────────────────
-
-/** Embedding model for semantic search. STILL USES GEMINI — not migrated. */
+// ── Embedding model shim ─────────────────────────────────────────────────────
+// Returns an object with an `embedContent` method that matches the call-site
+// in lib/embeddings.ts, so embedText() works without any changes there.
 export function getEmbeddingModel() {
-  return withFallback(["gemini-embedding-2-preview", "text-embedding-004"]);
+  const client = getHfClient();
+
+  return {
+    async embedContent(input: {
+      content: { parts: Array<{ text: string }> };
+      outputDimensionality?: number;
+    }): Promise<{ embedding: { values: number[] } }> {
+      const text = input.content.parts.map((p) => p.text).join(" ");
+
+      // BGE models benefit from a brief prefix for retrieval tasks
+      const queryText = `Represent this sentence: ${text}`;
+
+      const result = await client.featureExtraction({
+        model: HF_MODEL,
+        inputs: queryText,
+      });
+
+      // featureExtraction returns number[] | number[][] depending on input
+      let vector: number[];
+      if (Array.isArray(result) && typeof result[0] === "number") {
+        vector = result as number[];
+      } else if (Array.isArray(result) && Array.isArray(result[0])) {
+        vector = (result as number[][])[0];
+      } else {
+        throw new Error(
+          `Unexpected HuggingFace featureExtraction output shape: ${JSON.stringify(result).slice(0, 100)}`,
+        );
+      }
+
+      return { embedding: { values: vector } };
+    },
+  };
 }

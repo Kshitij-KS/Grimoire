@@ -1,44 +1,34 @@
 import { describe, expect, it, vi } from "vitest";
 
-describe("Gemini model helpers", () => {
-  it("preserves embedContent when the fallback client is configured", async () => {
+describe("HuggingFace embedding model helpers", () => {
+  it("embedContent resolves with a 768-dim vector from the HF mock", async () => {
     vi.resetModules();
     vi.doMock("server-only", () => ({}));
 
-    const embedContent = vi.fn().mockResolvedValue({ embedding: { values: [1, 2, 3] } });
-    const generateContent = vi.fn();
-    const generateContentStream = vi.fn();
+    // Mock HuggingFace featureExtraction to return a 768-element array
+    const mockVector = Array.from({ length: 768 }, (_, i) => i * 0.001);
+    const mockFeatureExtraction = vi.fn().mockResolvedValue(mockVector);
 
-    class MockModel {
-      generateContent(...args: unknown[]) {
-        return generateContent(...args);
-      }
-      generateContentStream(...args: unknown[]) {
-        return generateContentStream(...args);
-      }
-      embedContent(...args: unknown[]) {
-        return embedContent(...args);
-      }
-    }
+    vi.doMock("@huggingface/inference", () => ({
+      HfInference: class {
+        featureExtraction(...args: unknown[]) {
+          return mockFeatureExtraction(...args);
+        }
+      },
+    }));
 
-    class GoogleGenerativeAI {
-      constructor(readonly apiKey: string) {}
-      getGenerativeModel() {
-        return new MockModel();
-      }
-    }
-
-    vi.doMock("@google/generative-ai", () => ({ GoogleGenerativeAI }));
-
-    process.env.GEMINI_API_KEY = "primary-key";
-    process.env.GEMINI_FALLBACK_API_KEY = "fallback-key";
+    process.env.HF_TOKEN = "";
 
     const { getEmbeddingModel } = await import("@/lib/gemini");
     const model = getEmbeddingModel();
 
     expect(typeof model.embedContent).toBe("function");
-    await expect(model.embedContent("hello")).resolves.toEqual({
-      embedding: { values: [1, 2, 3] },
+
+    const result = await model.embedContent({
+      content: { parts: [{ text: "hello" }] },
     });
+
+    expect(result).toEqual({ embedding: { values: mockVector } });
+    expect(result.embedding.values).toHaveLength(768);
   });
 });
