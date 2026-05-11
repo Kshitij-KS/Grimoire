@@ -11,7 +11,7 @@ import { env } from "@/lib/env";
 // avoid anonymous rate limits. The model itself is always free.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const HF_MODEL = "BAAI/bge-base-en-v1.5";
+const HF_MODEL = "nomic-ai/nomic-embed-text-v1";
 
 let hfClient: HfInference | null = null;
 
@@ -33,8 +33,8 @@ export function getEmbeddingModel() {
     }): Promise<{ embedding: { values: number[] } }> {
       const text = input.content.parts.map((p) => p.text).join(" ");
 
-      // BGE models benefit from a brief prefix for retrieval tasks
-      const queryText = `Represent this sentence: ${text}`;
+      // Nomic models require a specific prefix for retrieval tasks
+      const queryText = `search_query: ${text}`;
 
       const result = await client.featureExtraction({
         model: HF_MODEL,
