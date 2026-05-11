@@ -96,8 +96,10 @@ export async function POST(request: Request) {
     return jsonError(e instanceof Error ? e.message : "Database error", 500);
   }
 
-  // Try background processing via Inngest first
-  if (useBackground) {
+  // Try background processing via Inngest first if configured
+  const inngestConfigured = process.env.INNGEST_EVENT_KEY && process.env.INNGEST_EVENT_KEY !== "test";
+  
+  if (useBackground && inngestConfigured) {
     try {
       const { ids } = await inngest.send({
         name: "lore.inscribed",
