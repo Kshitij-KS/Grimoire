@@ -1,0 +1,5 @@
+# Ignore Python sidecar during Vercel deployment
+scripts/eval-service/
+
+# Ignore Supabase local migrations
+supabase/migrations/

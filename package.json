@@ -8,8 +8,11 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "eval:service": "cd scripts/eval-service && .venv/Scripts/python.exe main.py",
+    "eval:setup": "powershell -ExecutionPolicy Bypass -File scripts/eval-service/setup.ps1"
   },
+
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
     "@google/generative-ai": "^0.24.1",

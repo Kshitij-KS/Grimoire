@@ -302,3 +302,45 @@ export interface ActivityItem {
   world_name: string;
   created_at: string;
 }
+
+// ── lm-evaluation-harness types ───────────────────────────────────────────
+
+export type EvalRunStatus = "pending" | "running" | "completed" | "failed";
+
+/** A single benchmark evaluation run (maps to eval_runs Supabase table). */
+export interface EvalRun {
+  id: string;
+  user_id: string;
+  model_name: string;
+  tasks: string[];
+  status: EvalRunStatus;
+  num_samples: number;
+  error_message: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+/** One metric row for a task in an eval run (maps to eval_results table). */
+export interface EvalResult {
+  id: string;
+  run_id: string;
+  task_name: string;
+  metric_name: string;
+  metric_value: number;
+  stderr: number | null;
+  created_at: string;
+}
+
+/** Eval run joined with its results (for the results panel). */
+export interface EvalRunWithResults extends EvalRun {
+  eval_results: EvalResult[];
+}
+
+/** A supported benchmark task descriptor. */
+export interface EvalTask {
+  id: string;
+  label: string;
+  category: string;
+  approxSamples: number;
+}
