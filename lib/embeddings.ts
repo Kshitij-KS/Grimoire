@@ -275,16 +275,20 @@ Order numbers should start at 1.`;
   });
 
   try {
-    const parsed = repairAndParseJSON<{ timeline: Array<{ id: string; name: string; era: string; order: number }> }>(raw);
-    return parsed.timeline ?? [];
+    const parsed = repairAndParseJSON<{ timeline?: Array<{ id: string; name: string; era: string; order: number }> }>(raw);
+    if (parsed?.timeline && Array.isArray(parsed.timeline) && parsed.timeline.length > 0) {
+      return parsed.timeline;
+    }
   } catch {
-    return events.map((e, i) => ({
-      id: e.id,
-      name: e.name,
-      era: "Unknown Era",
-      order: i + 1,
-    }));
+    // Fallback below
   }
+
+  return events.map((e, i) => ({
+    id: e.id,
+    name: e.name,
+    era: "Unknown Era",
+    order: i + 1,
+  }));
 }
 
 // ── Tavern: soul context builder ─────────────────────────────────────────

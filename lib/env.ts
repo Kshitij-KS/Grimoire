@@ -8,6 +8,7 @@ export const env = {
   // Free-tier anonymous access works but may be rate-limited; a free HF token removes that limit.
   hfToken: process.env.HF_TOKEN,
   groqApiKey: process.env.GROQ_API_KEY,
+  geminiApiKey: process.env.GEMINI_API_KEY,
   inngestSigningKey: process.env.INNGEST_SIGNING_KEY,
   inngestEventKey: process.env.INNGEST_EVENT_KEY,
 };
@@ -21,6 +22,7 @@ export function hasServerSupabaseEnv() {
 }
 
 export function hasAiEnv() {
-  // Groq for all generation; HuggingFace for embeddings (token optional but recommended).
-  return Boolean(env.groqApiKey);
+  // Groq for all generation; Gemini for embeddings (both required).
+  // HuggingFace token is optional but recommended.
+  return Boolean(env.groqApiKey && env.geminiApiKey);
 }

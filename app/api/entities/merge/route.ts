@@ -46,21 +46,58 @@ export async function POST(request: Request) {
 
   const primary = entities.find((e: { id: string }) => e.id === primaryEntityId)!;
   const secondary = entities.find((e: { id: string }) => e.id === secondaryEntityId)!;
+  const primaryName = (primary as { name: string }).name;
+  const secondaryName = (secondary as { name: string }).name;
 
-  // ── 1. Re-point all relationships from secondary → primary ─────────────
-  // source side
+  // ── 1. Re-point relationships with deduplication ───────────────────────
+  // Fetch secondary's relationships to re-insert with primary
+  const { data: secondaryRelationships } = await supabase
+    .from("entity_relationships")
+    .select("*")
+    .or(`source_entity_id.eq.${secondaryEntityId},target_entity_id.eq.${secondaryEntityId}`);
+
+  // Delete all relationships involving secondary (clean slate)
   await supabase
     .from("entity_relationships")
-    .update({ source_entity_id: primaryEntityId })
-    .eq("source_entity_id", secondaryEntityId)
-    .neq("target_entity_id", primaryEntityId); // avoid creating duplicates
+    .delete()
+    .or(`source_entity_id.eq.${secondaryEntityId},target_entity_id.eq.${secondaryEntityId}`);
 
-  // target side
-  await supabase
-    .from("entity_relationships")
-    .update({ target_entity_id: primaryEntityId })
-    .eq("target_entity_id", secondaryEntityId)
-    .neq("source_entity_id", primaryEntityId);
+  // Re-insert with primary, skip duplicates
+  if (secondaryRelationships && secondaryRelationships.length > 0) {
+    // Check which of secondary's relationships already exist (by target or source)
+    const { data: existingRelationships } = await supabase
+      .from("entity_relationships")
+      .select("source_entity_id, target_entity_id")
+      .or(`source_entity_id.eq.${primaryEntityId},target_entity_id.eq.${primaryEntityId}`)
+      .eq("world_id", worldId);
+
+    const existingPairs = new Set(
+      (existingRelationships ?? []).map(
+        (r: { source_entity_id: string; target_entity_id: string }) =>
+          `${r.source_entity_id}-${r.target_entity_id}`
+      )
+    );
+
+    const rowsToInsert = secondaryRelationships
+      .map((r: { source_entity_id: string; target_entity_id: string; label: string; description: string | null; tension_score: number }) => ({
+        world_id: worldId,
+        user_id: user.id,
+        source_entity_id: r.source_entity_id === secondaryEntityId ? primaryEntityId : r.source_entity_id,
+        target_entity_id: r.target_entity_id === secondaryEntityId ? primaryEntityId : r.target_entity_id,
+        label: r.label,
+        description: r.description,
+        tension_score: r.tension_score,
+      }))
+      .filter((r: { source_entity_id: string; target_entity_id: string }) => {
+        // Skip if this would duplicate an existing or self-referencing relationship
+        return r.source_entity_id !== r.target_entity_id &&
+          !existingPairs.has(`${r.source_entity_id}-${r.target_entity_id}`);
+      });
+
+    if (rowsToInsert.length > 0) {
+      await supabase.from("entity_relationships").insert(rowsToInsert);
+    }
+  }
 
   // ── 2. Re-point lore_chunks.entity_id → primary ────────────────────────
   await supabase
@@ -69,10 +106,6 @@ export async function POST(request: Request) {
     .eq("entity_id", secondaryEntityId);
 
   // ── 3. Remap entity_tags text array (best-effort) ──────────────────────
-  // This uses Postgres array operations to replace secondary name with primary name
-  const secondaryName = (secondary as { name: string }).name;
-  const primaryName = (primary as { name: string }).name;
-
   if (secondaryName !== primaryName) {
     await supabase.rpc("replace_entity_tag", {
       p_world_id: worldId,
@@ -90,7 +123,7 @@ export async function POST(request: Request) {
     .update({ mention_count: primaryMentions + secondaryMentions })
     .eq("id", primaryEntityId);
 
-  // ── 5. Delete secondary entity (CASCADE handles relationships/chunks) ──
+  // ── 5. Delete secondary entity ─────────────────────────────────────────
   const { error: deleteError } = await supabase
     .from("entities")
     .delete()

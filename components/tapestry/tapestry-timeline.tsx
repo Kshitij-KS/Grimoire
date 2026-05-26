@@ -135,23 +135,24 @@ export function TapestryTimeline({ worldId, isDemo }: TapestryTimelineProps & { 
             Events of your world, woven in chronological order
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setHorizontal((v) => !v)}
-            title={horizontal ? "Switch to vertical" : "Switch to horizontal"}
-            className={`rounded-[12px] border p-2 transition-colors ${
-              horizontal
-                ? "border-[var(--border-focus)] text-[var(--accent)]"
-                : "border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-main)]"
-            }`}
-          >
-            {horizontal ? <List className="h-4 w-4" /> : <Columns className="h-4 w-4" />}
-          </button>
-          <Button variant="secondary" size="sm" onClick={fetchTimeline} disabled={loading}>
-            {loading ? <LoadingSpinner className="mr-1 h-3 w-3" /> : <Sparkles className="mr-1 h-3 w-3" />}
-            Reweave
-          </Button>
-        </div>
+         <div className="flex items-center gap-2">
+           <button
+             onClick={() => setHorizontal((v) => !v)}
+             aria-label={horizontal ? "Switch to vertical view" : "Switch to horizontal view"}
+             aria-pressed={horizontal}
+             className={`rounded-[12px] border p-2 transition-colors ${
+               horizontal
+                 ? "border-[var(--border-focus)] text-[var(--accent)]"
+                 : "border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-main)]"
+             }`}
+           >
+             {horizontal ? <List className="h-4 w-4" /> : <Columns className="h-4 w-4" />}
+           </button>
+           <Button variant="secondary" size="sm" onClick={fetchTimeline} disabled={loading}>
+             {loading ? <LoadingSpinner className="mr-1 h-3 w-3" /> : <Sparkles className="mr-1 h-3 w-3" />}
+             Reweave
+           </Button>
+         </div>
       </div>
 
       {/* ── Era filter chips ── */}
@@ -167,27 +168,29 @@ export function TapestryTimeline({ worldId, isDemo }: TapestryTimelineProps & { 
           >
             All eras
           </button>
-          {eraList.map((era, i) => {
-            const color = ERA_COLORS[i % ERA_COLORS.length];
-            return (
-              <button
-                key={era}
-                onClick={() => scrollToEra(era)}
-                className={`rounded-full px-3 py-1 text-xs transition-colors ${
-                  activeFilter === era
-                    ? "text-[var(--text-main)]"
-                    : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
-                }`}
-                style={
-                  activeFilter === era
-                    ? { background: `color-mix(in srgb, ${color} 15%, var(--surface-raised))` }
-                    : undefined
-                }
-              >
-                {era}
-              </button>
-            );
-          })}
+           {eraList.map((era, i) => {
+             const color = ERA_COLORS[i % ERA_COLORS.length];
+             return (
+               <button
+                 key={era}
+                 onClick={() => scrollToEra(era)}
+                 aria-label={`Show era: ${era}`}
+                 aria-pressed={activeFilter === era}
+                 className={`rounded-full px-3 py-1 text-xs transition-colors ${
+                   activeFilter === era
+                     ? "text-[var(--text-main)]"
+                     : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                 }`}
+                 style={
+                   activeFilter === era
+                     ? { background: `color-mix(in srgb, ${color} 15%, var(--surface-raised))` }
+                     : undefined
+                 }
+               >
+                 {era}
+               </button>
+             );
+           })}
         </div>
       )}
 

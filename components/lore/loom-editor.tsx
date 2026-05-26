@@ -23,6 +23,7 @@ import { ProcessingStatus, type ProcessingStep } from "@/components/lore/process
 import { DestructiveActionModal } from "@/components/shared/destructive-action-modal";
 import { cn, stripHtml } from "@/lib/utils";
 import type { LoreEntry } from "@/lib/types";
+import { requireUser } from "@/lib/api";
 
 function wordCount(text: string) {
   return text.trim() ? text.trim().split(/\s+/).length : 0;
@@ -62,18 +63,20 @@ export function LoomEditor({
   isReadonly?: boolean;
   onUsageIncrement?: (action: string) => void;
 }) {
-  const [entries, setEntries] = useState(initialEntries);
-  const [selectedEntry, setSelectedEntry] = useState<LoreEntry | null>(null);
-  const [title, setTitle] = useState("");
-  const [steps, setSteps] = useState(baseSteps);
-  const [processing, setProcessing] = useState(false);
-  const [deletingLore, setDeletingLore] = useState<{ id: string; title: string } | null>(null);
-  const [importModalOpen, setImportModalOpen] = useState(false);
-  const [lastMilestone, setLastMilestone] = useState(0);
+   const [entries, setEntries] = useState(initialEntries);
+   const [selectedEntry, setSelectedEntry] = useState<LoreEntry | null>(null);
+   const [title, setTitle] = useState("");
+   const [steps, setSteps] = useState(baseSteps);
+   const [processing, setProcessing] = useState(false);
+   const [deletingLore, setDeletingLore] = useState<{ id: string; title: string } | null>(null);
+   const [importModalOpen, setImportModalOpen] = useState(false);
+   const [lastMilestone, setLastMilestone] = useState(0);
+   const [showRetry, setShowRetry] = useState(false);
 
-  const [spineOpen, setSpineOpen] = useState(true);
-  const [marginOpen, setMarginOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+    const [spineOpen, setSpineOpen] = useState(true);
+    const [marginOpen, setMarginOpen] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+    const prevContentRef = useRef<string>('');
 
   const [spineSearch, setSpineSearch] = useState("");
   const [semanticResults, setSemanticResults] = useState<SemanticResult[]>([]);
@@ -90,16 +93,23 @@ export function LoomEditor({
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const check = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      if (mobile) setSpineOpen(false);
-    };
-    check();
-    window.addEventListener("resize", check, { passive: true });
-    return () => window.removeEventListener("resize", check);
-  }, []);
+   useEffect(() => {
+     const check = () => {
+       const mobile = window.innerWidth < 768;
+       setIsMobile(mobile);
+       if (mobile) setSpineOpen(false);
+     };
+     check();
+     window.addEventListener("resize", check, { passive: true });
+     return () => {
+       window.removeEventListener("resize", check);
+       // Cleanup inline debounce ref
+       if (inlineDebounceRef.current) {
+         clearTimeout(inlineDebounceRef.current);
+         inlineDebounceRef.current = null;
+       }
+     };
+   }, []);
 
   useEffect(() => {
     if (isReadonly && initialEntries.length > 0 && !selectedEntry) {
@@ -108,51 +118,67 @@ export function LoomEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Highlight.configure({ multicolor: false }),
-      Placeholder.configure({
-        placeholder: "Write the places, people, rules, and histories that make this world coherent. Grimoire will remember the shape of what you mean.",
-      }),
-      CharacterCount,
-    ],
-    content: selectedEntry?.content ?? "",
-    onUpdate: ({ editor }) => {
-      const text = stripHtml(editor.getHTML());
-      setLiveWordCount(wordCount(text));
+   const editor = useEditor({
+     extensions: [
+       StarterKit,
+       Highlight.configure({ multicolor: false }),
+       Placeholder.configure({
+         placeholder: "Write the places, people, rules, and histories that make this world coherent. Grimoire will remember the shape of what you mean.",
+       }),
+       CharacterCount,
+     ],
+     content: selectedEntry?.content ?? "",
+     onUpdate: ({ editor }) => {
+       const text = stripHtml(editor.getHTML());
+       setLiveWordCount(wordCount(text));
 
-      // FractureLens: debounce inline check (5s idle, bypass rate limit)
-      if (!isReadonly && selectedEntry && text.length >= 80) {
-        if (inlineDebounceRef.current) clearTimeout(inlineDebounceRef.current);
-        inlineDebounceRef.current = setTimeout(async () => {
-          setInlineChecking(true);
-          try {
-            const res = await fetch("/api/consistency/check?inline=true", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ worldId, text: text.slice(0, 2000) }),
-            });
-            if (res.ok) {
-              const data = await res.json();
-              setInlineFlags((data.flags ?? []) as InlineFlag[]);
-            }
-          } catch {
-            // Silent fail — inline checks are best-effort
-          } finally {
-            setInlineChecking(false);
-          }
-        }, 5000);
-      }
-    },
-    onCreate: ({ editor }) => {
-      setLiveWordCount(wordCount(stripHtml(editor.getHTML())));
-    },
-    editorProps: {
-      attributes: { class: "tiptap-loom" },
-    },
-    immediatelyRender: false,
-  });
+       // FractureLens: debounce inline check (5s idle, bypass rate limit)
+       // Only check if content changed significantly to avoid unnecessary API calls
+       const hasSignificantChange = 
+         !isReadonly && 
+         selectedEntry && 
+         text.length >= 80 && 
+         Math.abs(text.length - prevContentRef.current.length) > 20; // Threshold for significant change
+   
+       if (hasSignificantChange) {
+         if (inlineDebounceRef.current) clearTimeout(inlineDebounceRef.current);
+         inlineDebounceRef.current = setTimeout(async () => {
+           setInlineChecking(true);
+           try {
+             const res = await fetch("/api/consistency/check?inline=true", {
+               method: "POST",
+               headers: { "Content-Type": "application/json" },
+               body: JSON.stringify({ worldId, text: text.slice(0, 2000) }),
+             });
+             if (res.ok) {
+               const data = await res.json();
+               setInlineFlags((data.flags ?? []) as InlineFlag[]);
+               // Update previous content after successful check
+               prevContentRef.current = text;
+             }
+           } catch {
+             // Silent fail — inline checks are best-effort
+           } finally {
+             setInlineChecking(false);
+           }
+         }, 5000);
+       }
+       
+       // Update previous content reference for next comparison
+       if (!isReadonly && selectedEntry) {
+         prevContentRef.current = text;
+       }
+     },
+     onCreate: ({ editor }) => {
+       setLiveWordCount(wordCount(stripHtml(editor.getHTML())));
+       // Initialize previous content
+       prevContentRef.current = selectedEntry?.content ?? "";
+     },
+     editorProps: {
+       attributes: { class: "tiptap-loom" },
+     },
+     immediatelyRender: false,
+   });
 
   useEffect(() => {
     if (editor) {
@@ -235,24 +261,30 @@ export function LoomEditor({
     throw new Error("Lore processing is still running. Check back in a moment.");
   }, []);
 
-  const handleDeleteLore = async () => {
-    if (!deletingLore) return;
-    try {
-      const res = await fetch(`/api/lore/${deletingLore.id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error();
-      setEntries((prev) => prev.filter((e) => e.id !== deletingLore.id));
-      if (selectedEntry?.id === deletingLore.id) {
-        setSelectedEntry(null);
-        editor?.commands.clearContent();
-        setTitle("");
-      }
-      toast.success("Lore entry permanently deleted.");
-    } catch {
-      toast.error("Failed to delete lore entry.");
-    } finally {
-      setDeletingLore(null);
-    }
-  };
+   const handleDeleteLore = async () => {
+     if (!deletingLore) return;
+     try {
+       const res = await fetch(`/api/lore/${deletingLore.id}`, { method: "DELETE" });
+       if (!res.ok) throw new Error();
+       setEntries((prev) => prev.filter((e) => e.id !== deletingLore.id));
+       if (selectedEntry?.id === deletingLore.id) {
+         setSelectedEntry(null);
+         editor?.commands.clearContent();
+         setTitle("");
+       }
+       toast.success("Lore entry permanently deleted.");
+     } catch {
+       toast.error("Failed to delete lore entry.");
+     } finally {
+       setDeletingLore(null);
+     }
+   };
+
+   const handleRetryLore = () => {
+     if (!selectedEntry) return;
+     setShowRetry(false);
+     submit();
+   };
 
   const handleOracleWhisper = useCallback(async () => {
     if (!editor || isReadonly || oracleWhispering) return;
@@ -683,49 +715,52 @@ export function LoomEditor({
         ══════════════════════════════════════ */}
         {editor && !isReadonly && (
           <div className="flex shrink-0 items-center gap-0.5 border-b border-[var(--border)] px-2 py-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {/* Inline group */}
-            {inlineButtons.map((btn, i) => (
-              <button
-                key={i}
-                type="button"
-                title={btn.title}
-                onMouseDown={(e) => { e.preventDefault(); btn.action(); }}
-                className={TOOLBAR_BTN(btn.active)}
-              >
-                {btn.icon}
-              </button>
-            ))}
+             {/* Inline group */}
+             {inlineButtons.map((btn, i) => (
+               <button
+                 key={i}
+                 type="button"
+                 title={btn.title}
+                 aria-label={btn.title}
+                 onMouseDown={(e) => { e.preventDefault(); btn.action(); }}
+                 className={TOOLBAR_BTN(btn.active)}
+               >
+                 {btn.icon}
+               </button>
+             ))}
 
             {/* Separator */}
             <span className="mx-1 h-4 w-px shrink-0 bg-[var(--border)]" />
 
-            {/* Block group */}
-            {blockButtons.map((btn, i) => (
-              <button
-                key={i}
-                type="button"
-                title={btn.title}
-                onMouseDown={(e) => { e.preventDefault(); btn.action(); }}
-                className={TOOLBAR_BTN(btn.active)}
-              >
-                {btn.icon}
-              </button>
-            ))}
+             {/* Block group */}
+             {blockButtons.map((btn, i) => (
+               <button
+                 key={i}
+                 type="button"
+                 title={btn.title}
+                 aria-label={btn.title}
+                 onMouseDown={(e) => { e.preventDefault(); btn.action(); }}
+                 className={TOOLBAR_BTN(btn.active)}
+               >
+                 {btn.icon}
+               </button>
+             ))}
 
             {/* Separator */}
             <span className="mx-1 h-4 w-px shrink-0 bg-[var(--border)]" />
 
-            {/* Oracle */}
-            <button
-              type="button"
-              onMouseDown={(e) => { e.preventDefault(); handleOracleWhisper(); }}
-              disabled={oracleWhispering || currentWordCount < 20}
-              title="Oracle's Whisper — AI continuation"
-              className="flex shrink-0 items-center gap-1.5 rounded-[5px] px-2 h-7 text-[11px] font-medium text-[var(--accent)] transition-colors hover:bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] active:scale-95 active:transition-none disabled:opacity-35"
-            >
-              <Sparkles className={cn("h-3.5 w-3.5", oracleWhispering && "animate-pulse")} />
-              <span className="hidden sm:inline">Oracle</span>
-            </button>
+             {/* Oracle */}
+             <button
+               type="button"
+               onMouseDown={(e) => { e.preventDefault(); handleOracleWhisper(); }}
+               disabled={oracleWhispering || currentWordCount < 20}
+               title="Oracle's Whisper — AI continuation"
+               aria-label="Oracle's Whisper — AI continuation"
+               className="flex shrink-0 items-center gap-1.5 rounded-[5px] px-2 h-7 text-[11px] font-medium text-[var(--accent)] transition-colors hover:bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] active:scale-95 active:transition-none disabled:opacity-35"
+             >
+               <Sparkles className={cn("h-3.5 w-3.5", oracleWhispering && "animate-pulse")} />
+               <span className="hidden sm:inline">Oracle</span>
+             </button>
 
             {/* Shortcut hint — pushed to right edge */}
             <span className="ml-auto hidden shrink-0 pr-1 text-[10px] text-[var(--text-muted)] opacity-40 lg:block">
@@ -813,20 +848,32 @@ export function LoomEditor({
           </div>
         </div>
 
-        {/* Processing status */}
-        <AnimatePresence>
-          {processing && (
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 6 }}
-              transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
-              className="shrink-0 border-t border-[var(--border)] px-6 py-3"
-            >
-              <ProcessingStatus steps={steps} />
-            </motion.div>
-          )}
-        </AnimatePresence>
+         {/* Processing status */}
+         <AnimatePresence>
+           {processing && (
+             <motion.div
+               initial={{ opacity: 0, y: 6 }}
+               animate={{ opacity: 1, y: 0 }}
+               exit={{ opacity: 0, y: 6 }}
+               transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+               className="shrink-0 border-t border-[var(--border)] px-6 py-3"
+             >
+               <div className="flex items-center justify-between">
+                 <ProcessingStatus steps={steps} />
+                 {!isReadonly && steps.some(step => step.status === "failed") && (
+                   <button
+                     onClick={handleRetryLore}
+                     disabled={processing}
+                     className="flex items-center gap-2 text-[var(--accent)] hover:text-[var(--accent-soft)] transition-colors"
+                   >
+                     <LoadingSpinner className="h-4 w-4" />
+                     Retry
+                   </button>
+                 )}
+               </div>
+             </motion.div>
+           )}
+         </AnimatePresence>
       </div>
 
       {/* ── Desktop margin panel ── */}

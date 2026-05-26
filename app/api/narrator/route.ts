@@ -180,14 +180,9 @@ export async function POST(request: Request) {
       return Response.json({ timeline: [] });
     }
 
+    // Return flat event array — the client handles era grouping in the component
     const flat = await orderEventsChronologically(events);
-    const grouped = Object.entries(
-      flat.reduce<Record<string, typeof flat>>((acc, e) => {
-        (acc[e.era] ??= []).push(e);
-        return acc;
-      }, {})
-    ).map(([era, evts]) => ({ era, events: evts }));
-    return Response.json({ timeline: grouped });
+    return Response.json({ timeline: flat });
   }
 
   return Response.json({ error: "Unknown action" }, { status: 400 });
@@ -208,11 +203,16 @@ export async function GET(request: Request) {
   if ("error" in auth) return auth.error;
   const { user } = auth;
 
-  if (!hasAiEnv()) {
-    return jsonError("AI_NOT_CONFIGURED", 503, {
-      detail: "Missing GROQ_API_KEY or GEMINI_API_KEY on the server.",
-    });
-  }
+   if (!hasAiEnv()) {
+     return jsonError(
+       "AI_SERVICE_UNAVAILABLE",
+       503,
+       {
+         detail: "AI analysis services are temporarily unavailable. Please try again later.",
+         suggestion: "Check that GROQ_API_KEY and GEMINI_API_KEY are properly configured on the server.",
+       }
+     );
+   }
 
   const supabase = await getSupabase();
   if (!supabase) return jsonError("SUPABASE_NOT_CONFIGURED", 500);

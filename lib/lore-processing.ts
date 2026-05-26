@@ -96,12 +96,13 @@ export async function processLoreEntry({
     });
   }
 
-  await supabase.from("lore_chunks").delete().eq("lore_entry_id", entryId);
-
+  // Insert new chunks first, then delete old ones to avoid data loss on failure
   if (chunkRows.length > 0) {
     const { error } = await supabase.from("lore_chunks").insert(chunkRows);
     if (error) throw error;
   }
+
+  await supabase.from("lore_chunks").delete().eq("lore_entry_id", entryId);
 
   await onEvent?.({ type: "embedding_complete", count: chunkRows.length });
   await onEvent?.({ type: "entity_extraction", count: extractedEntities.length });

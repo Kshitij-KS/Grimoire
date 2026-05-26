@@ -132,31 +132,35 @@ export function NarratorTools({ worldId, isDemo }: NarratorToolsProps & { isDemo
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="mb-6 flex gap-2">
-        <button
-          onClick={() => setTab("impact")}
-          className={`rounded-[14px] px-4 py-2 text-sm transition-all ${
-            tab === "impact"
-              ? "bg-[color-mix(in_srgb,var(--ai-pulse)_15%,transparent)] text-[var(--ai-pulse-soft)] border border-[color-mix(in_srgb,var(--ai-pulse)_30%,transparent)]"
-              : "text-secondary hover:text-foreground border border-transparent"
-          }`}
-        >
-          <Zap className="mr-1.5 inline h-3.5 w-3.5" />
-          Impact Simulator
-        </button>
-        <button
-          onClick={() => setTab("blank-spots")}
-          className={`rounded-[14px] px-4 py-2 text-sm transition-all ${
-            tab === "blank-spots"
-              ? "bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] text-[var(--accent)] border border-[color-mix(in_srgb,var(--accent)_30%,transparent)]"
-              : "text-secondary hover:text-foreground border border-transparent"
-          }`}
-        >
-          <MapPin className="mr-1.5 inline h-3.5 w-3.5" />
-          Lore Holes
-        </button>
-      </div>
+       {/* Tabs */}
+       <div className="mb-6 flex gap-2" role="tablist">
+         <button
+           onClick={() => setTab("impact")}
+           aria-selected={tab === "impact"}
+           role="tab"
+           className={`rounded-[14px] px-4 py-2 text-sm transition-all ${
+             tab === "impact"
+               ? "bg-[color-mix(in_srgb,var(--ai-pulse)_15%,transparent)] text-[var(--ai-pulse-soft)] border border-[color-mix(in_srgb,var(--ai-pulse)_30%,transparent)]"
+               : "text-secondary hover:text-foreground border border-transparent"
+           }`}
+         >
+           <Zap className="mr-1.5 inline h-3.5 w-3.5" />
+           Impact Simulator
+         </button>
+         <button
+           onClick={() => setTab("blank-spots")}
+           aria-selected={tab === "blank-spots"}
+           role="tab"
+           className={`rounded-[14px] px-4 py-2 text-sm transition-all ${
+             tab === "blank-spots"
+               ? "bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] text-[var(--accent)] border border-[color-mix(in_srgb,var(--accent)_30%,transparent)]"
+               : "text-secondary hover:text-foreground border border-transparent"
+           }`}
+         >
+           <MapPin className="mr-1.5 inline h-3.5 w-3.5" />
+           Lore Holes
+         </button>
+       </div>
 
       <AnimatePresence mode="wait">
         {tab === "impact" && (
