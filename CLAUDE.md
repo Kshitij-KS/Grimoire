@@ -536,6 +536,153 @@ supabase db reset              # Reset local DB and run all migrations
 
 ---
 
+## The Crucible — LLM Benchmark Harness (Local Dev Only)
+
+The benchmarking feature ("The Crucible") lets you run academic evaluation tasks (ARC, HellaSwag, MMLU, etc.) against Groq-hosted models and view results in a dashboard UI.
+
+**⚠️ This feature is strictly local-development only.** The page returns 404 in production (`NODE_ENV !== "development"`). The Python sidecar is excluded from deployment via `.vercelignore` and `.gitignore`. Do not attempt to deploy the sidecar.
+
+### Architecture Overview
+
+```
+Browser → Next.js (/api/eval/runs)
+             ↓  HTTP + shared secret
+        Python Sidecar (port 8001)
+             ↓  lm_eval.simple_evaluate()
+          Groq API (local-chat-completions)
+             ↓  results via webhook
+        Next.js (/api/eval/webhook)
+             ↓
+         Supabase (eval_runs table)
+```
+
+- **Python sidecar** (`scripts/eval-service/`): FastAPI app on port `8001`. Wraps `lm-evaluation-harness` to run benchmarks in a background thread against Groq's OpenAI-compatible API.
+- **Next.js frontend**: Talks to the sidecar via a shared secret (`EVAL_SIDECAR_SECRET`). Receives results via a webhook (`/api/eval/webhook`) and persists them to the `eval_runs` Supabase table.
+- **UI page**: `/dashboard/benchmarks` — only accessible when `NODE_ENV === "development"`.
+
+### Step-by-Step: Running Benchmarks Locally
+
+#### Step 1 — Prerequisites
+
+- Python **3.9 or higher** must be installed. Verify with:
+  ```bash
+  python --version
+  ```
+- Your normal Next.js dev environment must be working (`npm run dev`).
+
+#### Step 2 — One-time Setup (run once)
+
+From the **project root**, run the setup script. This creates a Python virtual environment at `scripts/eval-service/.venv` and installs all dependencies:
+
+```bash
+npm run eval:setup
+```
+
+This script will also copy `scripts/eval-service/.env.example` → `scripts/eval-service/.env` if it doesn't already exist.
+
+#### Step 3 — Configure the Sidecar `.env`
+
+Open `scripts/eval-service/.env` and fill in your keys. The critical ones:
+
+```env
+GROQ_API_KEY=gsk_...            # Same key as in your root .env.local
+SIDECAR_SECRET=change-me-in-production   # Must match EVAL_SIDECAR_SECRET in .env.local
+WEBHOOK_SECRET=change-me-in-production   # Must match EVAL_WEBHOOK_SECRET in .env.local
+NEXTJS_BASE_URL=http://localhost:3000    # Where the sidecar posts webhook results
+```
+
+Verify your root `.env.local` has matching values:
+
+```env
+EVAL_SIDECAR_SECRET=change-me-in-production
+EVAL_WEBHOOK_SECRET=change-me-in-production
+```
+
+#### Step 4 — Start Both Servers (two terminal windows)
+
+**Terminal 1 — Next.js:**
+```bash
+npm run dev
+```
+Next.js will be available at `http://localhost:3000`.
+
+**Terminal 2 — Python sidecar:**
+```bash
+npm run eval:service
+```
+The sidecar will start at `http://localhost:8001`. You should see:
+```
+INFO:     Uvicorn running on http://0.0.0.0:8001
+INFO:     lm-eval sidecar starting up...
+```
+
+#### Step 5 — Access the Benchmark UI
+
+Navigate to:
+```
+http://localhost:3000/dashboard/benchmarks
+```
+
+> **Note:** This URL returns a **404** unless `NODE_ENV=development`. It is never linked in the dashboard sidebar — it is only accessible by typing the URL directly. Log in first if you aren't already.
+
+#### Step 6 — Run a Benchmark
+
+1. In the UI, select a **model** (e.g., `llama-3.3-70b-versatile`) and one or more **tasks** (e.g., ARC Easy, HellaSwag).
+2. Set the number of **samples** (5–500; lower = faster).
+3. Click **Run Evaluation**.
+4. The UI polls for status every few seconds. When done, results appear as a score table.
+
+### Sidecar API Reference
+
+The sidecar exposes these endpoints (all on `http://localhost:8001`):
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Health check — confirms Groq key is loaded |
+| `GET` | `/tasks` | List all supported benchmark task IDs and labels |
+| `POST` | `/run` | Start a new evaluation run (requires `x-sidecar-secret` header) |
+| `GET` | `/status/{runId}` | Poll in-memory run state (requires `x-sidecar-secret` header) |
+| `GET` | `/docs` | FastAPI interactive docs (Swagger UI) |
+
+**Auth header required on `/run` and `/status`:**
+```
+x-sidecar-secret: <value of SIDECAR_SECRET in scripts/eval-service/.env>
+```
+
+### Supported Benchmark Tasks
+
+| Task ID | Label | Category | ~Samples |
+|---------|-------|----------|----------|
+| `arc_easy` | ARC Easy | Reasoning | 2,376 |
+| `arc_challenge` | ARC Challenge | Reasoning | 1,172 |
+| `hellaswag` | HellaSwag | Common Sense | 10,042 |
+| `winogrande` | Winogrande | Common Sense | 1,267 |
+| `truthfulqa_mc1` | TruthfulQA (MC1) | Knowledge | 817 |
+| `mmlu` | MMLU (Full) | Knowledge | 14,042 |
+| `boolq` | BoolQ | Reasoning | 3,270 |
+| `piqa` | PIQA | Common Sense | 1,838 |
+
+### Key Implementation Notes
+
+- **Evaluation runs in a daemon background thread** — the sidecar returns immediately after `POST /run`; the actual benchmark runs asynchronously. Results are posted back to Next.js via the webhook at `/api/eval/webhook` on completion.
+- **`num_concurrent: 1`** is enforced in `evaluator.py` to respect Groq's rate limits. Evaluations with many samples will take time.
+- **In-memory state only** — the sidecar tracks run state in a Python dict (`_run_states`). Restarting the sidecar loses all in-progress run state. The Next.js frontend falls back to Supabase for persisted run history.
+- **The sidecar runs as a local process only** — it is not part of the Next.js process and must be started separately each development session.
+- **Groq Adapter** (`groq_adapter.py`) configures `lm_eval` to use Groq's `https://api.groq.com/openai/v1` endpoint as an OpenAI-compatible API via the `local-chat-completions` model type.
+
+### Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| `/dashboard/benchmarks` returns 404 | You're not in `NODE_ENV=development`. Only works with `npm run dev`. |
+| `GROQ_API_KEY not configured on sidecar` | Fill in `GROQ_API_KEY` in `scripts/eval-service/.env` |
+| `Invalid sidecar secret` (401) | `SIDECAR_SECRET` in `scripts/eval-service/.env` must match `EVAL_SIDECAR_SECRET` in `.env.local` |
+| Sidecar not starting | Run `npm run eval:setup` first to install Python dependencies |
+| `python` not found during setup | Install Python 3.9+ and ensure it's on your PATH |
+| Webhook errors in sidecar logs | Confirm Next.js is running on port 3000 and `NEXTJS_BASE_URL` is correct in `scripts/eval-service/.env` |
+
+---
+
 ## Known Gaps (from audit_report.md)
 
 These are deliberate blockers, not bugs:

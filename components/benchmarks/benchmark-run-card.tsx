@@ -50,10 +50,17 @@ export function BenchmarkRunCard({
   };
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onSelect(run)}
-      className="w-full text-left rounded-xl border p-4 transition-all duration-200 active:scale-[0.98] active:transition-none"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect(run);
+        }
+      }}
+      className="w-full text-left rounded-xl border p-4 transition-all duration-200 active:scale-[0.98] active:transition-none cursor-pointer"
       style={{
         backgroundColor: isSelected ? "color-mix(in srgb, var(--ai-pulse) 8%, var(--surface))" : "var(--surface)",
         borderColor: isSelected ? "var(--ai-pulse)" : "var(--border)",
@@ -147,6 +154,6 @@ export function BenchmarkRunCard({
           {run.error_message}
         </p>
       )}
-    </button>
+    </div>
   );
 }
