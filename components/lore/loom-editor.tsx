@@ -164,10 +164,6 @@ export function LoomEditor({
          }, 5000);
        }
 
-       // Update previous content reference for next comparison
-       if (!isReadonly && selectedEntry) {
-         prevContentRef.current = text;
-       }
      },
      onCreate: ({ editor }) => {
        setLiveWordCount(wordCount(stripHtml(editor.getHTML())));
