@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { SUPPORTED_EVAL_TASKS } from "@/lib/constants";
 import type { EvalTaskId } from "@/lib/constants";
 
