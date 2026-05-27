@@ -3,7 +3,7 @@ export interface ChunkedText {
   chunkIndex: number;
 }
 
-function splitIntoSentences(paragraph: string) {
+export function splitIntoSentences(paragraph: string) {
   return paragraph
     .split(/(?<=[.!?])\s+/)
     .map((sentence) => sentence.trim())
