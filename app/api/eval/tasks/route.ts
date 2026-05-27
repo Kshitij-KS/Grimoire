@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { SUPPORTED_EVAL_TASKS, EVAL_SIDECAR_URL } from "@/lib/constants";
-import { requireUser, jsonError } from "@/lib/api";
+import { requireUser } from "@/lib/api";
 import type { EvalTask } from "@/lib/types";
 
 // ── GET /api/eval/tasks ────────────────────────────────────────────────────
