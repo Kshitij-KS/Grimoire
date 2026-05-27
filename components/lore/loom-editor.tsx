@@ -23,7 +23,6 @@ import { ProcessingStatus, type ProcessingStep } from "@/components/lore/process
 import { DestructiveActionModal } from "@/components/shared/destructive-action-modal";
 import { cn, stripHtml } from "@/lib/utils";
 import type { LoreEntry } from "@/lib/types";
-import { requireUser } from "@/lib/api";
 
 function wordCount(text: string) {
   return text.trim() ? text.trim().split(/\s+/).length : 0;
@@ -71,7 +70,6 @@ export function LoomEditor({
    const [deletingLore, setDeletingLore] = useState<{ id: string; title: string } | null>(null);
    const [importModalOpen, setImportModalOpen] = useState(false);
    const [lastMilestone, setLastMilestone] = useState(0);
-   const [showRetry, setShowRetry] = useState(false);
 
     const [spineOpen, setSpineOpen] = useState(true);
     const [marginOpen, setMarginOpen] = useState(false);
@@ -282,7 +280,6 @@ export function LoomEditor({
 
    const handleRetryLore = () => {
      if (!selectedEntry) return;
-     setShowRetry(false);
      submit();
    };
 

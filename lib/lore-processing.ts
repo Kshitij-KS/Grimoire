@@ -18,7 +18,10 @@ type SupabaseTable = {
     eq: (column: string, value: string) => SupabaseMutationResult;
   };
   insert: (values: unknown) => SupabaseMutationResult;
-  upsert: (values: unknown, options?: Record<string, unknown>) => SupabaseMutationResult;
+  upsert: (
+    values: unknown,
+    options?: Record<string, unknown>,
+  ) => SupabaseMutationResult;
 };
 
 type ProcessLoreEntryOptions = {
@@ -40,7 +43,9 @@ async function embedWithRetry(content: string, chunkIndex: number) {
     } catch (error) {
       lastError = error;
       if (attempt < 3) {
-        await new Promise((resolve) => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.pow(2, attempt) * 1000),
+        );
       }
     }
   }
@@ -83,7 +88,9 @@ export async function processLoreEntry({
 
     const embedding = await embedWithRetry(chunk.content, chunk.chunkIndex);
     const entityTags = extractedEntities
-      .filter((entity) => chunk.content.toLowerCase().includes(entity.name.toLowerCase()))
+      .filter((entity) =>
+        chunk.content.toLowerCase().includes(entity.name.toLowerCase()),
+      )
       .map((entity) => entity.name);
 
     chunkRows.push({
@@ -105,14 +112,19 @@ export async function processLoreEntry({
   await supabase.from("lore_chunks").delete().eq("lore_entry_id", entryId);
 
   await onEvent?.({ type: "embedding_complete", count: chunkRows.length });
-  await onEvent?.({ type: "entity_extraction", count: extractedEntities.length });
+  await onEvent?.({
+    type: "entity_extraction",
+    count: extractedEntities.length,
+  });
 
-  for (const entity of extractedEntities) {
-    const { error } = await supabase.rpc("upsert_entity_with_mention", {
-      p_world_id: worldId,
-      p_name: entity.name,
-      p_type: entity.type,
-      p_summary: entity.summary ?? null,
+  if (extractedEntities.length > 0) {
+    const { error } = await supabase.rpc("upsert_entities_with_mention", {
+      p_entities: extractedEntities.map((entity) => ({
+        world_id: worldId,
+        name: entity.name,
+        type: entity.type,
+        summary: entity.summary ?? null,
+      })),
     });
     if (error) throw error;
   }

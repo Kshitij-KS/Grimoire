@@ -4,10 +4,16 @@ describe("processLoreEntry", () => {
   it("creates chunks and entities for a lore entry", async () => {
     vi.resetModules();
     vi.doMock("@/lib/embeddings", () => ({
-      embedText: vi.fn().mockResolvedValue(Array.from({ length: 768 }, () => 0.1)),
+      embedText: vi
+        .fn()
+        .mockResolvedValue(Array.from({ length: 768 }, () => 0.1)),
       extractEntities: vi.fn().mockResolvedValue([
         { name: "Mira Ashveil", type: "character", summary: "A deserter." },
-        { name: "Night of Hollow Glass", type: "event", summary: "A betrayal." },
+        {
+          name: "Night of Hollow Glass",
+          type: "event",
+          summary: "A betrayal.",
+        },
       ]),
     }));
 
@@ -41,8 +47,14 @@ describe("processLoreEntry", () => {
         };
       },
       rpc(name: string, params: unknown) {
-        upserts.entities ??= [];
-        upserts.entities.push(params);
+        if (name === "upsert_entities_with_mention") {
+          const typedParams = params as { p_entities: unknown[] };
+          upserts.entities ??= [];
+          upserts.entities.push(...typedParams.p_entities);
+        } else {
+          upserts.entities ??= [];
+          upserts.entities.push(params);
+        }
         return Promise.resolve({ error: null });
       },
     };
@@ -59,7 +71,9 @@ describe("processLoreEntry", () => {
     expect(deletes).toContain("lore_chunks");
     expect(inserts.lore_chunks).toHaveLength(1);
     expect(upserts.entities).toHaveLength(2);
-    expect(updates.lore_entries).toContainEqual({ processing_status: "complete" });
+    expect(updates.lore_entries).toContainEqual({
+      processing_status: "complete",
+    });
     expect(result.chunksCreated).toBe(1);
     expect(result.entitiesFound).toHaveLength(2);
   });
