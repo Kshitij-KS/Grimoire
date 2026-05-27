@@ -158,6 +158,7 @@ function formatRelative(dateStr: string) {
 }
 
 function groupActivityByDate(items: ActivityItem[]) {
+  const groupsMap = new Map<string, { label: string; items: ActivityItem[] }>();
   const groups: { label: string; items: ActivityItem[] }[] = [];
   const now = new Date();
   const todayStr = now.toDateString();
@@ -166,9 +167,15 @@ function groupActivityByDate(items: ActivityItem[]) {
   for (const item of items) {
     const d = new Date(item.created_at).toDateString();
     const label = d === todayStr ? "Today" : d === yestStr ? "Yesterday" : formatRelative(item.created_at);
-    const existing = groups.find((g) => g.label === label);
-    if (existing) existing.items.push(item);
-    else groups.push({ label, items: [item] });
+
+    const existing = groupsMap.get(label);
+    if (existing) {
+      existing.items.push(item);
+    } else {
+      const newGroup = { label, items: [item] };
+      groupsMap.set(label, newGroup);
+      groups.push(newGroup);
+    }
   }
   return groups;
 }
