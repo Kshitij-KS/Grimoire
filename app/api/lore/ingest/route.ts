@@ -23,11 +23,16 @@ function sseEvent(event: string, data: Record<string, unknown>) {
 export async function POST(request: Request) {
   const auth = await requireUser();
   if ("error" in auth) return auth.error;
-  if (!hasAiEnv()) {
-    return jsonError("AI_NOT_CONFIGURED", 503, {
-      detail: "Missing GROQ_API_KEY or GEMINI_API_KEY on the server.",
-    });
-  }
+   if (!hasAiEnv()) {
+     return jsonError(
+       "AI_SERVICE_UNAVAILABLE",
+       503,
+       {
+         detail: "AI services are temporarily unavailable. Please try again later.",
+         suggestion: "Check that GROQ_API_KEY and GEMINI_API_KEY are properly configured on the server.",
+       }
+     );
+   }
 
   const body = await request.json();
   const parsed = schema.safeParse(body);

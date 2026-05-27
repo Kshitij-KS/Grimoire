@@ -30,7 +30,7 @@ export async function DELETE(
     return Response.json({ success: true, message: "No history found." });
   }
 
-  const convoIds = convos.map((c) => c.id);
+  const convoIds = (convos as Array<{ id: string }>).map((c) => c.id);
 
   const { error: messageError } = await supabase
     .from("messages")

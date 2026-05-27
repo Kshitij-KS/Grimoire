@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { TaskSelector } from "./task-selector";
 import { BenchmarkRunCard } from "./benchmark-run-card";
 import { BenchmarkResultsPanel } from "./benchmark-results-panel";
-import { EVAL_MODELS, EVAL_DEFAULT_SAMPLES, SUPPORTED_EVAL_TASKS, DAILY_LIMITS } from "@/lib/constants";
+import { EVAL_MODELS, EVAL_DEFAULT_SAMPLES, DAILY_LIMITS } from "@/lib/constants";
 import type { EvalRun, EvalRunWithResults } from "@/lib/types";
 import type { EvalTaskId, EvalModelId } from "@/lib/constants";
 
@@ -66,7 +66,7 @@ export function BenchmarkDashboard({ initialRuns }: BenchmarkDashboardProps) {
       if (!res.ok) throw new Error("Failed to fetch run details");
       const json = (await res.json()) as { run: EvalRunWithResults };
       setSelectedRunDetails(json.run);
-    } catch (err) {
+    } catch {
       toast.error("Failed to load results");
     } finally {
       setLoadingDetails(false);
@@ -298,6 +298,7 @@ export function BenchmarkDashboard({ initialRuns }: BenchmarkDashboardProps) {
                 </div>
                 <input
                   type="range"
+                  aria-label="Samples per task"
                   min={5}
                   max={500}
                   step={5}
@@ -343,7 +344,7 @@ export function BenchmarkDashboard({ initialRuns }: BenchmarkDashboardProps) {
                 <div className="flex items-center gap-3 py-8 justify-center">
                   <span className="animate-spin text-xl" style={{ color: "var(--ai-pulse)" }}>◈</span>
                   <span className="text-sm" style={{ color: "var(--text-muted)" }}>
-                    Reading the oracle's findings...
+                    Reading the oracle&apos;s findings...
                   </span>
                 </div>
               )}

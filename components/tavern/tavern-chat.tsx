@@ -528,6 +528,7 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
         <div className="flex items-center gap-2">
           <input
             value={input}
+            aria-label="Message input"
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {

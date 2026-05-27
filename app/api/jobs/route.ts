@@ -83,7 +83,7 @@ export async function POST(request: Request) {
       .eq("user_id", user.id)
       .eq("status", "failed");
 
-    const retryableJobs = (jobs ?? []).filter((job) => job.retry_count < job.max_retries);
+    const retryableJobs = (jobs as Array<{ id: string; retry_count: number; max_retries: number; type: string; payload: Record<string, unknown>; event_name: string }> ?? []).filter((job) => job.retry_count < job.max_retries);
     const queued: string[] = [];
     const failed: Array<{ id: string; error: string }> = [];
 

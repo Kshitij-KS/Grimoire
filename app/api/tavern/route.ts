@@ -128,7 +128,7 @@ export async function POST(request: Request) {
 
   if (!souls || souls.length === 0) return Response.json({ error: "NO_SOULS" }, { status: 400 });
 
-  if (directedToSoulId && !souls.some((s) => s.id === directedToSoulId)) {
+  if (directedToSoulId && !(souls as Array<{ id: string }>).some((s) => s.id === directedToSoulId)) {
     return jsonError("INVALID_DIRECTED_SOUL", 400);
   }
 
@@ -153,7 +153,7 @@ export async function POST(request: Request) {
   const history = (recentMessages ?? [])
     .reverse()
     .map((m: { role: string; content: string; soul_id: string | null }) => {
-      const soul = souls.find((s) => s.id === m.soul_id);
+      const soul = (souls as Array<{ id: string; name: string }>).find((s) => s.id === m.soul_id);
       const speaker = soul ? soul.name : "Director";
       return `${speaker}: ${m.content}`;
     })
@@ -173,7 +173,7 @@ export async function POST(request: Request) {
   );
 
   const targetSoul = directedToSoulId
-    ? souls.find((s) => s.id === directedToSoulId)?.name ?? null
+    ? (souls as Array<{ id: string; name: string }>).find((s) => s.id === directedToSoulId)?.name ?? null
     : null;
 
   // Build the set of valid soul names for hallucination guard
@@ -181,7 +181,7 @@ export async function POST(request: Request) {
 
   // Generate responses
   const responses = await generateTavernResponse(
-    souls.map((s) => ({ name: s.name, soul_card: s.soul_card ?? {} })),
+    (souls as Array<{ name: string; soul_card: unknown }>).map((s) => ({ name: s.name, soul_card: (s.soul_card ?? {}) as Record<string, unknown> })),
     targetSoul,
     message,
     history,

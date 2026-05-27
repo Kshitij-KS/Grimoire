@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type ProcessingStepStatus = "idle" | "active" | "complete";
+export type ProcessingStepStatus = "idle" | "active" | "complete" | "failed";
 
 export interface ProcessingStep {
   id: "saved" | "chunking" | "embedding" | "entities" | "complete";
@@ -26,16 +26,18 @@ export function ProcessingStatus({ steps }: { steps: ProcessingStep[] }) {
             transition={{ delay: index * 0.05, duration: 0.2 }}
             className="flex items-center gap-3"
           >
-            <div
-              className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-full border transition-all duration-300",
-                step.status === "complete"
-                  ? "border-[rgba(74,156,109,0.35)] bg-[rgba(74,156,109,0.12)] text-[rgb(183,247,208)]"
-                  : step.status === "active"
-                    ? "border-[color-mix(in_srgb,var(--ai-pulse)_35%,transparent)] bg-[color-mix(in_srgb,var(--ai-pulse)_15%,transparent)] text-foreground"
-                    : "border-border bg-[color-mix(in_srgb,var(--surface)_50%,transparent)] text-secondary",
-              )}
-            >
+             <div
+               className={cn(
+                 "flex h-8 w-8 items-center justify-center rounded-full border transition-all duration-300",
+                 step.status === "complete"
+                   ? "border-[rgba(74,156,109,0.35)] bg-[rgba(74,156,109,0.12)] text-[rgb(183,247,208)]"
+                   : step.status === "active"
+                     ? "border-[color-mix(in_srgb,var(--ai-pulse)_35%,transparent)] bg-[color-mix(in_srgb,var(--ai-pulse)_15%,transparent)] text-foreground"
+                     : step.status === "failed"
+                       ? "border-[color-mix(in_srgb,var(--danger)_35%,transparent)] bg-[color-mix(in_srgb,var(--danger)_15%,transparent)] text-[var(--danger)]"
+                       : "border-border bg-[color-mix(in_srgb,var(--surface)_50%,transparent)] text-secondary",
+               )}
+             >
               <AnimatePresence mode="wait">
                 {step.status === "active" ? (
                   <motion.span

@@ -50,15 +50,33 @@ export async function getWorldsForDashboard() {
   if (!user) return [];
 
   const supabase = createServerSupabaseClient();
-  const { data: worlds } = await supabase
-    .from("worlds")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("updated_at", { ascending: false });
 
-  if (!worlds) return [];
+  // Fetch both owned worlds and worlds where user is a member
+  const [ownedWorlds, memberEntries] = await Promise.all([
+    supabase.from("worlds").select("*").eq("user_id", user.id).order("updated_at", { ascending: false }),
+    supabase.from("world_members").select("world_id").eq("user_id", user.id),
+  ]);
 
-  const worldIds = worlds.map((world) => world.id);
+  const owned = ownedWorlds.data ?? [];
+  const memberWorldIds = memberEntries.data?.map((m) => m.world_id) ?? [];
+
+  // Fetch member worlds (that aren't already owned)
+  const memberWorldIdsToFetch = memberWorldIds.filter((id) => !owned.some((w) => w.id === id));
+  let memberWorlds: Array<Record<string, unknown>> = [];
+  if (memberWorldIdsToFetch.length > 0) {
+    const { data } = await supabase
+      .from("worlds")
+      .select("*")
+      .in("id", memberWorldIdsToFetch)
+      .order("updated_at", { ascending: false });
+    memberWorlds = data ?? [];
+  }
+
+  const allWorlds = [...owned, ...memberWorlds] as Array<Record<string, unknown>> as Array<{ id: string; [key: string]: unknown }>;
+  if (allWorlds.length === 0) return [];
+
+  const worldIds = allWorlds.map((world) => world.id);
+
   const [loreEntriesRes, soulsRes, flagsRes] = await Promise.all([
     supabase.from("lore_entries").select("world_id").in("world_id", worldIds),
     supabase.from("souls").select("world_id").in("world_id", worldIds),
@@ -75,7 +93,7 @@ export async function getWorldsForDashboard() {
   const soulCounts = countByWorld(soulsRes.data as Array<{ world_id: string }> | null);
   const flagCounts = countByWorld(flagsRes.data as Array<{ world_id: string }> | null);
 
-  return worlds.map((world) => ({
+  return allWorlds.map((world) => ({
     ...world,
     stats: {
       loreEntries: loreCounts[world.id] ?? 0,
@@ -100,7 +118,7 @@ export async function getUsageMeters(userId: string): Promise<UsageMeter[]> {
     ([action, limit]) => ({
       action,
       limit,
-      count: data?.find((row) => row.action === action)?.count ?? 0,
+      count: (data as Array<{ action: string; count: number }> | null)?.find((row) => row.action === action)?.count ?? 0,
     }),
   );
 }

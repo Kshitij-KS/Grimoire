@@ -96,12 +96,17 @@ export async function processLoreEntry({
     });
   }
 
+  // Delete old chunks first
   await supabase.from("lore_chunks").delete().eq("lore_entry_id", entryId);
 
+
+  // Insert new chunks
   if (chunkRows.length > 0) {
     const { error } = await supabase.from("lore_chunks").insert(chunkRows);
     if (error) throw error;
   }
+
+
 
   await onEvent?.({ type: "embedding_complete", count: chunkRows.length });
   await onEvent?.({ type: "entity_extraction", count: extractedEntities.length });
