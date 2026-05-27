@@ -24,6 +24,7 @@ import { DestructiveActionModal } from "@/components/shared/destructive-action-m
 import { cn, stripHtml } from "@/lib/utils";
 import type { LoreEntry } from "@/lib/types";
 
+
 function wordCount(text: string) {
   return text.trim() ? text.trim().split(/\s+/).length : 0;
 }
@@ -70,6 +71,7 @@ export function LoomEditor({
    const [deletingLore, setDeletingLore] = useState<{ id: string; title: string } | null>(null);
    const [importModalOpen, setImportModalOpen] = useState(false);
    const [lastMilestone, setLastMilestone] = useState(0);
+   const [, setShowRetry] = useState(false);
 
     const [spineOpen, setSpineOpen] = useState(true);
     const [marginOpen, setMarginOpen] = useState(false);
@@ -132,12 +134,12 @@ export function LoomEditor({
 
        // FractureLens: debounce inline check (5s idle, bypass rate limit)
        // Only check if content changed significantly to avoid unnecessary API calls
-       const hasSignificantChange = 
-         !isReadonly && 
-         selectedEntry && 
-         text.length >= 80 && 
+       const hasSignificantChange =
+         !isReadonly &&
+         selectedEntry &&
+         text.length >= 80 &&
          Math.abs(text.length - prevContentRef.current.length) > 20; // Threshold for significant change
-   
+
        if (hasSignificantChange) {
          if (inlineDebounceRef.current) clearTimeout(inlineDebounceRef.current);
          inlineDebounceRef.current = setTimeout(async () => {
@@ -161,11 +163,7 @@ export function LoomEditor({
            }
          }, 5000);
        }
-       
-       // Update previous content reference for next comparison
-       if (!isReadonly && selectedEntry) {
-         prevContentRef.current = text;
-       }
+
      },
      onCreate: ({ editor }) => {
        setLiveWordCount(wordCount(stripHtml(editor.getHTML())));
@@ -280,6 +278,7 @@ export function LoomEditor({
 
    const handleRetryLore = () => {
      if (!selectedEntry) return;
+     setShowRetry(false);
      submit();
    };
 

@@ -100,7 +100,7 @@ export async function POST(request: Request) {
     return jsonError("ENTITY_NOT_FOUND", 404);
   }
 
-  const entitiesAreInWorld = entities.every((entity) => entity.world_id === parsed.data.worldId);
+  const entitiesAreInWorld = (entities as Array<{ world_id: string }>).every((entity) => entity.world_id === parsed.data.worldId);
   if (!entitiesAreInWorld) {
     return jsonError("ENTITY_WORLD_MISMATCH", 400);
   }

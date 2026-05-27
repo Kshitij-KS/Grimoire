@@ -4,14 +4,18 @@ import { env } from "@/lib/env";
 
 export function createServerSupabaseClient() {
   if (!env.nextPublicSupabaseUrl || !env.nextPublicSupabaseAnonKey) {
-    throw new Error("Missing Supabase environment variables.");
+    if (process.env.NEXT_PHASE === "phase-production-build") {
+      console.warn("Missing Supabase environment variables. Returning placeholder client for build.");
+    } else {
+      throw new Error("Missing Supabase environment variables.");
+    }
   }
 
   const cookieStore = cookies();
 
   return createServerClient(
-    env.nextPublicSupabaseUrl,
-    env.nextPublicSupabaseAnonKey,
+    env.nextPublicSupabaseUrl || "https://placeholder.supabase.co",
+    env.nextPublicSupabaseAnonKey || "placeholder",
     {
       cookies: {
         get(name: string) {

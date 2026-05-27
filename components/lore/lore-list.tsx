@@ -73,6 +73,7 @@ export function LoreList({
                 {!isReadonly && onDelete && (
                   <button
                     type="button"
+                    aria-label="Delete lore entry"
                     onClick={(e) => { e.stopPropagation(); onDelete(entry.id, entry.title ?? undefined); }}
                     className="shrink-0 -mr-1 -mt-0.5 rounded-md p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-[color-mix(in_srgb,var(--danger)_12%,transparent)] hover:text-[var(--danger)] text-[var(--text-muted)]"
                   >

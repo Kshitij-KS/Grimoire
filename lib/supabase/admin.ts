@@ -3,12 +3,16 @@ import { env, hasServerSupabaseEnv } from "@/lib/env";
 
 export function createAdminSupabaseClient() {
   if (!hasServerSupabaseEnv()) {
-    throw new Error("Missing Supabase service role environment variables.");
+    if (process.env.NEXT_PHASE === "phase-production-build") {
+      console.warn("Missing Supabase service role environment variables. Returning placeholder client for build.");
+    } else {
+      throw new Error("Missing Supabase service role environment variables.");
+    }
   }
 
   return createClient(
-    env.nextPublicSupabaseUrl!,
-    env.supabaseServiceRoleKey!,
+    env.nextPublicSupabaseUrl || "https://placeholder.supabase.co",
+    env.supabaseServiceRoleKey || "placeholder",
     {
       auth: {
         autoRefreshToken: false,

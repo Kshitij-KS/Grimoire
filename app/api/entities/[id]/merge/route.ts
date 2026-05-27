@@ -61,7 +61,7 @@ export async function POST(
     .contains("entity_tags", [source.name]);
 
   if (chunks && chunks.length > 0) {
-    const updates = chunks.map((chunk) => ({
+    const updates = ((chunks ?? []) as Array<{ id: string; entity_tags: string[] }>).map((chunk) => ({
       id: chunk.id,
       entity_tags: (chunk.entity_tags as string[]).map((tag: string) =>
         tag === source.name ? target.name : tag,

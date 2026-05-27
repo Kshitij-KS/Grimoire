@@ -166,7 +166,7 @@ export async function POST(request: Request) {
   const userPrompt = `${parsed.data.description}
 
 Relevant lore:
-${(loreChunks ?? []).map((chunk) => chunk.content).join("\n\n")}`;
+${((loreChunks ?? []) as Array<{ content: string }>).map((chunk) => chunk.content).join("\n\n")}`;
 
   let soulCard;
   try {

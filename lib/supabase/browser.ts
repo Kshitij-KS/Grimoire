@@ -8,12 +8,16 @@ let browserClient: SupabaseClient | null = null;
 
 export function createClient() {
   if (!publicEnv.nextPublicSupabaseUrl || !publicEnv.nextPublicSupabaseAnonKey) {
-    throw new Error("Missing Supabase browser environment variables.");
+    if (process.env.NEXT_PHASE === "phase-production-build") {
+      console.warn("Missing Supabase browser environment variables. Returning placeholder client for build.");
+    } else {
+      throw new Error("Missing Supabase browser environment variables.");
+    }
   }
 
   browserClient ??= createBrowserClient(
-    publicEnv.nextPublicSupabaseUrl,
-    publicEnv.nextPublicSupabaseAnonKey,
+    publicEnv.nextPublicSupabaseUrl || "https://placeholder.supabase.co",
+    publicEnv.nextPublicSupabaseAnonKey || "placeholder",
   );
 
   return browserClient;

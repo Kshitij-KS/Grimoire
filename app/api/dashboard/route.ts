@@ -21,7 +21,7 @@ export async function GET() {
     .single();
 
   // Aggregate stats across all worlds
-  const worldIds = (worlds ?? []).map((w) => w.id);
+  const worldIds = ((worlds ?? []) as Array<{ id: string }>).map((w) => w.id);
 
   const [
     { count: totalLore },
@@ -68,10 +68,10 @@ export async function GET() {
       .limit(3),
   ]);
 
-  const worldMap = new Map((worlds ?? []).map((w) => [w.id, w.name]));
+  const worldMap = new Map(((worlds ?? []) as Array<{ id: string; name: string }>).map((w) => [w.id, w.name]));
 
   const activity = [
-    ...(recentLore ?? []).map((l) => ({
+    ...((recentLore ?? []) as Array<{ id: string; title: string | null; world_id: string; created_at: string }>).map((l) => ({
       id: l.id,
       type: "lore_created" as const,
       title: l.title ?? "Untitled Lore",
@@ -80,7 +80,7 @@ export async function GET() {
       world_name: worldMap.get(l.world_id) ?? "Unknown",
       created_at: l.created_at,
     })),
-    ...(recentSouls ?? []).map((s) => ({
+    ...((recentSouls ?? []) as Array<{ id: string; name: string; world_id: string; created_at: string }>).map((s) => ({
       id: s.id,
       type: "soul_forged" as const,
       title: s.name,
@@ -89,7 +89,7 @@ export async function GET() {
       world_name: worldMap.get(s.world_id) ?? "Unknown",
       created_at: s.created_at,
     })),
-    ...(recentChecks ?? []).map((c) => ({
+    ...((recentChecks ?? []) as Array<{ id: string; world_id: string; created_at: string }>).map((c) => ({
       id: c.id,
       type: "consistency_check" as const,
       title: "Consistency Scan",
@@ -108,8 +108,8 @@ export async function GET() {
     .select("world_id, role")
     .eq("user_id", user.id);
 
-  const sharedWorldIds = (memberships ?? []).map((m) => m.world_id);
-  const memberRoleMap = new Map((memberships ?? []).map((m) => [m.world_id, m.role]));
+  const sharedWorldIds = ((memberships ?? []) as Array<{ world_id: string; role: string }>).map((m) => m.world_id);
+  const memberRoleMap = new Map(((memberships ?? []) as Array<{ world_id: string; role: string }>).map((m) => [m.world_id, m.role]));
 
   const { data: sharedWorlds } = sharedWorldIds.length > 0
     ? await supabase.from("worlds").select("*").in("id", sharedWorldIds).order("updated_at", { ascending: false })
@@ -131,11 +131,11 @@ export async function GET() {
   }
 
   return Response.json({
-    worlds: (worlds ?? []).map((w) => ({
+    worlds: ((worlds ?? []) as Array<{ id: string; [key: string]: unknown }>).map((w) => ({
       ...w,
       stats: worldStats[w.id] ?? { lore: 0, souls: 0, entities: 0 },
     })),
-    sharedWorlds: (sharedWorlds ?? []).map((w) => ({
+    sharedWorlds: ((sharedWorlds ?? []) as Array<{ id: string; [key: string]: unknown }>).map((w) => ({
       ...w,
       memberRole: memberRoleMap.get(w.id) ?? "viewer",
       stats: worldStats[w.id] ?? { lore: 0, souls: 0, entities: 0 },

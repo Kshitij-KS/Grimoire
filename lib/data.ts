@@ -76,6 +76,7 @@ export async function getWorldsForDashboard() {
   if (allWorlds.length === 0) return [];
 
   const worldIds = allWorlds.map((world) => world.id);
+
   const [loreEntriesRes, soulsRes, flagsRes] = await Promise.all([
     supabase.from("lore_entries").select("world_id").in("world_id", worldIds),
     supabase.from("souls").select("world_id").in("world_id", worldIds),
@@ -117,7 +118,7 @@ export async function getUsageMeters(userId: string): Promise<UsageMeter[]> {
     ([action, limit]) => ({
       action,
       limit,
-      count: data?.find((row) => row.action === action)?.count ?? 0,
+      count: (data as Array<{ action: string; count: number }> | null)?.find((row) => row.action === action)?.count ?? 0,
     }),
   );
 }

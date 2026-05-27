@@ -298,6 +298,7 @@ export function BenchmarkDashboard({ initialRuns }: BenchmarkDashboardProps) {
                 </div>
                 <input
                   type="range"
+                  aria-label="Samples per task"
                   min={5}
                   max={500}
                   step={5}

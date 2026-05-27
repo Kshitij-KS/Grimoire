@@ -22,7 +22,7 @@ export function hasServerSupabaseEnv() {
 }
 
 export function hasAiEnv() {
-  // Groq for all generation; Gemini for embeddings (both required).
+  // Groq for all generation.
   // HuggingFace token is optional but recommended.
-  return Boolean(env.groqApiKey && env.geminiApiKey);
+  return Boolean(env.groqApiKey);
 }

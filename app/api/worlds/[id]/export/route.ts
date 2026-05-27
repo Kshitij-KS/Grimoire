@@ -191,7 +191,7 @@ export async function GET(
     supabase.from("conversations").select("*").eq("world_id", params.id).eq("user_id", user.id).order("created_at", { ascending: true }),
   ]);
 
-  const conversationIds = (conversations ?? []).map((conversation) => conversation.id);
+  const conversationIds = ((conversations ?? []) as Array<{ id: string }>).map((conversation) => conversation.id);
   const { data: messages } = conversationIds.length > 0
     ? await supabase
       .from("messages")
@@ -215,7 +215,7 @@ export async function GET(
       is_demo: Boolean(world.is_demo),
     },
     lore: {
-      folders: (loreFolders ?? []).map((folder) => ({
+      folders: ((loreFolders ?? []) as Array<{ id: string; name: string; parent_id: string | null; sort_order: number; created_at: string; updated_at: string }>).map((folder) => ({
         id: folder.id,
         name: folder.name,
         parent_id: folder.parent_id,
@@ -223,7 +223,7 @@ export async function GET(
         created_at: folder.created_at,
         updated_at: folder.updated_at,
       })),
-      entries: (loreEntries ?? []).map((entry) => ({
+      entries: ((loreEntries ?? []) as Array<{ id: string; title: string; content: string; folder_id: string | null; processing_status: string | null; created_at: string; updated_at: string | null }>).map((entry) => ({
         id: entry.id,
         title: entry.title,
         folder_id: entry.folder_id ?? null,
@@ -234,7 +234,7 @@ export async function GET(
       })),
     },
     archive: {
-      entities: (entities ?? []).map((entity) => ({
+      entities: ((entities ?? []) as Array<{ id: string; name: string; category: string; description: string; aliases: string[] | null; type: string; summary: string | null; mention_count: number | null; created_at: string | null; updated_at: string | null }>).map((entity) => ({
         id: entity.id,
         name: entity.name,
         type: entity.type,
@@ -245,7 +245,7 @@ export async function GET(
       })),
       relationships: relationships ?? [],
     },
-    souls: (souls ?? []).map((soul) => ({
+    souls: ((souls ?? []) as Array<{ id: string; name: string; entity_id: string | null; description?: string; avatar_color?: string; avatar_initials?: string; is_active?: boolean; soul_card: unknown; system_prompt: string | null; created_at: string; updated_at: string }>).map((soul) => ({
       id: soul.id,
       name: soul.name,
       description: soul.description,
