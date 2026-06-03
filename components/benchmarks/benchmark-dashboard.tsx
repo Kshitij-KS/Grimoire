@@ -6,6 +6,7 @@ import { TaskSelector } from "./task-selector";
 import { BenchmarkRunCard } from "./benchmark-run-card";
 import { BenchmarkResultsPanel } from "./benchmark-results-panel";
 import { EVAL_MODELS, EVAL_DEFAULT_SAMPLES, DAILY_LIMITS } from "@/lib/constants";
+import { trackRateLimitHit } from "@/lib/analytics";
 import type { EvalRun, EvalRunWithResults } from "@/lib/types";
 import type { EvalTaskId, EvalModelId } from "@/lib/constants";
 
@@ -110,6 +111,7 @@ export function BenchmarkDashboard({ initialRuns }: BenchmarkDashboardProps) {
         }
 
         if (res.status === 429) {
+          trackRateLimitHit("eval_run", MAX_EVAL_RUNS_PER_DAY, MAX_EVAL_RUNS_PER_DAY);
           toast.error(
             `The spellwork needs to rest. You've used ${MAX_EVAL_RUNS_PER_DAY}/${MAX_EVAL_RUNS_PER_DAY} evaluation runs today.`,
           );

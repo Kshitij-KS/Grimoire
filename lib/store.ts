@@ -11,6 +11,11 @@ interface LimitModalState {
   limit?: number;
 }
 
+export interface RateLimitEntry {
+  count: number;
+  limit: number;
+}
+
 interface WorkspaceStore {
   section: WorldSection;
   rightPanelOpen: boolean;
@@ -20,6 +25,7 @@ interface WorkspaceStore {
   forgeSoulName: string | null;
   autoSaveDraft: string | null;
   loreDetectedToast: { show: boolean; summary: string | null };
+  rateLimits: Record<string, RateLimitEntry>;
   setSection: (section: WorldSection) => void;
   setRightPanelOpen: (open: boolean) => void;
   setSelectedEntity: (entity: Entity | null) => void;
@@ -30,6 +36,7 @@ interface WorkspaceStore {
   setAutoSaveDraft: (draft: string | null) => void;
   showLoreDetected: (summary: string) => void;
   hideLoreDetected: () => void;
+  setRateLimits: (limits: Record<string, RateLimitEntry>) => void;
 }
 
 export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
@@ -41,6 +48,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
   forgeSoulName: null,
   autoSaveDraft: null,
   loreDetectedToast: { show: false, summary: null },
+  rateLimits: {},
   setSection: (section) => set({ section }),
   setRightPanelOpen: (open) => set({ rightPanelOpen: open }),
   setSelectedEntity: (selectedEntity) => set({ selectedEntity }),
@@ -54,6 +62,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
     set({ loreDetectedToast: { show: true, summary } }),
   hideLoreDetected: () =>
     set({ loreDetectedToast: { show: false, summary: null } }),
+  setRateLimits: (rateLimits) => set({ rateLimits }),
 }));
 
 // ── Offline-first auto-save store ──

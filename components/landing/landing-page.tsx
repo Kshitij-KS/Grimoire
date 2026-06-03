@@ -729,6 +729,13 @@ export function LandingPage() {
               Demo world
             </Link>
             <span className="h-4 w-px bg-[var(--border)]" />
+            <Link href="/terms" className="link-underline transition-colors hover:text-[var(--text-main)]">
+              Terms
+            </Link>
+            <Link href="/privacy" className="link-underline transition-colors hover:text-[var(--text-main)]">
+              Privacy
+            </Link>
+            <span className="h-4 w-px bg-[var(--border)]" />
             <span className="text-xs text-[var(--text-muted)] opacity-65">
               © {new Date().getFullYear()} Grimoire
             </span>

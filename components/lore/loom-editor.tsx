@@ -21,7 +21,11 @@ import { LoreImportModal } from "@/components/lore/lore-import-modal";
 import { LoreList } from "@/components/lore/lore-list";
 import { ProcessingStatus, type ProcessingStep } from "@/components/lore/processing-status";
 import { DestructiveActionModal } from "@/components/shared/destructive-action-modal";
+import { RateLimitWarning } from "@/components/shared/rate-limit-warning";
 import { cn, stripHtml } from "@/lib/utils";
+import { trackCoreAction } from "@/lib/analytics";
+import { useWorkspaceStore } from "@/lib/store";
+import { useRateLimitStatus } from "@/lib/hooks/use-rate-limit-status";
 import type { LoreEntry } from "@/lib/types";
 
 
@@ -92,6 +96,14 @@ export function LoomEditor({
   const inlineDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Rate limit state for lore inscription
+  const { isLimitExhausted, isActionNearLimit } = useRateLimitStatus();
+  const rateLimits = useWorkspaceStore((s) => s.rateLimits);
+  const showLimitModal = useWorkspaceStore((s) => s.showLimitModal);
+  const loreIngestEntry = rateLimits["lore_ingest"];
+  const loreIngestExhausted = isLimitExhausted("lore_ingest");
+  const loreIngestNearLimit = isActionNearLimit("lore_ingest");
 
    useEffect(() => {
      const check = () => {
@@ -344,6 +356,12 @@ export function LoomEditor({
         body: JSON.stringify({ worldId, title: entryTitle, content: text, entryId: selectedEntry?.id }),
       });
       if (!response.ok || !response.body) {
+        if (response.status === 429) {
+          const payload = await response.json().catch(() => ({}));
+          showLimitModal("lore_ingest", loreIngestEntry?.limit);
+          toast.error(payload.error || "Daily lore inscription limit reached.");
+          return;
+        }
         const payload = await response.json();
         throw new Error(payload.error || "Lore ingest failed.");
       }
@@ -359,6 +377,7 @@ export function LoomEditor({
           await pollProcessingStatus(payload.entry.id);
           toast.success("Lore woven into memory.");
           onUsageIncrement?.("lore_ingest");
+          trackCoreAction("lore_inscribed", worldId);
           return;
         }
       }
@@ -391,6 +410,7 @@ export function LoomEditor({
             }
             toast.success("Lore woven into memory.");
             onUsageIncrement?.("lore_ingest");
+            trackCoreAction("lore_inscribed", worldId);
           }
           if (eventName === "error") throw new Error(payload?.error || "Lore ingest failed.");
         }
@@ -683,23 +703,29 @@ export function LoomEditor({
             <span className="h-4 w-px bg-[var(--border)] mx-0.5" />
 
             {!isReadonly && (
-              <button
-                type="button"
-                onClick={submit}
-                disabled={processing}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-md px-2.5 h-7 text-[11px] font-medium transition-colors",
-                  "border border-[color-mix(in_srgb,var(--accent)_35%,transparent)] text-[var(--accent)]",
-                  "hover:bg-[color-mix(in_srgb,var(--accent)_8%,transparent)]",
-                  "active:scale-95 active:transition-none disabled:opacity-50"
+              <>
+                <button
+                  type="button"
+                  onClick={submit}
+                  disabled={processing || loreIngestExhausted}
+                  title={loreIngestExhausted ? "Lore Inscription — daily limit reached. Resets at UTC midnight." : undefined}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-md px-2.5 h-7 text-[11px] font-medium transition-colors",
+                    "border border-[color-mix(in_srgb,var(--accent)_35%,transparent)] text-[var(--accent)]",
+                    "hover:bg-[color-mix(in_srgb,var(--accent)_8%,transparent)]",
+                    "active:scale-95 active:transition-none disabled:opacity-50"
+                  )}
+                >
+                  {processing ? (
+                    <><span className="h-3 w-3 animate-spin rounded-full border-t-[1.5px] border-[var(--accent)]" />Inscribing</>
+                  ) : (
+                    <><CheckSquare className="h-3 w-3" />Inscribe</>
+                  )}
+                </button>
+                {loreIngestEntry && loreIngestNearLimit && (
+                  <RateLimitWarning count={loreIngestEntry.count} limit={loreIngestEntry.limit} />
                 )}
-              >
-                {processing ? (
-                  <><span className="h-3 w-3 animate-spin rounded-full border-t-[1.5px] border-[var(--accent)]" />Inscribing</>
-                ) : (
-                  <><CheckSquare className="h-3 w-3" />Inscribe</>
-                )}
-              </button>
+              </>
             )}
           </div>
         </div>

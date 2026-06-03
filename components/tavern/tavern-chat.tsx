@@ -7,7 +7,11 @@ import { Check, Copy, Crown, Lock, Pencil, Send, Users, Plus, BookMarked, Sparkl
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { RateLimitWarning } from "@/components/shared/rate-limit-warning";
 import { FREE_TIER_LIMITS } from "@/lib/constants";
+import { trackCoreAction } from "@/lib/analytics";
+import { useWorkspaceStore } from "@/lib/store";
+import { useRateLimitStatus } from "@/lib/hooks/use-rate-limit-status";
 import type { PlanTier, Soul, TavernMessage } from "@/lib/types";
 
 interface TavernChatProps {
@@ -37,6 +41,14 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
   const [sessionName, setSessionName] = useState("");
   const nameInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Rate limit state for tavern sessions
+  const { isLimitExhausted, isActionNearLimit } = useRateLimitStatus();
+  const rateLimits = useWorkspaceStore((s) => s.rateLimits);
+  const showLimitModal = useWorkspaceStore((s) => s.showLimitModal);
+  const tavernEntry = rateLimits["tavern_message"];
+  const tavernExhausted = isLimitExhausted("tavern_message");
+  const tavernNearLimit = isActionNearLimit("tavern_message");
 
   const isFree = plan === "free";
   const soulLimit = isFree ? FREE_TIER_LIMITS.tavernSouls : FREE_TIER_LIMITS.tavernSoulsPro;
@@ -75,6 +87,7 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
           canonizedLoreEntryId: data.session.canonized_lore_entry_id ?? null,
         });
         setSessionName(data.session.name ?? "The Tavern");
+        trackCoreAction("tavern_session_created", worldId);
       }
     } catch (e) {
       console.error("Failed to create tavern session:", e);
@@ -110,6 +123,11 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
           directedToSoulId: directedTo,
         }),
       });
+      if (res.status === 429) {
+        showLimitModal("tavern_message", tavernEntry?.limit);
+        toast.error("Daily tavern message limit reached.");
+        return;
+      }
       const data = await res.json();
       if (data.messages) {
         const soulMessages: TavernMessage[] = data.messages.map(
@@ -317,11 +335,17 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
           <Button
             className="w-full"
             onClick={createSession}
-            disabled={selectedSouls.length < 2}
+            disabled={selectedSouls.length < 2 || tavernExhausted}
+            title={tavernExhausted ? "Tavern Sessions — daily limit reached. Resets at UTC midnight." : undefined}
           >
             <Plus className="mr-2 h-4 w-4" />
             Open the Scene ({selectedSouls.length}/{soulLimit} souls)
           </Button>
+          {tavernEntry && tavernNearLimit && (
+            <div className="mt-2 flex justify-center">
+              <RateLimitWarning count={tavernEntry.count} limit={tavernEntry.limit} />
+            </div>
+          )}
         </div>
       </div>
     );
@@ -547,10 +571,14 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
           <Button
             size="sm"
             onClick={sendMessage}
-            disabled={!input.trim() || sending}
+            disabled={!input.trim() || sending || tavernExhausted}
+            title={tavernExhausted ? "Tavern Sessions — daily limit reached. Resets at UTC midnight." : undefined}
           >
             <Send className="h-3.5 w-3.5" />
           </Button>
+          {tavernEntry && tavernNearLimit && (
+            <RateLimitWarning count={tavernEntry.count} limit={tavernEntry.limit} />
+          )}
         </div>
       </div>
     </div>

@@ -18,8 +18,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
+import { RateLimitWarning } from "@/components/shared/rate-limit-warning";
 import { initialsFromName } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { trackCoreAction, trackRateLimitHit } from "@/lib/analytics";
+import { useWorkspaceStore } from "@/lib/store";
+import { useRateLimitStatus } from "@/lib/hooks/use-rate-limit-status";
 import type { Soul } from "@/lib/types";
 
 const AVATAR_COLORS = [
@@ -73,6 +77,14 @@ export function SoulCreationModal({
   const [forging, setForging] = useState(false);
   const [particles, setParticles] = useState<Particle[]>([]);
   const forgeButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Rate limit state for soul forging
+  const { isLimitExhausted, isActionNearLimit } = useRateLimitStatus();
+  const rateLimits = useWorkspaceStore((s) => s.rateLimits);
+  const showLimitModal = useWorkspaceStore((s) => s.showLimitModal);
+  const soulGenerateEntry = rateLimits["soul_generate"];
+  const soulGenerateExhausted = isLimitExhausted("soul_generate");
+  const soulGenerateNearLimit = isActionNearLimit("soul_generate");
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
@@ -143,9 +155,14 @@ export function SoulCreationModal({
         }),
       });
       const payload = await response.json();
-      if (response.status === 429) throw new Error("RATE_LIMIT");
+      if (response.status === 429) {
+        trackRateLimitHit("soul_generate", 3, 3);
+        showLimitModal("soul_generate", soulGenerateEntry?.limit);
+        throw new Error("Daily soul forging limit reached.");
+      }
       if (!response.ok) throw new Error(payload.detail || payload.error || "Soul forging failed.");
       toast.success("Soul forged. The archive has a new voice.");
+      trackCoreAction("soul_forged", worldId);
       setTimeout(() => {
         setForging(false);
         onOpenChange(false);
@@ -374,13 +391,18 @@ export function SoulCreationModal({
                     Back
                   </Button>
 
-                  <div className="relative">
-                    <Button
-                      ref={forgeButtonRef}
-                      onClick={submit}
-                      disabled={loading}
-                      className="relative overflow-hidden"
-                    >
+                  <div className="flex items-center gap-2">
+                    {soulGenerateEntry && soulGenerateNearLimit && (
+                      <RateLimitWarning count={soulGenerateEntry.count} limit={soulGenerateEntry.limit} />
+                    )}
+                    <div className="relative">
+                      <Button
+                        ref={forgeButtonRef}
+                        onClick={submit}
+                        disabled={loading || soulGenerateExhausted}
+                        title={soulGenerateExhausted ? "Soul Forging — daily limit reached. Resets at UTC midnight." : undefined}
+                        className="relative overflow-hidden"
+                      >
                       {loading ? (
                         <>
                           <LoadingSpinner className="text-current" size={16} />
@@ -421,6 +443,7 @@ export function SoulCreationModal({
                         );
                       })}
                     </AnimatePresence>
+                  </div>
                   </div>
                 </div>
               </>

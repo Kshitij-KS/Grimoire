@@ -3,6 +3,7 @@ import { Crimson_Pro, Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import "./globals.css";
 import { AppProviders } from "@/components/providers/app-providers";
+import { PostHogProvider } from "@/components/providers/posthog-provider";
 import { AetherBackground } from "@/components/aether/aether-background";
 import { AmbientAudioProvider } from "@/components/shared/ambient-audio";
 
@@ -24,6 +25,17 @@ export const metadata: Metadata = {
   description:
     "A premium dark fantasy worldbuilding studio for lore, living world bibles, AI character souls, and interactive timelines.",
   keywords: ["worldbuilding", "writing", "AI", "fantasy", "lore", "fiction"],
+  icons: {
+    icon: [
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  manifest: "/site.webmanifest",
+  themeColor: "#0A0A0B",
 };
 
 export default function RootLayout({
@@ -40,8 +52,10 @@ export default function RootLayout({
         >
           <AetherBackground />
           <AppProviders>
-            <AmbientAudioProvider />
-            {children}
+            <PostHogProvider>
+              <AmbientAudioProvider />
+              {children}
+            </PostHogProvider>
           </AppProviders>
         </ThemeProvider>
       </body>

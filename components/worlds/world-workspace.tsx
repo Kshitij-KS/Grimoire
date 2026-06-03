@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Sparkles } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { ArrowLeft, Eye, Sparkles } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { EmptyState } from "@/components/shared/empty-state";
 import { WorldSidebar } from "@/components/layout/world-sidebar";
 import { ArchiveWorkspace } from "@/components/bible/archive-workspace";
 import { FractureLens } from "@/components/consistency/fracture-lens";
@@ -19,13 +20,17 @@ import { SoulCard } from "@/components/souls/soul-card";
 import { SoulCardPanel } from "@/components/souls/soul-card-panel";
 import { SoulCreationModal } from "@/components/souls/soul-creation-modal";
 import { DestructiveActionModal } from "@/components/shared/destructive-action-modal";
+import { OnboardingPanel } from "@/components/shared/onboarding-panel";
 import { Button } from "@/components/ui/button";
 import { Breadcrumbs, type BreadcrumbItem } from "@/components/shared/breadcrumbs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SectionLoadingScreen } from "@/components/shared/loading-shimmer";
+import { useOnboarding } from "@/lib/hooks/use-onboarding";
+import { useRateLimitStatus } from "@/lib/hooks/use-rate-limit-status";
 import { useWorkspaceStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { FREE_TIER_LIMITS } from "@/lib/constants";
+import { trackSectionViewed } from "@/lib/analytics";
 import type { ConsistencyCheck, Entity, EntityRelationship, Soul, UsageMeter, WorldWorkspaceData } from "@/lib/types";
 
 const SECTION_META: Record<string, { label: string; subtitle: string; description: string }> = {
@@ -74,7 +79,15 @@ export function WorldWorkspace({
   checks?: ConsistencyCheck[];
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { limitModal, hideLimitModal, forgeSoulName, setForgeSoulName, selectedEntity } = useWorkspaceStore();
+
+  const navigateToSection = useCallback((section: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("section", section);
+    router.push(`${pathname}?${params.toString()}`);
+  }, [pathname, router, searchParams]);
   const [soulModalOpen, setSoulModalOpen] = useState(false);
   const [activeSoulId, setActiveSoulId] = useState<string | null>(null);
   const [activeSoulCardId, setActiveSoulCardId] = useState<string | null>(null);
@@ -88,12 +101,38 @@ export function WorldWorkspace({
   const [archiveRefreshCount, setArchiveRefreshCount] = useState(0);
   const [prefillDesc, setPrefillDesc] = useState<string | null>(null);
   const [usage, setUsage] = useState<UsageMeter[]>(data.usage);
+  const [loreEmptyDismissed, setLoreEmptyDismissed] = useState(false);
+
+  // ── Onboarding for first-time users ──
+  const isDemo = data.world.is_demo ?? false;
+  const onboarding = useOnboarding({
+    userId: data.world.user_id,
+    worldId: data.world.id,
+  });
+  // Show onboarding panel only for non-demo, active onboarding (not finished, not dismissed)
+  const showOnboarding = !isDemo && !onboarding.isFinished && !onboarding.isDismissed;
+  // Detect if entities are being extracted (step 2 waiting: currentStep is 1, step not yet complete, no entities found yet)
+  const isExtractingEntities = onboarding.currentStep === 1 && !onboarding.completedSteps[1] && entities.length === 0;
 
   const incrementUsage = useCallback((action: string) => {
     setUsage((prev) =>
       prev.map((m) => (m.action === action ? { ...m, count: m.count + 1 } : m))
     );
   }, []);
+
+  // ── Rate limit UX: sync usage into the workspace store ──
+  const { setRateLimits } = useRateLimitStatus(() => {
+    // onDayChange: reset local usage counts at UTC midnight
+    setUsage((prev) => prev.map((m) => ({ ...m, count: 0 })));
+  });
+
+  useEffect(() => {
+    const limits: Record<string, { count: number; limit: number }> = {};
+    for (const meter of usage) {
+      limits[meter.action] = { count: meter.count, limit: meter.limit };
+    }
+    setRateLimits(limits);
+  }, [usage, setRateLimits]);
 
   const suggestedCharacters = useMemo(() => {
     return entities.filter(e => 
@@ -107,7 +146,6 @@ export function WorldWorkspace({
   const deletingSoul = souls.find((s) => s.id === deletingSoulId) ?? null;
   const meta = SECTION_META[data.activeSection] ?? SECTION_META.lore;
   const structuredSection = data.activeSection === "lore" || data.activeSection === "consistency" || data.activeSection === "tapestry" || data.activeSection === "narrator";
-  const isDemo = data.world.is_demo ?? false;
 
   // Simulate loading on section change for "perceived performance" and skeletal demo
   useEffect(() => {
@@ -115,6 +153,11 @@ export function WorldWorkspace({
     const timer = setTimeout(() => setIsTransitioning(false), 400);
     return () => clearTimeout(timer);
   }, [data.activeSection]);
+
+  // Track section views for analytics
+  useEffect(() => {
+    trackSectionViewed(data.activeSection, data.world.id);
+  }, [data.activeSection, data.world.id]);
 
   // Incremental archive refresh — only fetches entities updated since last refresh
   const refreshArchive = useCallback(async () => {
@@ -255,43 +298,84 @@ export function WorldWorkspace({
               className="relative z-10"
             >
             {data.activeSection === "lore" ? (
-              <div className={cn("relative h-[calc(100vh-230px)]", structuredSection ? "mx-auto max-w-[1100px]" : "")}>
-                <LoomEditor worldId={data.world.id} initialEntries={data.loreEntries} isReadonly={data.isReadonly} onUsageIncrement={incrementUsage} />
-              </div>
+              data.loreEntries.length === 0 && !loreEmptyDismissed ? (
+                <div className={cn("mx-auto max-w-[1100px] py-12")}>
+                  <EmptyState
+                    variant="lore"
+                    ctaLabel="Begin Writing"
+                    ctaAction={() => setLoreEmptyDismissed(true)}
+                  />
+                </div>
+              ) : (
+                <div className={cn("relative h-[calc(100vh-230px)]", structuredSection ? "mx-auto max-w-[1100px]" : "")}>
+                  <LoomEditor worldId={data.world.id} initialEntries={data.loreEntries} isReadonly={data.isReadonly} onUsageIncrement={incrementUsage} />
+                </div>
+              )
             ) : null}
 
             {data.activeSection === "bible" ? (
-              <div className="relative h-[calc(100vh-230px)]">
-                <ArchiveWorkspace
-                  worldId={data.world.id}
-                  entities={entities}
-                  relationships={relationships}
-                  souls={souls}
-                  isReadonly={data.isReadonly}
-                  isDemo={isDemo}
-                  isRefreshing={isRefreshingArchive}
-                  refreshCount={archiveRefreshCount}
-                  lastRefreshed={lastRefreshed}
-                  onRefresh={refreshArchive}
-                  onForgeRelationship={(newRel) => setRelationships(prev => [...prev, newRel])}
-                  onDeleteRelationship={(relId) => setRelationships(prev => prev.filter(r => r.id !== relId))}
-                  onCreateSoul={(name) => {
-                    setForgeSoulName(name);
-                    // Navigate to souls section
-                    const url = new URL(window.location.href);
-                    url.searchParams.set("section", "souls");
-                    window.history.pushState({}, "", url.toString());
-                  }}
-                  canCreateSoul={souls.length < FREE_TIER_LIMITS.soulsPerWorld}
-                  onEntityCreated={(entity) => setEntities((prev) => [entity, ...prev])}
-                  onEntityMerged={(deletedId) =>
-                    setEntities((prev) => prev.filter((e) => e.id !== deletedId))
-                  }
-                />
-              </div>
+              entities.length === 0 ? (
+                <div className="mx-auto max-w-[1100px] py-12">
+                  <EmptyState
+                    variant="archive"
+                    ctaLabel="Go to Lore Scribe"
+                    ctaAction={() => navigateToSection("lore")}
+                  />
+                </div>
+              ) : (
+                <div className="relative h-[calc(100vh-230px)]">
+                  <ArchiveWorkspace
+                    worldId={data.world.id}
+                    entities={entities}
+                    relationships={relationships}
+                    souls={souls}
+                    isReadonly={data.isReadonly}
+                    isDemo={isDemo}
+                    isRefreshing={isRefreshingArchive}
+                    refreshCount={archiveRefreshCount}
+                    lastRefreshed={lastRefreshed}
+                    onRefresh={refreshArchive}
+                    onForgeRelationship={(newRel) => setRelationships(prev => [...prev, newRel])}
+                    onDeleteRelationship={(relId) => setRelationships(prev => prev.filter(r => r.id !== relId))}
+                    onCreateSoul={(name) => {
+                      setForgeSoulName(name);
+                      // Navigate to souls section
+                      const url = new URL(window.location.href);
+                      url.searchParams.set("section", "souls");
+                      window.history.pushState({}, "", url.toString());
+                    }}
+                    canCreateSoul={souls.length < FREE_TIER_LIMITS.soulsPerWorld}
+                    onEntityCreated={(entity) => setEntities((prev) => [entity, ...prev])}
+                    onEntityMerged={(deletedId) =>
+                      setEntities((prev) => prev.filter((e) => e.id !== deletedId))
+                    }
+                  />
+                </div>
+              )
             ) : null}
 
             {data.activeSection === "souls" ? (
+              souls.length === 0 && !activeSoul ? (
+                <div className="mx-auto max-w-[1100px] py-12">
+                  {entities.length > 0 ? (
+                    <EmptyState
+                      variant="souls"
+                      heading="No souls are bound."
+                      description="Your archive holds entities waiting to be given voice. Forge them into bound souls who can speak, remember, and reveal."
+                      ctaLabel="Go to The Archive"
+                      ctaAction={() => navigateToSection("bible")}
+                    />
+                  ) : (
+                    <EmptyState
+                      variant="souls"
+                      heading="No souls are bound."
+                      description="Souls require lore-derived entities. Write characters into the lore first, then return here to forge them into living voices."
+                      ctaLabel="Go to Lore Scribe"
+                      ctaAction={() => navigateToSection("lore")}
+                    />
+                  )}
+                </div>
+              ) : (
               <AnimatePresence mode="wait">
                 {activeSoul ? (
                   <motion.div
@@ -394,6 +478,7 @@ export function WorldWorkspace({
                   </motion.div>
                 )}
               </AnimatePresence>
+              )
             ) : null}
 
             {data.activeSection === "consistency" ? (
@@ -415,13 +500,35 @@ export function WorldWorkspace({
             ) : null}
 
             {data.activeSection === "tavern" ? (
-              <TavernChat worldId={data.world.id} souls={souls} />
+              souls.length < 2 ? (
+                <div className="mx-auto max-w-[1100px] py-12">
+                  <EmptyState
+                    variant="tavern"
+                    ctaLabel="Go to Bound Souls"
+                    ctaAction={() => navigateToSection("souls")}
+                  />
+                </div>
+              ) : (
+                <TavernChat worldId={data.world.id} souls={souls} />
+              )
             ) : null}
 
             {data.activeSection === "narrator" ? (
-              <div className="mx-auto max-w-[980px]">
-                <NarratorTools worldId={data.world.id} isDemo={isDemo} />
-              </div>
+              data.loreEntries.length === 0 ? (
+                <div className="mx-auto max-w-[980px] py-12">
+                  <EmptyState
+                    icon={<Eye className="relative z-10 h-7 w-7 text-[var(--accent)]" />}
+                    heading="The Narrator waits."
+                    description="Consistency checking and what-if analysis require lore to reason over. Inscribe your world's story first, then the Narrator will have something to examine."
+                    ctaLabel="Go to Lore Scribe"
+                    ctaAction={() => navigateToSection("lore")}
+                  />
+                </div>
+              ) : (
+                <div className="mx-auto max-w-[980px]">
+                  <NarratorTools worldId={data.world.id} isDemo={isDemo} />
+                </div>
+              )
             ) : null}
           </motion.div>
         )}
@@ -482,6 +589,18 @@ export function WorldWorkspace({
         onConfirm={handleDeleteSoul}
         isDemo={isDemo}
       />
+
+      {/* Onboarding guide panel — shown for first-time users */}
+      {showOnboarding && (
+        <OnboardingPanel
+          currentStep={onboarding.currentStep}
+          completedSteps={onboarding.completedSteps}
+          isDismissed={onboarding.isDismissed}
+          isFinished={onboarding.isFinished}
+          isExtractingEntities={isExtractingEntities}
+          onDismiss={onboarding.dismiss}
+        />
+      )}
     </div>
   );
 }

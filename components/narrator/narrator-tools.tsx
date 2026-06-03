@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import {
   Sparkles,
   Search,
@@ -12,6 +13,10 @@ import {
   MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { RateLimitWarning } from "@/components/shared/rate-limit-warning";
+import { trackCoreAction } from "@/lib/analytics";
+import { useWorkspaceStore } from "@/lib/store";
+import { useRateLimitStatus } from "@/lib/hooks/use-rate-limit-status";
 
 interface NarratorToolsProps {
   worldId: string;
@@ -57,6 +62,14 @@ export function NarratorTools({ worldId, isDemo }: NarratorToolsProps & { isDemo
   const [blankSpots, setBlankSpots] = useState<BlankSpot[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Rate limit state for narrator actions
+  const { isLimitExhausted, isActionNearLimit } = useRateLimitStatus();
+  const rateLimits = useWorkspaceStore((s) => s.rateLimits);
+  const showLimitModal = useWorkspaceStore((s) => s.showLimitModal);
+  const narratorEntry = rateLimits["narrator_action"];
+  const narratorExhausted = isLimitExhausted("narrator_action");
+  const narratorNearLimit = isActionNearLimit("narrator_action");
+
   const analyzeImpact = async () => {
     if (!scenario.trim()) return;
     setLoading(true);
@@ -82,8 +95,14 @@ export function NarratorTools({ worldId, isDemo }: NarratorToolsProps & { isDemo
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "impact", worldId, scenario }),
       });
+      if (res.status === 429) {
+        showLimitModal("narrator_action", narratorEntry?.limit);
+        toast.error("Daily narrator tool limit reached.");
+        return;
+      }
       const data = await res.json();
       setImpactResult(data);
+      trackCoreAction("narrator_tool_used", worldId);
     } catch (e) {
       console.error("Impact analysis failed:", e);
     } finally {
@@ -111,8 +130,14 @@ export function NarratorTools({ worldId, isDemo }: NarratorToolsProps & { isDemo
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "blank-spots", worldId }),
       });
+      if (res.status === 429) {
+        showLimitModal("narrator_action", narratorEntry?.limit);
+        toast.error("Daily narrator tool limit reached.");
+        return;
+      }
       const data = await res.json();
       setBlankSpots(data.holes ?? []);
+      trackCoreAction("narrator_tool_used", worldId);
     } catch (e) {
       console.error("Blank spot detection failed:", e);
     } finally {
@@ -182,7 +207,8 @@ export function NarratorTools({ worldId, isDemo }: NarratorToolsProps & { isDemo
               />
               <Button
                 onClick={analyzeImpact}
-                disabled={!scenario.trim() || loading}
+                disabled={!scenario.trim() || loading || narratorExhausted}
+                title={narratorExhausted ? "Narrator's Eye — daily limit reached. Resets at UTC midnight." : undefined}
                 className="w-full"
               >
                 {loading ? (
@@ -192,6 +218,9 @@ export function NarratorTools({ worldId, isDemo }: NarratorToolsProps & { isDemo
                 )}
                 Analyze Impact
               </Button>
+              {narratorEntry && narratorNearLimit && (
+                <RateLimitWarning count={narratorEntry.count} limit={narratorEntry.limit} />
+              )}
             </div>
 
             {impactResult && (
@@ -298,7 +327,11 @@ export function NarratorTools({ worldId, isDemo }: NarratorToolsProps & { isDemo
               <p className="mb-3 text-sm text-secondary">
                 Discover what&rsquo;s missing from your world. The Oracle examines your most referenced entities for gaps.
               </p>
-              <Button onClick={findBlankSpots} disabled={loading}>
+              <Button
+                onClick={findBlankSpots}
+                disabled={loading || narratorExhausted}
+                title={narratorExhausted ? "Narrator's Eye — daily limit reached. Resets at UTC midnight." : undefined}
+              >
                 {loading ? (
                   <LoadingSpinner className="mr-2 h-4 w-4" />
                 ) : (
@@ -306,6 +339,9 @@ export function NarratorTools({ worldId, isDemo }: NarratorToolsProps & { isDemo
                 )}
                 Find Lore Holes
               </Button>
+              {narratorEntry && narratorNearLimit && (
+                <RateLimitWarning count={narratorEntry.count} limit={narratorEntry.limit} />
+              )}
             </div>
 
             {blankSpots.length > 0 && (

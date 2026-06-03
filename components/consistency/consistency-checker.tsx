@@ -9,7 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { FlagCard } from "@/components/consistency/flag-card";
+import { RateLimitWarning } from "@/components/shared/rate-limit-warning";
 import { partitionConsistencyFlags, toggleConsistencyFlagResolved } from "@/lib/consistency-flags";
+import { trackCoreAction } from "@/lib/analytics";
+import { useWorkspaceStore } from "@/lib/store";
+import { useRateLimitStatus } from "@/lib/hooks/use-rate-limit-status";
 import type { ConsistencyCheck, ConsistencyFlag } from "@/lib/types";
 
 export function ConsistencyChecker({
@@ -31,6 +35,14 @@ export function ConsistencyChecker({
   const [loading, setLoading] = useState(false);
   const [hasChecked, setHasChecked] = useState(false);
   const [view, setView] = useState<"active" | "resolved">("active");
+
+  // Rate limit state for consistency checks
+  const { isLimitExhausted, isActionNearLimit } = useRateLimitStatus();
+  const rateLimits = useWorkspaceStore((s) => s.rateLimits);
+  const showLimitModal = useWorkspaceStore((s) => s.showLimitModal);
+  const consistencyEntry = rateLimits["consistency_check"];
+  const consistencyExhausted = isLimitExhausted("consistency_check");
+  const consistencyNearLimit = isActionNearLimit("consistency_check");
 
   const resolveFlag = async (id: string) => {
     if (isDemo) {
@@ -95,10 +107,17 @@ export function ConsistencyChecker({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ worldId, text }),
       });
+      if (response.status === 429) {
+        const payload = await response.json().catch(() => ({}));
+        showLimitModal("consistency_check", consistencyEntry?.limit);
+        toast.error(payload.error || "Daily consistency check limit reached.");
+        return;
+      }
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Consistency check failed.");
       setFlags(payload.flags);
       setHasChecked(true);
+      trackCoreAction("consistency_check_run", worldId);
       if (!payload.flags.length) {
         toast.success("The world holds. No contradictions found.");
       }
@@ -145,7 +164,14 @@ export function ConsistencyChecker({
         ) : null}
         {(!isReadonly || isDemo) ? (
           <div className="mt-4 flex items-center justify-end gap-4">
-            <Button onClick={runCheck} disabled={loading || !text.trim()}>
+            {consistencyEntry && consistencyNearLimit && (
+              <RateLimitWarning count={consistencyEntry.count} limit={consistencyEntry.limit} />
+            )}
+            <Button
+              onClick={runCheck}
+              disabled={loading || !text.trim() || consistencyExhausted}
+              title={consistencyExhausted ? "Consistency Checks — daily limit reached. Resets at UTC midnight." : undefined}
+            >
               {loading ? "Consulting the archive..." : "Scan the Archive"}
             </Button>
           </div>

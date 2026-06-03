@@ -184,6 +184,28 @@ export function AuthShell() {
               {!busy && <ArrowRight className="ml-2 h-4 w-4" />}
             </Button>
           </motion.div>
+          {mode === "signup" && (
+            <p className="mt-3 text-center text-xs text-secondary">
+              By signing up, you agree to the{" "}
+              <a
+                href="/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 transition-colors hover:text-foreground"
+              >
+                Terms of Service
+              </a>{" "}
+              and{" "}
+              <a
+                href="/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 transition-colors hover:text-foreground"
+              >
+                Privacy Policy
+              </a>
+            </p>
+          )}
         </form>
 
         <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-[0.25em] text-secondary">
