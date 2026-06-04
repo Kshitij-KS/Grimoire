@@ -28,7 +28,7 @@ This plan transforms Grimoire from a development prototype into a launch-ready S
     - Integrate Sentry `captureException` in both error boundaries
     - _Requirements: 1.2, 6.2, 6.3, 6.5_
 
-  - [ ]* 1.4 Write unit tests for Sentry utility helpers
+  - [x] 1.4 Write unit tests for Sentry utility helpers
     - Test `withErrorMonitoring` returns 500 JSON without stack trace
     - Test user ID and route context are attached to error reports
     - Test world ID extraction from route params
@@ -54,7 +54,7 @@ This plan transforms Grimoire from a development prototype into a launch-ready S
     - Apply validation in API route handlers or as shared utility
     - _Requirements: 4.3_
 
-  - [ ]* 2.4 Write unit tests for security middleware
+  - [x] 2.4 Write unit tests for security middleware
     - Test sliding window allows requests under limit and rejects over limit
     - Test Retry-After header calculation accuracy
     - Test expired entry cleanup
@@ -87,7 +87,7 @@ This plan transforms Grimoire from a development prototype into a launch-ready S
     - Add `trackRateLimitHit` calls when rate limit responses are received
     - _Requirements: 2.2, 2.3, 2.4_
 
-  - [ ]* 4.4 Write unit tests for analytics module
+  - [x] 4.4 Write unit tests for analytics module
     - Test event functions call PostHog with correct event names and property shapes
     - Test silent failure when PostHog throws
     - Test identifyUser passes correct properties
@@ -106,7 +106,7 @@ This plan transforms Grimoire from a development prototype into a launch-ready S
     - Create `app/sitemap.ts` using Next.js convention: include absolute URLs for `/` and `/demo`
     - _Requirements: 3.5, 3.6_
 
-  - [ ]* 5.3 Write integration tests for SEO metadata
+  - [x] 5.3 Write integration tests for SEO metadata
     - Test landing page metadata object has all required OG and Twitter Card fields
     - Test demo page metadata has distinct description and correct og:title
     - Test robots.txt has correct allow/disallow rules
@@ -131,7 +131,7 @@ This plan transforms Grimoire from a development prototype into a launch-ready S
     - Use cookie presence for auth state detection on client-side
     - _Requirements: 6.1, 6.4_
 
-  - [ ]* 7.2 Write unit tests for error pages
+  - [x] 7.2 Write unit tests for error pages
     - Test 404 page renders correct link based on auth state
     - Test error page calls reset on first failure then shows static link on second
     - _Requirements: 6.1, 6.2, 6.5_
@@ -153,7 +153,7 @@ This plan transforms Grimoire from a development prototype into a launch-ready S
     - Ensure no N×3 per-world query pattern remains
     - _Requirements: 7.1, 7.2, 7.3, 7.4_
 
-  - [ ]* 9.3 Write integration tests for dashboard query
+  - [x] 9.3 Write integration tests for dashboard query
     - Test RPC is called with correct world IDs
     - Test response completes within 2 await boundaries
     - Test timeout handling returns error state (not infinite spinner)
@@ -178,7 +178,7 @@ This plan transforms Grimoire from a development prototype into a launch-ready S
     - Re-enable buttons and remove warnings when midnight reset is detected
     - _Requirements: 8.1, 8.2, 8.4, 8.5_
 
-  - [ ]* 10.4 Write unit tests for rate limit UX
+  - [x] 10.4 Write unit tests for rate limit UX
     - Test 80% threshold calculation and remaining uses math
     - Test warning badge shows/hides at correct thresholds
     - Test modal displays correct action label, count, and countdown
@@ -205,7 +205,7 @@ This plan transforms Grimoire from a development prototype into a launch-ready S
     - Integrate into World_Workspace layout, activated only for first-time users on their first world
     - _Requirements: 9.1, 9.2, 9.4, 9.5, 9.7, 9.8_
 
-  - [ ]* 11.4 Write unit tests for onboarding logic
+  - [x] 11.4 Write unit tests for onboarding logic
     - Test step progression and completion detection
     - Test dismiss and resume behavior
     - Test finished state prevents re-display
@@ -230,7 +230,7 @@ This plan transforms Grimoire from a development prototype into a launch-ready S
     - Add empty state to Narrator's Eye (condition: zero lore entries) with CTA to Lore Scribe
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7_
 
-  - [ ]* 13.3 Write unit tests for empty state component
+  - [x] 13.3 Write unit tests for empty state component
     - Test correct content renders per section condition
     - Test conditional Bound Souls messaging (entities present vs. absent)
     - Test CTA actions navigate to correct sections

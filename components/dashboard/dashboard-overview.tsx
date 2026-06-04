@@ -139,7 +139,7 @@ function StatCard({
         </div>
         <Sparkline value={value} colorVar={colorVar} />
       </div>
-      <p className="font-heading text-5xl text-[var(--text-main)] tabular-nums">{count}</p>
+      <p className="font-heading text-4xl text-[var(--text-main)] tabular-nums">{count}</p>
     </motion.div>
   );
 }
@@ -360,9 +360,9 @@ export function DashboardOverview({
                 >
                   <Link href={`/worlds/${world.id}`}>
                     <div className="glass-panel hoverable-card group overflow-hidden rounded-[16px]">
-                      {/* Enhanced header — h-28 with constellation decoration */}
+                      {/* Enhanced header — conditional height with constellation decoration */}
                       <div
-                        className="relative h-28 overflow-hidden rounded-t-[16px] transition-all duration-300"
+                        className={`relative ${world.premise ? "h-28" : "h-20"} overflow-hidden rounded-t-[16px] transition-all duration-300`}
                         style={{
                           background: `linear-gradient(135deg, ${world.cover_color}44, ${world.cover_color}11)`,
                         }}
@@ -509,7 +509,7 @@ export function DashboardOverview({
                 {activityGroups.map((group, gi) => (
                   <div key={group.label}>
                     {(gi === 0 || group.label !== activityGroups[gi - 1]?.label) && (
-                      <div className="sticky top-0 z-10 bg-[color-mix(in_srgb,var(--surface)_90%,transparent)] px-4 pb-1 pt-3 backdrop-blur-sm">
+                      <div className="bg-[color-mix(in_srgb,var(--surface)_90%,transparent)] px-4 pb-1 pt-3">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">{group.label}</p>
                       </div>
                     )}
@@ -554,7 +554,7 @@ export function DashboardOverview({
           </div>
 
           {/* Quick Actions */}
-          <div className="glass-panel arcane-border rounded-[14px] p-5 space-y-3">
+          <div className="glass-panel rounded-[14px] p-5 space-y-3">
             <p className="chapter-label">— Quick Actions —</p>
             <div className="grid gap-2">
               <Button
