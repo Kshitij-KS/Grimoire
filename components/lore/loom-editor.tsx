@@ -10,7 +10,7 @@ import CharacterCount from "@tiptap/extension-character-count";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Bold, Code, Heading1, Heading2, Heading3,
-  Highlighter, Italic, List, ListOrdered, Minus, PanelLeft, Plus, Quote, Search,
+  Highlighter, Italic, List, ListOrdered, Maximize2, Minus, PanelLeft, Plus, Quote, Search,
   Sparkles, Strikethrough, Upload, X, Layers,
   BookOpen, CheckSquare,
 } from "lucide-react";
@@ -26,6 +26,9 @@ import { cn, stripHtml } from "@/lib/utils";
 import { trackCoreAction } from "@/lib/analytics";
 import { useWorkspaceStore } from "@/lib/store";
 import { useRateLimitStatus } from "@/lib/hooks/use-rate-limit-status";
+import { useFocusModeStore } from "@/lib/stores/focus-mode-store";
+import { useParagraphFocus } from "@/lib/hooks/use-paragraph-focus";
+import { ImmersivePortal } from "@/components/lore/immersive-portal";
 import type { LoreEntry } from "@/lib/types";
 
 
@@ -104,6 +107,10 @@ export function LoomEditor({
   const loreIngestEntry = rateLimits["lore_ingest"];
   const loreIngestExhausted = isLimitExhausted("lore_ingest");
   const loreIngestNearLimit = isActionNearLimit("lore_ingest");
+
+  // Immersive focus mode state
+  const { isImmersive, setImmersive } = useFocusModeStore();
+  const lastSavedContentRef = useRef<string>("");
 
    useEffect(() => {
      const check = () => {
@@ -188,10 +195,15 @@ export function LoomEditor({
      immediatelyRender: false,
    });
 
+  // Activate paragraph focus mode when enabled in the focus mode store
+  useParagraphFocus(editor);
+
   useEffect(() => {
     if (editor) {
       editor.commands.setContent(selectedEntry?.content ?? "");
       setTitle(selectedEntry?.title ?? "");
+      // Initialize saved content tracking
+      lastSavedContentRef.current = editor.getHTML();
     }
   }, [editor, selectedEntry]);
 
@@ -378,6 +390,7 @@ export function LoomEditor({
           toast.success("Lore woven into memory.");
           onUsageIncrement?.("lore_ingest");
           trackCoreAction("lore_inscribed", worldId);
+          lastSavedContentRef.current = editor.getHTML();
           return;
         }
       }
@@ -411,6 +424,7 @@ export function LoomEditor({
             toast.success("Lore woven into memory.");
             onUsageIncrement?.("lore_ingest");
             trackCoreAction("lore_inscribed", worldId);
+            lastSavedContentRef.current = editor.getHTML();
           }
           if (eventName === "error") throw new Error(payload?.error || "Lore ingest failed.");
         }
@@ -420,6 +434,7 @@ export function LoomEditor({
     } finally {
       setProcessing(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, isReadonly, title, worldId, selectedEntry, onUsageIncrement, pollProcessingStatus]);
 
   useEffect(() => {
@@ -428,10 +443,17 @@ export function LoomEditor({
         e.preventDefault();
         if (!processing && !isReadonly) submit();
       }
+      // Ctrl+Shift+F / Cmd+Shift+F to toggle immersive mode
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === "f" || e.key === "F")) {
+        e.preventDefault();
+        if (!isReadonly && !isImmersive) {
+          setImmersive(true);
+        }
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [submit, processing, isReadonly]);
+  }, [submit, processing, isReadonly, isImmersive, setImmersive]);
 
   /* ── Toolbar definition ── */
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -688,6 +710,20 @@ export function LoomEditor({
 
             <button
               type="button"
+              onClick={() => !isReadonly && setImmersive(true)}
+              disabled={isReadonly}
+              title="Focus mode (Ctrl+Shift+F)"
+              className={cn(
+                "hidden sm:flex h-7 px-2 items-center justify-center gap-1.5 rounded-md transition-colors",
+                "text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[color-mix(in_srgb,var(--text-main)_6%,transparent)]"
+              )}
+            >
+              <Maximize2 className="h-3.5 w-3.5" />
+              <span className="text-[10px] font-medium mb-[0.5px]">Focus</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setMarginOpen((v) => !v)}
               title="Lore Lens — Consistency Check"
               className={cn(
@@ -914,6 +950,19 @@ export function LoomEditor({
             </motion.div>
           )}
         </AnimatePresence>
+      )}
+
+      {/* ── Immersive Portal ── */}
+      {isImmersive && (
+        <ImmersivePortal
+          editor={editor}
+          wordCount={currentWordCount}
+          onSave={submit}
+          onExit={() => setImmersive(false)}
+          isProcessing={processing}
+          isSaved={editor?.getHTML() === lastSavedContentRef.current}
+          isReadonly={isReadonly}
+        />
       )}
 
       {/* ── Modals ── */}

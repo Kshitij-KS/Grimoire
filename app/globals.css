@@ -1198,3 +1198,13 @@ button:not(:disabled),
     border-color: color-mix(in srgb, var(--accent) 40%, transparent) !important;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Immersive Mode — Ambient Atmosphere
+   ───────────────────────────────────────────────────────────── */
+
+@keyframes atmosphereShift {
+  0%   { opacity: 0.6; }
+  50%  { opacity: 1; }
+  100% { opacity: 0.7; }
+}

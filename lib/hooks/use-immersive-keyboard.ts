@@ -19,31 +19,33 @@ export function useImmersiveKeyboard(props: {
   onSave: () => void;
   isSaving: boolean;
 }): void {
+  const { isImmersive, onExit, onSave, isSaving } = props;
+
   useEffect(() => {
-    if (!props.isImmersive) return;
+    if (!isImmersive) return;
 
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
-        props.onExit();
+        onExit();
         return;
       }
 
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
-        if (!props.isSaving) props.onSave();
+        if (!isSaving) onSave();
         return;
       }
 
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "F") {
         e.preventDefault();
-        props.onExit();
+        onExit();
         return;
       }
     };
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [props.isImmersive, props.onExit, props.onSave, props.isSaving]);
+  }, [isImmersive, onExit, onSave, isSaving]);
 }

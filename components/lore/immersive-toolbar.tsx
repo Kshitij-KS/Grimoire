@@ -1,7 +1,7 @@
 "use client";
 
 import { type Editor } from "@tiptap/react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { Bold, Italic, Heading2, Quote, X, Save } from "lucide-react";
 import { useToolbarVisibility } from "@/lib/hooks/use-toolbar-visibility";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,7 @@ interface ImmersiveToolbarProps {
   isSaved: boolean;
 }
 
-const toolbarVariants = {
+const toolbarVariants: Variants = {
   hidden: { opacity: 0, y: 20, transition: { duration: 0.2, ease: "easeIn" } },
   visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } },
 };
