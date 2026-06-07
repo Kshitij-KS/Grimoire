@@ -43,18 +43,18 @@ export default async function DashboardSettingsPage() {
   return (
     <main className="page-fade min-h-screen">
       <DashboardNav isAuthed={Boolean(user)} userEmail={user?.email} />
-      <div className="mx-auto max-w-4xl px-6 py-10 lg:px-10">
+      <div className="mx-auto max-w-5xl px-6 py-10 lg:px-10">
 
         {/* Page header */}
-        <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="chapter-label">Settings</p>
-            <h1 className="mt-2 font-heading text-5xl text-foreground">Your Archive</h1>
+            <h1 className="mt-2 font-heading text-4xl text-foreground sm:text-5xl">Your Archive</h1>
             <p className="mt-2 max-w-md text-sm leading-7 text-secondary">
               Manage your account, review usage, and adjust how Grimoire feels.
             </p>
           </div>
-          <Button asChild variant="secondary" className="shrink-0 self-start">
+          <Button asChild variant="secondary" className="shrink-0 self-start sm:self-auto">
             <Link href="/dashboard">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Dashboard

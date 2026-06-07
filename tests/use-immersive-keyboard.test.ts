@@ -4,12 +4,12 @@ import { renderHook } from "@testing-library/react";
 import { useImmersiveKeyboard } from "@/lib/hooks/use-immersive-keyboard";
 
 describe("useImmersiveKeyboard", () => {
-  let onExit: ReturnType<typeof vi.fn<[], void>>;
-  let onSave: ReturnType<typeof vi.fn<[], void>>;
+  let onExit: ReturnType<typeof vi.fn<() => void>>;
+  let onSave: ReturnType<typeof vi.fn<() => void>>;
 
   beforeEach(() => {
-    onExit = vi.fn<[], void>();
-    onSave = vi.fn<[], void>();
+    onExit = vi.fn<() => void>();
+    onSave = vi.fn<() => void>();
   });
 
   afterEach(() => {
