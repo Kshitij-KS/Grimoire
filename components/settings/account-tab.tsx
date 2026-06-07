@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { KeyRound, LogOut, Mail, ShieldCheck, UserCircle2 } from "lucide-react";
+import { LogOut, Mail, ShieldCheck, UserCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/browser";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
