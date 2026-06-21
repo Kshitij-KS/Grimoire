@@ -460,7 +460,7 @@ export function EchoesInterface({
                             type="button"
                             onClick={async () => {
                               try {
-                                await fetch("/api/lore/ingest", {
+                                const res = await fetch("/api/lore/ingest", {
                                   method: "POST",
                                   headers: { "Content-Type": "application/json" },
                                   body: JSON.stringify({
@@ -469,6 +469,10 @@ export function EchoesInterface({
                                     content: message.content,
                                   }),
                                 });
+                                // Synchronous ingest streams progress as SSE;
+                                // drain the body so server-side processing
+                                // (chunk -> embed -> store) runs to completion.
+                                if (res.ok) await res.text();
                                 toast.success("Saved to your lore.");
                               } catch {
                                 toast.error("Could not save to lore.");

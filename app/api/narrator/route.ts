@@ -3,11 +3,18 @@ import { z } from "zod";
 import { DAILY_LIMITS } from "@/lib/constants";
 import { hasAiEnv } from "@/lib/env";
 import { hasSupabaseEnv } from "@/lib/public-env";
-import { analyzeImpact, detectBlankSpots, orderEventsChronologically, embedText } from "@/lib/embeddings";
+import { analyzeImpact, detectBlankSpots, orderEventsChronologically, embedText, assertModelConsistency } from "@/lib/embeddings";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
 import { checkAndIncrement } from "@/lib/rate-limit";
 import { requireWorldAccess } from "@/lib/world-access";
+
+// Model-consistency guard (R7.1, R7.2). No per-row stored model identifier is
+// recorded in the schema (768-dim columns need no migration), so we pin the
+// identifier the stored embeddings were generated with — HuggingFace
+// all-mpnet-base-v2, matching `getEmbeddingModel()`. We assert the active model
+// still matches before `match_lore_chunks`; a mismatch suppresses the RPC.
+const STORED_EMBEDDING_MODEL = "huggingface:sentence-transformers/all-mpnet-base-v2";
 
 // Accept any non-empty string worldId — "demo-world" is valid for demo mode
 const worldIdSchema = z.string().min(1);
@@ -77,7 +84,7 @@ export async function POST(request: Request) {
 
     if (!hasAiEnv()) {
       return jsonError("AI_NOT_CONFIGURED", 503, {
-        detail: "Missing GROQ_API_KEY or GEMINI_API_KEY on the server.",
+        detail: "Missing GROQ_API_KEY on the server.",
       });
     }
 
@@ -86,6 +93,9 @@ export async function POST(request: Request) {
       embedText(scenario),
     ]);
 
+    // Suppress the similarity RPC if the active model no longer matches the
+    // model the stored embeddings were generated with (R7.2).
+    assertModelConsistency(STORED_EMBEDDING_MODEL);
     const { data: loreChunks } = await supabase.rpc("match_lore_chunks", {
       world_uuid: worldId,
       query_embedding: embedding,
@@ -121,7 +131,7 @@ export async function POST(request: Request) {
 
     if (!hasAiEnv()) {
       return jsonError("AI_NOT_CONFIGURED", 503, {
-        detail: "Missing GROQ_API_KEY or GEMINI_API_KEY on the server.",
+        detail: "Missing GROQ_API_KEY on the server.",
       });
     }
 

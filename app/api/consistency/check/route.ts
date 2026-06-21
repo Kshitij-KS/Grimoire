@@ -1,11 +1,18 @@
 export const dynamic = "force-dynamic";
 import { z } from "zod";
 import { DAILY_LIMITS } from "@/lib/constants";
-import { checkConsistency, embedText } from "@/lib/embeddings";
+import { checkConsistency, embedText, assertModelConsistency } from "@/lib/embeddings";
 import { hasAiEnv } from "@/lib/env";
 import { checkAndIncrement } from "@/lib/rate-limit";
 import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
 import { requireWorldAccess } from "@/lib/world-access";
+
+// Model-consistency guard (R7.1, R7.2). No per-row stored model identifier is
+// recorded in the schema (768-dim columns need no migration), so we pin the
+// identifier the stored embeddings were generated with — HuggingFace
+// all-mpnet-base-v2, matching `getEmbeddingModel()`. We assert the active model
+// still matches before `match_lore_chunks`; a mismatch suppresses the RPC.
+const STORED_EMBEDDING_MODEL = "huggingface:sentence-transformers/all-mpnet-base-v2";
 
 const schema = z.object({
   worldId: z.string().uuid(),
@@ -49,6 +56,9 @@ export async function POST(request: Request) {
   ).slice(0, 10);
 
   // Run embedding similarity search AND entity-tag search in parallel
+  // Suppress the similarity RPC if the active model no longer matches the model
+  // the stored embeddings were generated with (R7.2).
+  assertModelConsistency(STORED_EMBEDDING_MODEL);
   const [similarResult, tagResult] = await Promise.all([
     supabase.rpc("match_lore_chunks", {
       world_uuid: parsed.data.worldId,

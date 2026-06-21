@@ -104,6 +104,10 @@ The tone should be evocative, third-person, past-tense. Do not use generic fanta
         body: JSON.stringify({ worldId, title, content: text }),
       });
       if (!res.ok) throw new Error("Inscribe failed");
+      // Synchronous ingest streams progress as SSE; drain the body so the
+      // server-side processing (chunk -> embed -> store) runs to completion
+      // even though this caller doesn't render progress.
+      await res.text();
       toast.success(`Bounty claimed — "${title}" inscribed to the archive.`, { duration: 3500 });
       onResolved?.();
       onOpenChange(false);

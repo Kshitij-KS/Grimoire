@@ -35,28 +35,6 @@ type ProcessLoreEntryOptions = {
   onEvent?: (event: ProcessingEvent) => void | Promise<void>;
 };
 
-async function embedWithRetry(content: string, chunkIndex: number) {
-  let lastError: unknown;
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    try {
-      return await embedText(content);
-    } catch (error) {
-      lastError = error;
-      if (attempt < 3) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, Math.pow(2, attempt) * 1000),
-        );
-      }
-    }
-  }
-
-  throw new Error(
-    `Embedding failed for chunk ${chunkIndex} after 3 attempts: ${
-      lastError instanceof Error ? lastError.message : "unknown"
-    }`,
-  );
-}
-
 export async function processLoreEntry({
   supabase,
   worldId,
@@ -86,7 +64,12 @@ export async function processLoreEntry({
       total: chunks.length,
     });
 
-    const embedding = await embedWithRetry(chunk.content, chunk.chunkIndex);
+    // The hardened Embedding_Service (lib/embedding/service.ts) now owns all
+    // retry/backoff/timeout/fallback logic, so this is a direct pass-through.
+    // A terminal EmbeddingError propagates out of the loop, aborting this
+    // entry's write before any chunk is inserted, so no partially-written
+    // vectors are persisted (R1.7, R3.1, R3.3).
+    const embedding = await embedText(chunk.content);
     const entityTags = extractedEntities
       .filter((entity) =>
         chunk.content.toLowerCase().includes(entity.name.toLowerCase()),

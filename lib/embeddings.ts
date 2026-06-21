@@ -1,17 +1,77 @@
 import { z } from "zod";
-// Embeddings are now served by HuggingFace BAAI/bge-base-en-v1.5 (768-dim, free).
-// getEmbeddingModel() in lib/gemini.ts wraps the HF client with the same interface.
-import { getEmbeddingModel } from "@/lib/gemini";
+import { getEmbeddingConfig } from "@/lib/env";
+import { EmbeddingError } from "@/lib/embedding/errors";
 // Groq handles all text generation tasks.
 import { groqGenerate, GROQ_MODEL_HEAVY, GROQ_MODEL_FAST } from "@/lib/groq";
 import { repairAndParseJSON } from "@/lib/json-repair";
 
-export async function embedText(text: string): Promise<number[]> {
-  const model = getEmbeddingModel(); // HuggingFace BAAI/bge-base-en-v1.5 — 768 dims
-  const result = await model.embedContent({
-    content: { parts: [{ text }] },
-  });
-  return result.embedding.values ?? [];
+// Embeddings are served by the hardened Embedding_Service in
+// lib/embedding/service.ts (HuggingFace Inference API with
+// sentence-transformers/all-mpnet-base-v2 — 768-dim, free). `embedText` is
+// re-exported from that service, preserving the public
+// `(text: string): Promise<number[]>` contract (the service's `options`
+// parameter defaults to `{}`, so single-argument callers are unaffected). This
+// routes all callers through input validation, bounded retry/backoff,
+// per-request timeouts, dimension validation, and fallback handling
+// (R1.4, R7.1).
+export { embedText } from "@/lib/embedding/service";
+
+/**
+ * Return the active embedding model identifier as a stable
+ * `"<provider>:<model>"` string (e.g.
+ * `"huggingface:sentence-transformers/all-mpnet-base-v2"`).
+ *
+ * This identifier combines the active Primary_Provider id and model from the
+ * resolved {@link getEmbeddingConfig}, matching the provider `id` used inside
+ * the hardened embedding service. Both the Lore_Pipeline (write) and the
+ * Query_Path (read) report the same identifier through this function, so it can
+ * be used to assert read/write embedding consistency (R1.4, R7.1).
+ */
+export function getEmbeddingModel(): string {
+  const config = getEmbeddingConfig();
+  return `${config.primaryProviderId}:${config.primaryModel}`;
+}
+
+/**
+ * Guard that the active embedding model matches the model recorded for stored
+ * embeddings before a Query_Path similarity search is issued.
+ *
+ * Vector similarity is only meaningful when query embeddings and the stored
+ * Lore_Pipeline embeddings come from the same model. This guard compares the
+ * active embedding model identifier (as reported by {@link getEmbeddingModel},
+ * an `"<provider>:<model>"` string) against the `storedModel` identifier
+ * recorded for the embeddings already persisted in `lore_chunks` /
+ * `semantic_cache`.
+ *
+ * Callers MUST invoke this guard *before* issuing the `match_lore_chunks` or
+ * `match_semantic_cache` RPC. When the identifiers are equal the guard returns
+ * normally and the caller proceeds with the RPC. When they differ the guard
+ * throws an {@link EmbeddingError} naming both the active and recorded
+ * identifiers, so the caller suppresses the RPC entirely. A mismatch means all
+ * stored embeddings must be re-embedded with the active model before similarity
+ * search results are valid (R7.2).
+ *
+ * @param storedModel - The model identifier recorded for the stored embeddings.
+ * @param activeModel - The active model identifier; defaults to
+ *   {@link getEmbeddingModel}. Accepting an override keeps the guard pure and
+ *   testable across arbitrary identifier pairs.
+ * @throws {EmbeddingError} with `category: "other"` when the active and stored
+ *   model identifiers differ.
+ */
+export function assertModelConsistency(
+  storedModel: string,
+  activeModel: string = getEmbeddingModel(),
+): void {
+  if (activeModel !== storedModel) {
+    throw new EmbeddingError(
+      `Embedding model mismatch: the active embedding model is "${activeModel}", ` +
+        `but the stored embeddings were generated with "${storedModel}". ` +
+        `Similarity search is suppressed because results would be meaningless; ` +
+        `all stored embeddings must be re-embedded with the active model before ` +
+        `similarity search results are valid.`,
+      { category: "other" },
+    );
+  }
 }
 
 // Zod schema for extracted entities

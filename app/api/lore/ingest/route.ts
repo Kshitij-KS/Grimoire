@@ -13,7 +13,13 @@ const schema = z.object({
   title: z.string().min(1).max(120),
   content: z.string().min(20),
   entryId: z.string().uuid().optional(),
-  useBackground: z.boolean().optional().default(true),
+  // Default to synchronous SSE processing, which is self-contained and reliable
+  // (chunk -> embed -> store -> entities, with live progress). Background
+  // (Inngest) processing is opt-in: it avoids serverless timeouts on very large
+  // entries, but it silently strands entries in "pending" if the Inngest app is
+  // not actually delivering/executing events. Callers that know Inngest is
+  // healthy can opt in with `useBackground: true`.
+  useBackground: z.boolean().optional().default(false),
 });
 
 function sseEvent(event: string, data: Record<string, unknown>) {
@@ -29,7 +35,7 @@ export async function POST(request: Request) {
        503,
        {
          detail: "AI services are temporarily unavailable. Please try again later.",
-         suggestion: "Check that GROQ_API_KEY and GEMINI_API_KEY are properly configured on the server.",
+         suggestion: "Check that GROQ_API_KEY is configured on the server (HF_TOKEN is optional but recommended for embeddings).",
        }
      );
    }

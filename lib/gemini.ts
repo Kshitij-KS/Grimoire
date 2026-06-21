@@ -4,8 +4,10 @@ import { env } from "@/lib/env";
 // ─────────────────────────────────────────────────────────────────────────────
 // Gemini has been fully replaced. All text-generation tasks use Groq (lib/groq.ts).
 // Embeddings previously used Gemini text-embedding-004 (768-dim). They now use
-// HuggingFace BAAI/bge-base-en-v1.5 which also outputs 768 dimensions, keeping
-// the Supabase pgvector columns fully compatible.
+// HuggingFace sentence-transformers/all-mpnet-base-v2 (the HF_MODEL constant
+// below, the source of truth) which also outputs 768 dimensions, keeping the
+// Supabase pgvector columns fully compatible. No GEMINI_API_KEY is read or
+// required by this embedding path.
 //
 // A free HuggingFace account token (HF_TOKEN) is optional but recommended to
 // avoid anonymous rate limits. The model itself is always free.

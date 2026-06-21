@@ -4,12 +4,20 @@ import { DAILY_LIMITS, SEMANTIC_CACHE_THRESHOLD } from "@/lib/constants";
 import { hasAiEnv } from "@/lib/env";
 // import { getChatModel } from "@/lib/gemini"; // REPLACED — Groq handles generation now
 import { groqStream, GROQ_MODEL_FAST, type GroqMessage } from "@/lib/groq";
-import { embedText } from "@/lib/embeddings";
+import { embedText, assertModelConsistency } from "@/lib/embeddings";
 import { checkAndIncrement } from "@/lib/rate-limit";
 import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
 import crypto from "crypto";
 import { soulMatchesWorld } from "@/lib/soul-access";
 import { requireWorldAccess } from "@/lib/world-access";
+
+// Model-consistency guard (R7.1, R7.2). No per-row stored model identifier is
+// recorded in the schema (768-dim columns need no migration), so we pin the
+// identifier the stored embeddings were generated with — HuggingFace
+// all-mpnet-base-v2, matching `getEmbeddingModel()`. We assert the active model
+// still matches before `match_semantic_cache` / `match_lore_chunks`; a mismatch
+// suppresses those RPCs.
+const STORED_EMBEDDING_MODEL = "huggingface:sentence-transformers/all-mpnet-base-v2";
 
 const schema = z.object({
   worldId: z.string().uuid(),
@@ -26,7 +34,7 @@ export async function POST(request: Request) {
   if ("error" in auth) return auth.error;
   if (!hasAiEnv()) {
     return jsonError("AI_NOT_CONFIGURED", 503, {
-      detail: "Missing GROQ_API_KEY or GEMINI_API_KEY on the server.",
+      detail: "Missing GROQ_API_KEY on the server.",
     });
   }
 
@@ -69,6 +77,10 @@ export async function POST(request: Request) {
   if (!rate.allowed) return jsonRateLimited("chat_message", rate.limit);
 
   // ── Semantic Cache Check ──────────────────────────────────────────────
+  // Suppress the similarity RPCs (match_semantic_cache below and
+  // match_lore_chunks further down) if the active model no longer matches the
+  // model the stored embeddings were generated with (R7.2).
+  assertModelConsistency(STORED_EMBEDDING_MODEL);
   try {
     const { data: cacheHits } = await supabase.rpc("match_semantic_cache", {
       query_embedding: embedding,
