@@ -115,7 +115,7 @@ export function EntityDetailPanel({
     <>
       {/* Backdrop for mobile */}
       <div
-        className="fixed inset-0 z-30 bg-black/40 md:hidden"
+        className="fixed inset-0 z-30 bg-[color-mix(in_srgb,var(--bg)_60%,transparent)] md:hidden"
         onClick={onClose}
       />
       <motion.div

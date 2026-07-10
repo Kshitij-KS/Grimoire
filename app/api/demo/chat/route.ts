@@ -5,6 +5,8 @@ import { hasAiEnv } from "@/lib/env";
 // import { getChatModel } from "@/lib/gemini"; // REPLACED — Groq handles generation now
 import { groqStream, GROQ_MODEL_FAST } from "@/lib/groq";
 import { demoLoreEntries, demoSoulCard } from "@/lib/mock-data";
+import { getClientIp } from "@/lib/middleware/auth-rate-limit";
+import { checkIpRateLimit, checkGlobalDailyCap } from "@/lib/rate-limit-ip";
 
 const schema = z.object({
   message: z.string().min(1).max(2000),
@@ -28,7 +30,7 @@ RULES:
 export async function POST(request: Request) {
   if (!hasAiEnv()) {
     return jsonError("AI_NOT_CONFIGURED", 503, {
-      detail: "Missing GROQ_API_KEY or GEMINI_API_KEY on the server.",
+      detail: "Missing GROQ_API_KEY on the server (generation uses Groq; embeddings use HuggingFace).",
     });
   }
 
@@ -42,6 +44,19 @@ export async function POST(request: Request) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
     return Response.json({ error: "Invalid request." }, { status: 400 });
+  }
+
+  // Throttle the public demo before spending any Groq budget (Req 8.1–8.3).
+  // Per-IP sliding window keeps a single client from scripting the endpoint;
+  // the global daily cap is a hard circuit breaker across all IPs.
+  const ip = getClientIp(request);
+  const perIp = checkIpRateLimit("demo_chat", ip, { windowMs: 60_000, max: 8 });
+  if (!perIp.allowed) {
+    return jsonError("RATE_LIMITED", 429, { retryAfter: perIp.retryAfter });
+  }
+  const global = checkGlobalDailyCap("demo_chat", 5_000);
+  if (!global.allowed) {
+    return jsonError("DEMO_UNAVAILABLE", 429);
   }
 
   // Previously: let geminiStream; const model = getChatModel();

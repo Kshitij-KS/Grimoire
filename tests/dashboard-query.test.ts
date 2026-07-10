@@ -42,7 +42,7 @@ function createMockSupabase({
     chain.single = vi.fn().mockReturnValue(chain);
     chain.then = (resolve: (v: unknown) => unknown) => resolve({ data, error: null });
     // Make chain a thenable (Promise-like)
-    (chain as Record<string, unknown>)[Symbol.toStringTag] = "Promise";
+    (chain as Record<string | symbol, unknown>)[Symbol.toStringTag] = "Promise";
     return chain;
   }
 

@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { z } from "zod";
 import { jsonError, requireUser, zodErrorResponse } from "@/lib/api";
 import { requireWorldAccess } from "@/lib/world-access";
+import { withErrorMonitoring } from "@/lib/sentry";
 
 const schema = z.object({
   worldId: z.string().uuid(),
@@ -9,7 +10,7 @@ const schema = z.object({
   secondaryEntityId: z.string().uuid(),
 });
 
-export async function POST(request: Request) {
+export const POST = withErrorMonitoring(async (request) => {
   const auth = await requireUser();
   if ("error" in auth) return auth.error;
 
@@ -105,13 +106,18 @@ export async function POST(request: Request) {
     .update({ entity_id: primaryEntityId })
     .eq("entity_id", secondaryEntityId);
 
-  // ── 3. Remap entity_tags text array (best-effort) ──────────────────────
+  // ── 3. Remap entity_tags text array (checked) ──────────────────────────
+  // Runs before the secondary entity is deleted so all source-entity tags
+  // end up associated with the target.
   if (secondaryName !== primaryName) {
-    await supabase.rpc("replace_entity_tag", {
+    const { error: tagError } = await supabase.rpc("replace_entity_tag", {
       p_world_id: worldId,
       p_old_tag: secondaryName,
       p_new_tag: primaryName,
-    }).then(() => {/* ignore if function doesn't exist yet */});
+    });
+    if (tagError) {
+      return jsonError("TAG_REMAP_FAILED", 500, { detail: tagError.message });
+    }
   }
 
   // ── 4. Merge mention_count into primary ────────────────────────────────
@@ -140,4 +146,4 @@ export async function POST(request: Request) {
     primaryName,
     secondaryName,
   });
-}
+});

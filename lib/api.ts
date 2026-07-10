@@ -33,7 +33,16 @@ export function zodErrorResponse(error: ZodError) {
   );
 }
 
-export async function requireUser() {
+type ServerClient = ReturnType<typeof createServerSupabaseClient>;
+type AuthUser = NonNullable<
+  Awaited<ReturnType<ServerClient["auth"]["getUser"]>>["data"]["user"]
+>;
+
+export type RequireUserResult =
+  | { user: AuthUser; supabase: ServerClient }
+  | { user?: undefined; supabase?: ServerClient; error: NextResponse };
+
+export async function requireUser(): Promise<RequireUserResult> {
   try {
     const supabase = createServerSupabaseClient();
     const {

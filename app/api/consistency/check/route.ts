@@ -6,6 +6,7 @@ import { hasAiEnv } from "@/lib/env";
 import { checkAndIncrement } from "@/lib/rate-limit";
 import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
 import { requireWorldAccess } from "@/lib/world-access";
+import { withErrorMonitoring } from "@/lib/sentry";
 
 // Model-consistency guard (R7.1, R7.2). No per-row stored model identifier is
 // recorded in the schema (768-dim columns need no migration), so we pin the
@@ -19,7 +20,7 @@ const schema = z.object({
   text: z.string().min(10),
 });
 
-export async function POST(request: Request) {
+export const POST = withErrorMonitoring(async (request) => {
   const { searchParams } = new URL(request.url);
   const isInline = searchParams.get("inline") === "true";
 
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
   if ("error" in auth) return auth.error;
   if (!hasAiEnv()) {
     return jsonError("AI_NOT_CONFIGURED", 503, {
-      detail: "Missing GROQ_API_KEY or GEMINI_API_KEY on the server.",
+      detail: "Missing GROQ_API_KEY on the server (generation uses Groq; embeddings use HuggingFace).",
     });
   }
 
@@ -128,4 +129,4 @@ export async function POST(request: Request) {
       created_at: new Date().toISOString(),
     })),
   });
-}
+});

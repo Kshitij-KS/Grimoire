@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Hourglass } from "lucide-react";
 import {
@@ -10,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { WaitlistDialog } from "@/components/shared/waitlist-dialog";
 import { useWorkspaceStore } from "@/lib/store";
 
 /**
@@ -50,6 +52,7 @@ interface RateLimitModalProps {
 
 export function RateLimitModal({ open, onOpenChange, action, limit }: RateLimitModalProps) {
   const rateLimits = useWorkspaceStore((s) => s.rateLimits);
+  const [waitlistOpen, setWaitlistOpen] = useState(false);
 
   const label = action
     ? (ACTION_LABELS[action] ?? action.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()))
@@ -63,6 +66,7 @@ export function RateLimitModal({ open, onOpenChange, action, limit }: RateLimitM
   const { formatted: resetTime } = getTimeUntilReset();
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
@@ -111,7 +115,14 @@ export function RateLimitModal({ open, onOpenChange, action, limit }: RateLimitM
           {/* Upgrade prompt */}
           <div className="rounded-[18px] border border-[color-mix(in_srgb,var(--accent)_20%,transparent)] bg-[color-mix(in_srgb,var(--accent)_6%,transparent)] p-4">
             <p className="text-sm leading-6 text-secondary">
-              Need more? <span className="font-medium text-[var(--accent)]">Upgrade your plan</span>{" "}
+              Need more?{" "}
+              <button
+                type="button"
+                onClick={() => setWaitlistOpen(true)}
+                className="font-medium text-[var(--accent)] underline-offset-2 hover:underline"
+              >
+                Upgrade your plan
+              </button>{" "}
               to unlock higher daily limits and uninterrupted worldbuilding.
             </p>
           </div>
@@ -124,5 +135,7 @@ export function RateLimitModal({ open, onOpenChange, action, limit }: RateLimitM
         </div>
       </DialogContent>
     </Dialog>
+    <WaitlistDialog open={waitlistOpen} onOpenChange={setWaitlistOpen} source="rate-limit" />
+    </>
   );
 }

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RateLimitWarning } from "@/components/shared/rate-limit-warning";
+import { WaitlistDialog } from "@/components/shared/waitlist-dialog";
 import { FREE_TIER_LIMITS } from "@/lib/constants";
 import { trackCoreAction } from "@/lib/analytics";
 import { useWorkspaceStore } from "@/lib/store";
@@ -39,6 +40,7 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
   const [directedTo, setDirectedTo] = useState<string | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [sessionName, setSessionName] = useState("");
+  const [waitlistOpen, setWaitlistOpen] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -75,7 +77,12 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
       });
       const data = await res.json();
       if (data.error === "TAVERN_SOUL_LIMIT") {
-        toast.error(data.detail ?? "Soul limit reached. Upgrade to Pro.");
+        toast.error(data.detail ?? "Soul limit reached.", {
+          action: {
+            label: "Join waitlist",
+            onClick: () => setWaitlistOpen(true),
+          },
+        });
         return;
       }
       if (data.session) {
@@ -244,7 +251,7 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
                   style={isSelected ? { borderColor: soul.avatar_color, background: soul.avatar_color ? `${soul.avatar_color}1a` : "color-mix(in srgb, var(--ai-pulse) 10%, transparent)" } : {}}
                 >
                   <div
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-[var(--text-main)]"
                     style={{ background: soul.avatar_color }}
                   >
                     {soul.avatar_initials ?? soul.name[0]}
@@ -262,7 +269,7 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
                       className="ml-auto flex h-5 w-5 items-center justify-center rounded-full"
                       style={{ background: soul.avatar_color }}
                     >
-                      <span className="text-[10px] text-white">✓</span>
+                      <span className="text-[10px] text-[var(--text-main)]">✓</span>
                     </div>
                   )}
                 </motion.button>
@@ -272,11 +279,13 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
 
           {/* Upsell slot */}
           {isFree && souls.length >= FREE_TIER_LIMITS.tavernSouls && (
-            <motion.div
+            <motion.button
+              type="button"
+              onClick={() => setWaitlistOpen(true)}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25 }}
-              className="flex items-center gap-3 rounded-[18px] border border-dashed border-[color-mix(in_srgb,var(--gold)_30%,transparent)] bg-[color-mix(in_srgb,var(--gold)_4%,transparent)] p-4"
+              className="flex w-full items-center gap-3 rounded-[18px] border border-dashed border-[color-mix(in_srgb,var(--gold)_30%,transparent)] bg-[color-mix(in_srgb,var(--gold)_4%,transparent)] p-4 text-left transition-colors hover:bg-[color-mix(in_srgb,var(--gold)_8%,transparent)]"
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--gold)_15%,transparent)]">
                 <Lock className="h-4 w-4 text-[var(--gold)]" />
@@ -291,7 +300,7 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
                 </p>
               </div>
               <Crown className="h-4 w-4 text-[var(--gold)] opacity-60 shrink-0" />
-            </motion.div>
+            </motion.button>
           )}
 
           {souls.length < 2 && (
@@ -347,6 +356,7 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
             </div>
           )}
         </div>
+        <WaitlistDialog open={waitlistOpen} onOpenChange={setWaitlistOpen} source="tavern" />
       </div>
     );
   }
@@ -408,7 +418,7 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
           {activeSouls.map((soul) => (
             <div
               key={soul.id}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold text-white"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold text-[var(--text-main)]"
               style={{ background: soul.avatar_color }}
               title={soul.name}
             >
@@ -444,7 +454,7 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
                   {!isDirector && soul && (
                     <div className="mb-1 flex items-center gap-2">
                       <div
-                        className="h-5 w-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white"
+                        className="h-5 w-5 rounded-full flex items-center justify-center text-[8px] font-bold text-[var(--text-main)]"
                         style={{ background: soul.avatar_color }}
                       >
                         {soul.avatar_initials ?? soul.name[0]}
@@ -581,6 +591,7 @@ export function TavernChat({ worldId, souls, plan = "free" }: TavernChatProps) {
           )}
         </div>
       </div>
+      <WaitlistDialog open={waitlistOpen} onOpenChange={setWaitlistOpen} source="tavern" />
     </div>
   );
 }

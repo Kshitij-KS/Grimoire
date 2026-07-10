@@ -10,8 +10,8 @@ import type { EvalTask } from "@/lib/types";
 // Optionally enriched with live data from the sidecar if it's running.
 
 export async function GET() {
-  const { error } = await requireUser();
-  if (error) return error;
+  const auth = await requireUser();
+  if ("error" in auth) return auth.error;
 
   // Try to get live task list from sidecar; fall back to static list
   let tasks: EvalTask[] = SUPPORTED_EVAL_TASKS as unknown as EvalTask[];

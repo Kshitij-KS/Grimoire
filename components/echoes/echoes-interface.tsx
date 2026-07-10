@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, BookOpen, Bookmark, BrainCircuit, Send, RotateCcw, Sparkles, X } from "lucide-react";
+import { ArrowLeft, BookOpen, BrainCircuit, Send, RotateCcw, X } from "lucide-react";
 import { toast } from "sonner";
 import { DestructiveActionModal } from "@/components/shared/destructive-action-modal";
 import { EchoesOrbDynamic } from "@/components/echoes/echoes-orb-dynamic";
@@ -482,22 +482,6 @@ export function EchoesInterface({
                           >
                             <BookOpen className="h-3 w-3" />
                             Save to Lore
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => toast.info("Coming soon.")}
-                            className="flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-[11px] text-[var(--text-muted)] transition-colors hover:text-[var(--text-main)]"
-                            title="Bookmark"
-                          >
-                            <Bookmark className="h-3 w-3" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => toast.info("Coming soon.")}
-                            className="flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-[11px] text-[var(--text-muted)] transition-colors hover:text-[var(--text-main)]"
-                            title="Inspire"
-                          >
-                            <Sparkles className="h-3 w-3" />
                           </button>
                         </div>
                       </div>

@@ -6,6 +6,7 @@ import { hasAiEnv } from "@/lib/env";
 import { checkAndIncrement } from "@/lib/rate-limit";
 import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
 import { requireWorldAccess } from "@/lib/world-access";
+import { withErrorMonitoring } from "@/lib/sentry";
 
 // Model-consistency guard (R7.1, R7.2). No per-row stored model identifier is
 // recorded in the schema (768-dim columns need no migration), so we pin the
@@ -28,7 +29,7 @@ const createSchema = z.object({
   premise: z.string().max(400).optional(),
 });
 
-export async function POST(request: Request) {
+export const POST = withErrorMonitoring(async (request) => {
   const auth = await requireUser();
   if ("error" in auth) return auth.error;
 
@@ -229,10 +230,10 @@ export async function POST(request: Request) {
     .eq("id", sessionId);
 
   return Response.json({ messages: savedMessages });
-}
+});
 
 
-export async function GET(request: Request) {
+export const GET = withErrorMonitoring(async (request) => {
   const auth = await requireUser();
   if ("error" in auth) return auth.error;
 
@@ -275,4 +276,4 @@ export async function GET(request: Request) {
   }
 
   return Response.json({ error: "Missing worldId or sessionId" }, { status: 400 });
-}
+});

@@ -6,10 +6,12 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { CreditCard, LogOut, Settings, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/browser";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { WaitlistDialog } from "@/components/shared/waitlist-dialog";
 
 export function UserNav({ email }: { email?: string }) {
   const supabase = createClient();
   const [isOpen, setIsOpen] = useState(false);
+  const [waitlistOpen, setWaitlistOpen] = useState(false);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -19,6 +21,7 @@ export function UserNav({ email }: { email?: string }) {
   const initial = email ? email.charAt(0).toUpperCase() : "U";
 
   return (
+    <>
     <DropdownMenu.Root open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenu.Trigger asChild>
         <button className="relative h-8 w-8 rounded-full outline-none ring-offset-background transition-shadow focus-visible:ring-2 focus-visible:ring-[var(--violet)] focus-visible:ring-offset-2">
@@ -54,11 +57,15 @@ export function UserNav({ email }: { email?: string }) {
               <span>Account Settings</span>
             </Link>
           </DropdownMenu.Item>
-          <DropdownMenu.Item asChild className="relative flex cursor-pointer select-none items-center gap-2 rounded-xl px-3 py-2 text-sm outline-none transition-colors hover:bg-[color-mix(in_srgb,var(--text-main)_8%,transparent)] focus:bg-[color-mix(in_srgb,var(--text-main)_8%,transparent)] focus:text-[var(--text-main)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50">
-            <Link href="/dashboard/settings#billing">
-              <CreditCard className="h-4 w-4 text-[var(--text-muted)]" />
-              <span>Billing & Plan</span>
-            </Link>
+          <DropdownMenu.Item
+            onSelect={(e) => {
+              e.preventDefault();
+              setWaitlistOpen(true);
+            }}
+            className="relative flex cursor-pointer select-none items-center gap-2 rounded-xl px-3 py-2 text-sm outline-none transition-colors hover:bg-[color-mix(in_srgb,var(--text-main)_8%,transparent)] focus:bg-[color-mix(in_srgb,var(--text-main)_8%,transparent)] focus:text-[var(--text-main)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+          >
+            <CreditCard className="h-4 w-4 text-[var(--text-muted)]" />
+            <span>Billing & Plan</span>
           </DropdownMenu.Item>
           <DropdownMenu.Separator className="-mx-1 my-1 h-px bg-[var(--border)]" />
           <DropdownMenu.Item
@@ -71,5 +78,7 @@ export function UserNav({ email }: { email?: string }) {
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
+    <WaitlistDialog open={waitlistOpen} onOpenChange={setWaitlistOpen} source="user-nav" />
+    </>
   );
 }

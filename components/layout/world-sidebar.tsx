@@ -15,6 +15,8 @@ import {
   Wand2,
   ChevronDown,
   ChevronRight,
+  MoreHorizontal,
+  X,
 } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -58,11 +60,21 @@ export function WorldSidebar({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [isNavOpen, setIsNavOpen] = useState(true);
   const [isUsageOpen, setIsUsageOpen] = useState(true);
+  const [moreSheetOpen, setMoreSheetOpen] = useState(false);
 
   const nextHref = (section: WorldSection) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("section", section);
     return `${pathname}?${params.toString()}`;
+  };
+
+  const primaryItems = items.slice(0, 5);
+  const overflowItems = items.slice(5);
+
+  const navigateTo = (section: WorldSection) => {
+    // Close the sheet before navigating so it never lingers over a changed route.
+    setMoreSheetOpen(false);
+    router.push(nextHref(section));
   };
 
   return (
@@ -229,18 +241,73 @@ export function WorldSidebar({
         isDemo={isDemo}
       />
 
+      {/* ── Mobile "More" overflow sheet ── */}
+      <AnimatePresence>
+        {moreSheetOpen && (
+          <motion.div
+            key="mobile-more-backdrop"
+            className="fixed inset-0 z-40 bg-[color-mix(in_srgb,var(--bg)_60%,transparent)] backdrop-blur-sm lg:hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onClick={() => setMoreSheetOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {moreSheetOpen && (
+          <motion.div
+            key="mobile-more-sheet"
+            className="fixed bottom-[72px] left-3 right-3 z-50 rounded-2xl border border-[var(--border)] bg-[var(--surface-raised)] px-4 pb-4 pt-3 shadow-[0_-8px_32px_color-mix(in_srgb,var(--bg)_60%,transparent)] lg:hidden"
+            initial={{ y: 16, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 16, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+          >
+            {/* Drag handle */}
+            <div className="mx-auto mb-3 h-1 w-8 rounded-full bg-[var(--border)]" />
+
+            {/* Overflow section grid */}
+            <div className="grid grid-cols-3 gap-2">
+              {overflowItems.map((item) => {
+                const Icon = item.icon;
+                const active = item.key === activeSection;
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => navigateTo(item.key)}
+                    className={cn(
+                      "flex flex-col items-center gap-1 rounded-xl border px-3 py-3 transition-all duration-150 active:scale-[0.96] active:transition-none",
+                      active
+                        ? "border-[color-mix(in_srgb,var(--accent)_35%,transparent)] bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] text-[var(--accent)]"
+                        : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--border-focus)] hover:text-[var(--text-main)]",
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span className="text-[11px] font-medium">{item.mobileLabel}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Mobile bottom nav ── */}
       <div
-        className="fixed inset-x-0 bottom-0 z-30 flex gap-1 border-t border-[var(--border)] bg-[var(--bg)] p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-50 flex gap-1 border-t border-[var(--border)] bg-[var(--bg)] p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:hidden"
       >
-        {items.slice(0, 5).map((item) => {
+        {primaryItems.map((item) => {
           const Icon = item.icon;
           const active = item.key === activeSection;
           return (
             <button
               key={item.key}
               type="button"
-              onClick={() => router.push(nextHref(item.key))}
+              onClick={() => navigateTo(item.key)}
               className={cn(
                 "group relative flex flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-[10px] transition-[background,color,transform] duration-150 active:scale-[0.92]",
                 active
@@ -266,6 +333,28 @@ export function WorldSidebar({
             </button>
           );
         })}
+
+        {/* "More" affordance — opens the overflow sheet */}
+        <button
+          type="button"
+          onClick={() => setMoreSheetOpen((v) => !v)}
+          aria-expanded={moreSheetOpen}
+          className={cn(
+            "group relative flex flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-[10px] transition-[background,color,transform] duration-150 active:scale-[0.92]",
+            moreSheetOpen
+              ? "bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] text-[var(--accent)]"
+              : "text-[var(--text-muted)] hover:text-[var(--text-main)]",
+          )}
+          style={{ transitionTimingFunction: "cubic-bezier(0.23,1,0.32,1)" }}
+        >
+          <motion.span
+            animate={{ rotate: moreSheetOpen ? 45 : 0 }}
+            transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
+          >
+            {moreSheetOpen ? <X className="h-4 w-4" /> : <MoreHorizontal className="h-4 w-4" />}
+          </motion.span>
+          More
+        </button>
       </div>
     </>
   );

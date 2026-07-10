@@ -7,6 +7,7 @@ import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib
 import { inngest } from "@/lib/inngest-client";
 import { requireWorldAccess } from "@/lib/world-access";
 import { processLoreEntry } from "@/lib/lore-processing";
+import { withErrorMonitoring } from "@/lib/sentry";
 
 const schema = z.object({
   worldId: z.string().uuid().or(z.literal("demo-world")),
@@ -26,7 +27,7 @@ function sseEvent(event: string, data: Record<string, unknown>) {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
-export async function POST(request: Request) {
+export const POST = withErrorMonitoring(async (request) => {
   const auth = await requireUser();
   if ("error" in auth) return auth.error;
    if (!hasAiEnv()) {
@@ -217,4 +218,4 @@ export async function POST(request: Request) {
       Connection: "keep-alive",
     },
   });
-}
+});

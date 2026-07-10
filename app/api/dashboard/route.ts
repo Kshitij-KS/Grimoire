@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 import { requireUser } from "@/lib/api";
 
-export async function GET() {
+export async function GET(): Promise<Response> {
   const auth = await requireUser();
   if ("error" in auth) return auth.error;
 

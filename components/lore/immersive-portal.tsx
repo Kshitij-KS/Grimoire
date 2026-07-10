@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence, type Variants } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion, type Variants } from "framer-motion";
 import { EditorContent, type Editor } from "@tiptap/react";
 import { useFullscreen } from "@/lib/hooks/use-fullscreen";
 import { useImmersiveKeyboard } from "@/lib/hooks/use-immersive-keyboard";
@@ -78,15 +78,9 @@ export function ImmersivePortal({
 }: ImmersivePortalProps) {
   const { ambientIntensity } = useFocusModeStore();
   const { enter, exit } = useFullscreen();
-  const reducedMotionRef = useRef(false);
+  // Reactive at render time and responsive to changes, unlike a ref set in an effect.
+  const prefersReducedMotion = useReducedMotion();
   const isActive = !isReadonly;
-
-  // Detect prefers-reduced-motion on mount
-  useEffect(() => {
-    reducedMotionRef.current =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  }, []);
 
   // Enter fullscreen on mount, exit on unmount/exit
   useEffect(() => {
@@ -108,7 +102,7 @@ export function ImmersivePortal({
   // Block rendering if editor is in readonly mode
   if (!isActive) return null;
 
-  const variants = reducedMotionRef.current
+  const variants = prefersReducedMotion
     ? reducedMotionVariants
     : portalVariants;
 

@@ -14,10 +14,10 @@ import {
   Download,
   Users,
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { DestructiveActionModal } from "@/components/shared/destructive-action-modal";
+import { WaitlistDialog } from "@/components/shared/waitlist-dialog";
 import { WorldCollaboratorsTab } from "@/components/worlds/world-collaborators-tab";
 import type { World, UsageMeter } from "@/lib/types";
 import { toast } from "sonner";
@@ -44,6 +44,7 @@ export function WorldSettingsDrawer({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [exporting, setExporting] = useState(false); // Added exporting state
   const router = useRouter();
 
@@ -342,14 +343,12 @@ export function WorldSettingsDrawer({
                       </p>
                       {!isDemo && (
                         <Button
-                          asChild
                           variant="ghost"
+                          onClick={() => setWaitlistOpen(true)}
                           className="mt-3 flex w-full items-center justify-between rounded-[12px] border border-[color-mix(in_srgb,var(--accent)_30%,transparent)] bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] px-3 py-2.5 text-xs text-[var(--accent)] transition hover:border-[color-mix(in_srgb,var(--accent)_50%,transparent)] hover:bg-[color-mix(in_srgb,var(--accent)_12%,transparent)]"
                         >
-                          <Link href="/dashboard/settings#billing">
-                            <span>Upgrade to Pro</span>
-                            <ChevronRight className="h-3.5 w-3.5" />
-                          </Link>
+                          <span>Upgrade to Pro</span>
+                          <ChevronRight className="h-3.5 w-3.5" />
                         </Button>
                       )}
                     </div>
@@ -428,6 +427,7 @@ export function WorldSettingsDrawer({
       onConfirm={handleDeleteWorld}
       isDemo={isDemo}
     />
+    <WaitlistDialog open={waitlistOpen} onOpenChange={setWaitlistOpen} source="world-settings" />
     </>
   );
 }

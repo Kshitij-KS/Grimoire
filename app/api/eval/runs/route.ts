@@ -25,8 +25,9 @@ const CreateRunSchema = z.object({
 // Returns paginated list of eval runs for the authenticated user.
 
 export async function GET(request: Request) {
-  const { user, supabase, error } = await requireUser();
-  if (error) return error;
+  const auth = await requireUser();
+  if ("error" in auth) return auth.error;
+  const { user, supabase } = auth;
 
   const { searchParams } = new URL(request.url);
   const page = Math.max(0, parseInt(searchParams.get("page") ?? "0", 10));
@@ -50,8 +51,9 @@ export async function GET(request: Request) {
 // Creates a new eval run, inserts it into Supabase, and fires off the sidecar.
 
 export async function POST(request: Request) {
-  const { user, supabase, error } = await requireUser();
-  if (error) return error;
+  const auth = await requireUser();
+  if ("error" in auth) return auth.error;
+  const { user, supabase } = auth;
 
   // Parse and validate body
   let body: unknown;

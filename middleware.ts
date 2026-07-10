@@ -14,6 +14,20 @@ export async function middleware(request: NextRequest) {
     return earlyResponse;
   }
 
+  // Gate all eval API routes outside development so service-role-backed eval
+  // endpoints are unreachable in production. 404 avoids advertising them.
+  if (
+    request.nextUrl.pathname.startsWith("/api/eval") &&
+    process.env.NODE_ENV !== "development"
+  ) {
+    const evalGateResponse = NextResponse.json(
+      { error: "Not found" },
+      { status: 404 },
+    );
+    applySecurityHeaders(evalGateResponse);
+    return evalGateResponse;
+  }
+
   // Rate limit auth endpoints BEFORE session refresh to short-circuit abusive traffic
   if (request.nextUrl.pathname.startsWith("/api/auth")) {
     const ip = getClientIp(request);

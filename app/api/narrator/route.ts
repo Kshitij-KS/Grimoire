@@ -8,6 +8,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
 import { checkAndIncrement } from "@/lib/rate-limit";
 import { requireWorldAccess } from "@/lib/world-access";
+import { withErrorMonitoring } from "@/lib/sentry";
 
 // Model-consistency guard (R7.1, R7.2). No per-row stored model identifier is
 // recorded in the schema (768-dim columns need no migration), so we pin the
@@ -44,7 +45,7 @@ async function getSupabase() {
   }
 }
 
-export async function POST(request: Request) {
+export const POST = withErrorMonitoring(async (request) => {
   let body: unknown;
   try {
     body = await request.json();
@@ -176,7 +177,7 @@ export async function POST(request: Request) {
 
     if (!hasAiEnv()) {
       return jsonError("AI_NOT_CONFIGURED", 503, {
-        detail: "Missing GROQ_API_KEY or GEMINI_API_KEY on the server.",
+        detail: "Missing GROQ_API_KEY on the server (generation uses Groq; embeddings use HuggingFace).",
       });
     }
 
@@ -196,11 +197,11 @@ export async function POST(request: Request) {
   }
 
   return Response.json({ error: "Unknown action" }, { status: 400 });
-}
+});
 
 // ── GET /api/narrator?action=blank-spots&worldId=<id> ─────────────────────
 // Used by the dashboard Lore Bounties panel. No rate limit — read-only analysis.
-export async function GET(request: Request) {
+export const GET = withErrorMonitoring(async (request) => {
   const { searchParams } = new URL(request.url);
   const action = searchParams.get("action");
   const worldId = searchParams.get("worldId");
@@ -219,7 +220,7 @@ export async function GET(request: Request) {
        503,
        {
          detail: "AI analysis services are temporarily unavailable. Please try again later.",
-         suggestion: "Check that GROQ_API_KEY and GEMINI_API_KEY are properly configured on the server.",
+         suggestion: "Check that GROQ_API_KEY is properly configured on the server (generation uses Groq; embeddings use HuggingFace).",
        }
      );
    }
@@ -246,4 +247,4 @@ export async function GET(request: Request) {
   const loreContext = (loreChunks ?? []).map((c: { content: string }) => c.content);
   const holes = await detectBlankSpots(entities ?? [], loreContext);
   return Response.json({ holes });
-}
+});

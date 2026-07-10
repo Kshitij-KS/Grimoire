@@ -4,6 +4,7 @@ import { type Editor } from "@tiptap/react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { Bold, Italic, Heading2, Quote, X, Save } from "lucide-react";
 import { useToolbarVisibility } from "@/lib/hooks/use-toolbar-visibility";
+import { useFocusModeStore } from "@/lib/stores/focus-mode-store";
 import { cn } from "@/lib/utils";
 
 interface ImmersiveToolbarProps {
@@ -24,9 +25,9 @@ const TOOLBAR_BTN = (active: boolean) =>
   cn(
     "flex items-center justify-center rounded-md w-8 h-8 transition-colors",
     "text-[var(--text-muted)]",
-    "hover:text-[var(--text-main)] hover:bg-white/10",
+    "hover:text-[var(--text-main)] hover:bg-[color-mix(in_srgb,var(--text-main)_14%,transparent)]",
     "active:scale-95 active:transition-none",
-    active && "bg-white/15 !text-[var(--accent)]"
+    active && "bg-[color-mix(in_srgb,var(--accent)_18%,transparent)] !text-[var(--accent)]"
   );
 
 export function ImmersiveToolbar({
@@ -37,7 +38,8 @@ export function ImmersiveToolbar({
   isProcessing,
   isSaved,
 }: ImmersiveToolbarProps) {
-  const { isVisible, resetTimer } = useToolbarVisibility(3000);
+  const toolbarAutoHide = useFocusModeStore((s) => s.toolbarAutoHide);
+  const { isVisible, resetTimer } = useToolbarVisibility(3000, toolbarAutoHide);
 
   return (
     <AnimatePresence>
@@ -49,7 +51,7 @@ export function ImmersiveToolbar({
           exit="hidden"
           onMouseEnter={resetTimer}
           onMouseMove={resetTimer}
-          className="fixed bottom-6 left-1/2 z-[10000] -translate-x-1/2 flex items-center gap-3 rounded-xl border border-white/10 bg-black/60 backdrop-blur-xl px-4 py-2 shadow-2xl"
+          className="fixed bottom-6 left-1/2 z-[10000] -translate-x-1/2 flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_60%,transparent)] backdrop-blur-xl px-4 py-2 shadow-2xl"
         >
           {/* Formatting controls */}
           <div className="flex items-center gap-1">
@@ -100,7 +102,7 @@ export function ImmersiveToolbar({
           </div>
 
           {/* Divider */}
-          <div className="h-5 w-px bg-white/15" />
+          <div className="h-5 w-px bg-[var(--border)]" />
 
           {/* Word count */}
           <span className="text-xs text-[var(--text-muted)] tabular-nums">
@@ -108,7 +110,7 @@ export function ImmersiveToolbar({
           </span>
 
           {/* Divider */}
-          <div className="h-5 w-px bg-white/15" />
+          <div className="h-5 w-px bg-[var(--border)]" />
 
           {/* Save status */}
           <button
@@ -126,13 +128,13 @@ export function ImmersiveToolbar({
           </button>
 
           {/* Divider */}
-          <div className="h-5 w-px bg-white/15" />
+          <div className="h-5 w-px bg-[var(--border)]" />
 
           {/* Exit button */}
           <button
             type="button"
             title="Exit immersive mode"
-            className="flex items-center justify-center rounded-md w-8 h-8 text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-white/10 transition-colors"
+            className="flex items-center justify-center rounded-md w-8 h-8 text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[color-mix(in_srgb,var(--text-main)_14%,transparent)] transition-colors"
             onMouseDown={(e) => {
               e.preventDefault();
               onExit();

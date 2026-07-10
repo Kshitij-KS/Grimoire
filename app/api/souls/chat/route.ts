@@ -10,6 +10,7 @@ import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib
 import crypto from "crypto";
 import { soulMatchesWorld } from "@/lib/soul-access";
 import { requireWorldAccess } from "@/lib/world-access";
+import { withErrorMonitoring } from "@/lib/sentry";
 
 // Model-consistency guard (R7.1, R7.2). No per-row stored model identifier is
 // recorded in the schema (768-dim columns need no migration), so we pin the
@@ -29,7 +30,7 @@ function hashPrompt(text: string): string {
   return crypto.createHash("sha256").update(text.trim().toLowerCase()).digest("hex");
 }
 
-export async function POST(request: Request) {
+export const POST = withErrorMonitoring(async (request) => {
   const auth = await requireUser();
   if ("error" in auth) return auth.error;
   if (!hasAiEnv()) {
@@ -346,4 +347,4 @@ RULES:
       "X-Cache": "MISS",
     },
   });
-}
+});

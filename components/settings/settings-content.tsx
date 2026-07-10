@@ -136,12 +136,24 @@ function DangerTab() {
         Deleting your account permanently removes all worlds, lore, souls, and conversations.
         This cannot be undone.
       </p>
+      <p className="mt-4 text-sm leading-7 text-secondary">
+        To delete your account, email{" "}
+        <a
+          href="mailto:support@grimoire.pro?subject=Account%20deletion%20request"
+          className="font-medium text-[var(--danger)] underline underline-offset-4 transition-colors hover:text-[color-mix(in_srgb,var(--danger)_80%,var(--text-main))]"
+        >
+          support@grimoire.pro
+        </a>{" "}
+        and we&apos;ll remove your data.
+      </p>
       <Button
+        asChild
         variant="ghost"
         className="mt-4 w-full border border-[color-mix(in_srgb,var(--danger)_25%,transparent)] text-[var(--danger)] hover:bg-[color-mix(in_srgb,var(--danger)_8%,transparent)] sm:w-auto"
-        disabled
       >
-        Delete account — coming soon
+        <a href="mailto:support@grimoire.pro?subject=Account%20deletion%20request">
+          Email support to delete account
+        </a>
       </Button>
     </SettingsSection>
   );

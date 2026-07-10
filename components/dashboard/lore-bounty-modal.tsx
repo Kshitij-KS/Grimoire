@@ -129,7 +129,7 @@ The tone should be evocative, third-person, past-tense. Do not use generic fanta
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-50 bg-[color-mix(in_srgb,var(--bg)_60%,transparent)] backdrop-blur-sm"
             onClick={handleClose}
           />
 

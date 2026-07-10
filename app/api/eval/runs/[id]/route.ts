@@ -11,8 +11,9 @@ export async function GET(
   _request: Request,
   { params }: { params: { id: string } },
 ) {
-  const { user, supabase, error } = await requireUser();
-  if (error) return error;
+  const auth = await requireUser();
+  if ("error" in auth) return auth.error;
+  const { user, supabase } = auth;
 
   const { data: run, error: dbError } = await supabase
     .from("eval_runs")
@@ -38,8 +39,9 @@ export async function DELETE(
   _request: Request,
   { params }: { params: { id: string } },
 ) {
-  const { user, supabase, error } = await requireUser();
-  if (error) return error;
+  const auth = await requireUser();
+  if ("error" in auth) return auth.error;
+  const { user, supabase } = auth;
 
   // Verify ownership before deleting
   const { data: existing } = await supabase

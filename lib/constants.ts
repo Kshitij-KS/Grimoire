@@ -1,6 +1,7 @@
 export const DAILY_LIMITS = {
   chat_message: 5,
   lore_ingest: 10,
+  autocomplete: 30, // bounds per-user Groq autocomplete spend
   consistency_check: 5,
   soul_generate: 3,
   tavern_message: 30,

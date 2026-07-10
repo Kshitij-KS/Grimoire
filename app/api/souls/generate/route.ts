@@ -9,6 +9,7 @@ import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib
 import { parseSoulCard, soulCardPrompt } from "@/lib/soul-card";
 import { initialsFromName } from "@/lib/utils";
 import { requireWorldAccess } from "@/lib/world-access";
+import { withErrorMonitoring } from "@/lib/sentry";
 
 const schema = z.object({
   worldId: z.string().uuid(),
@@ -106,7 +107,7 @@ function soulForgeErrorResponse(error: unknown) {
   );
 }
 
-export async function POST(request: Request) {
+export const POST = withErrorMonitoring(async (request) => {
   const auth = await requireUser();
   if ("error" in auth) return auth.error;
   if (!hasAiEnv()) {
@@ -218,4 +219,4 @@ ${((loreChunks ?? []) as Array<{ content: string }>).map((chunk) => chunk.conten
     );
   }
   return Response.json({ success: true, soul, soul_card: soulCard });
-}
+});

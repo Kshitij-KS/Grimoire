@@ -28,6 +28,7 @@ import { useWorkspaceStore } from "@/lib/store";
 import { useRateLimitStatus } from "@/lib/hooks/use-rate-limit-status";
 import { useFocusModeStore } from "@/lib/stores/focus-mode-store";
 import { useParagraphFocus } from "@/lib/hooks/use-paragraph-focus";
+import { useTypewriterScrolling } from "@/lib/hooks/use-typewriter-scrolling";
 import { ImmersivePortal } from "@/components/lore/immersive-portal";
 import type { LoreEntry } from "@/lib/types";
 
@@ -197,6 +198,10 @@ export function LoomEditor({
 
   // Activate paragraph focus mode when enabled in the focus mode store
   useParagraphFocus(editor);
+
+  // Center the cursor line on selection change when typewriter scrolling is on
+  const typewriterScrolling = useFocusModeStore((s) => s.typewriterScrolling);
+  useTypewriterScrolling(editor, typewriterScrolling);
 
   useEffect(() => {
     if (editor) {
@@ -610,7 +615,7 @@ export function LoomEditor({
         <AnimatePresence>
           {spineOpen && (
             <>
-              <motion.div key="bd" className="fixed inset-0 z-40 bg-black/40" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} onClick={() => setSpineOpen(false)} />
+              <motion.div key="bd" className="fixed inset-0 z-40 bg-[color-mix(in_srgb,var(--bg)_60%,transparent)]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} onClick={() => setSpineOpen(false)} />
               <motion.aside key="sp" className="fixed left-0 top-0 z-50 flex h-full w-[min(280px,88vw)] flex-col border-r border-[var(--border)] bg-[var(--surface)]" initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} transition={{ duration: 0.26, ease: [0.32, 0.72, 0, 1] }}>
                 {spineContent}
               </motion.aside>
@@ -624,7 +629,7 @@ export function LoomEditor({
         <AnimatePresence>
           {marginOpen && (
             <>
-              <motion.div key="mbd" className="fixed inset-0 z-40 bg-black/40" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} onClick={() => setMarginOpen(false)} />
+              <motion.div key="mbd" className="fixed inset-0 z-40 bg-[color-mix(in_srgb,var(--bg)_60%,transparent)]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} onClick={() => setMarginOpen(false)} />
               <motion.div key="ms" className="fixed inset-x-0 bottom-0 z-50 flex max-h-[80vh] flex-col rounded-t-2xl border-t border-[var(--border)] bg-[var(--surface)]" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}>
                 <div className="mx-auto mt-2.5 h-[3px] w-8 shrink-0 rounded-full bg-[var(--border)]" />
                 {marginContent}

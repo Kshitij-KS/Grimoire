@@ -25,13 +25,15 @@ const WebhookSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  // Validate shared secret to ensure only our sidecar can call this
+  // Validate shared secret to ensure only our sidecar can call this.
+  // Fail closed: an unset secret rejects rather than skipping the check.
   const webhookSecret = process.env.EVAL_WEBHOOK_SECRET ?? "";
-  if (webhookSecret) {
-    const incoming = request.headers.get("x-eval-webhook-secret") ?? "";
-    if (incoming !== webhookSecret) {
-      return jsonError("Forbidden", 403);
-    }
+  if (!webhookSecret) {
+    return jsonError("Webhook not configured", 503);
+  }
+  const incoming = request.headers.get("x-eval-webhook-secret") ?? "";
+  if (incoming !== webhookSecret) {
+    return jsonError("Forbidden", 403);
   }
 
   let body: unknown;

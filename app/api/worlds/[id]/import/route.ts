@@ -1,5 +1,8 @@
 export const dynamic = "force-dynamic";
-import { requireUser, jsonError } from "@/lib/api";
+import { requireUser, jsonError, jsonRateLimited } from "@/lib/api";
+import { requireWorldAccess } from "@/lib/world-access";
+import { checkAndIncrement } from "@/lib/rate-limit";
+import { DAILY_LIMITS, FREE_TIER_LIMITS } from "@/lib/constants";
 
 const MAX_FILES = 10;
 const MAX_FILE_BYTES = 512 * 1024; // 500 KB
@@ -24,15 +27,10 @@ export async function POST(
   if ("error" in auth) return auth.error;
   const { user, supabase } = auth;
 
-  // Verify world ownership
-  const { data: world } = await supabase
-    .from("worlds")
-    .select("id, user_id")
-    .eq("id", params.id)
-    .maybeSingle();
-
-  if (!world) return jsonError("World not found", 404);
-  if (world.user_id !== user.id) return jsonError("Forbidden", 403);
+  // Require at least editor access so collaborators can import too, rather than
+  // a raw owner-only ownership check.
+  const access = await requireWorldAccess(supabase, user.id, params.id, "editor");
+  if (!access.allowed) return jsonError("Forbidden", 403);
 
   let formData: FormData;
   try {
@@ -49,6 +47,11 @@ export async function POST(
 
   const entries: Array<{ id: string; title: string; created_at: string }> = [];
   const errors: Array<{ name: string; reason: string }> = [];
+
+  // First pass: validate files (extension, size, readability, non-empty) so the
+  // free-tier cap can be checked against the count of files that would actually
+  // be imported.
+  const validFiles: Array<{ name: string; content: string; title: string }> = [];
 
   for (const raw of rawFiles) {
     if (!(raw instanceof File)) {
@@ -84,7 +87,36 @@ export async function POST(
       continue;
     }
 
-    const title = extractTitle(content, ext);
+    validFiles.push({ name, content, title: extractTitle(content, ext) });
+  }
+
+  // Free-tier cap: reject up front if importing the valid batch would push the
+  // world past the free-tier lore-entry limit.
+  const { count: existing } = await supabase
+    .from("lore_entries")
+    .select("id", { count: "exact", head: true })
+    .eq("world_id", params.id);
+
+  if ((existing ?? 0) + validFiles.length > FREE_TIER_LIMITS.loreEntries) {
+    return jsonError("FREE_TIER_LORE_LIMIT", 403, {
+      limit: FREE_TIER_LIMITS.loreEntries,
+    });
+  }
+
+  for (const file of validFiles) {
+    const { name, content, title } = file;
+
+    // Meter each entry against the per-user lore_ingest daily limit; the first
+    // exhausted check short-circuits the remaining files.
+    const gate = await checkAndIncrement(
+      supabase,
+      user.id,
+      "lore_ingest",
+      DAILY_LIMITS.lore_ingest,
+    );
+    if (!gate.allowed) {
+      return jsonRateLimited("lore_ingest", DAILY_LIMITS.lore_ingest);
+    }
 
     const { data: entry, error: insertErr } = await supabase
       .from("lore_entries")

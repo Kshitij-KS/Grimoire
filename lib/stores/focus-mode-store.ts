@@ -6,7 +6,6 @@ import { createJSONStorage, persist } from "zustand/middleware";
 // ── Types ──
 
 type AmbientIntensity = "subtle" | "medium" | "vivid";
-type Soundscape = "none" | "rain" | "fireplace" | "quill";
 
 export interface FocusModeState {
   isImmersive: boolean;
@@ -14,14 +13,12 @@ export interface FocusModeState {
   showParagraphFocus: boolean;
   typewriterScrolling: boolean;
   toolbarAutoHide: boolean;
-  soundscape: Soundscape;
 
   setImmersive: (value: boolean) => void;
   setAmbientIntensity: (value: AmbientIntensity) => void;
   toggleParagraphFocus: () => void;
   toggleTypewriterScrolling: () => void;
   toggleToolbarAutoHide: () => void;
-  setSoundscape: (value: Soundscape) => void;
 }
 
 // ── Defaults ──
@@ -31,12 +28,6 @@ const VALID_AMBIENT_INTENSITIES: AmbientIntensity[] = [
   "medium",
   "vivid",
 ];
-const VALID_SOUNDSCAPES: Soundscape[] = [
-  "none",
-  "rain",
-  "fireplace",
-  "quill",
-];
 
 export const FOCUS_MODE_DEFAULTS = {
   isImmersive: false,
@@ -44,7 +35,6 @@ export const FOCUS_MODE_DEFAULTS = {
   showParagraphFocus: false,
   typewriterScrolling: false,
   toolbarAutoHide: true,
-  soundscape: "none" as Soundscape,
 };
 
 // ── Validation helpers ──
@@ -53,13 +43,6 @@ function isValidAmbientIntensity(value: unknown): value is AmbientIntensity {
   return (
     typeof value === "string" &&
     VALID_AMBIENT_INTENSITIES.includes(value as AmbientIntensity)
-  );
-}
-
-function isValidSoundscape(value: unknown): value is Soundscape {
-  return (
-    typeof value === "string" &&
-    VALID_SOUNDSCAPES.includes(value as Soundscape)
   );
 }
 
@@ -78,10 +61,6 @@ export function validatePersistedState(
   const ambientIntensity = isValidAmbientIntensity(persisted.ambientIntensity)
     ? persisted.ambientIntensity
     : FOCUS_MODE_DEFAULTS.ambientIntensity;
-
-  const soundscape = isValidSoundscape(persisted.soundscape)
-    ? persisted.soundscape
-    : FOCUS_MODE_DEFAULTS.soundscape;
 
   // Validate booleans — if any is non-boolean, discard ALL and use defaults (Req 8.6)
   const booleanFields = [
@@ -111,7 +90,6 @@ export function validatePersistedState(
     toolbarAutoHide: isBoolean(persisted.toolbarAutoHide)
       ? persisted.toolbarAutoHide
       : FOCUS_MODE_DEFAULTS.toolbarAutoHide,
-    soundscape,
   };
 }
 
@@ -168,7 +146,6 @@ export const useFocusModeStore = create<FocusModeState>()(
         set((state) => ({ typewriterScrolling: !state.typewriterScrolling })),
       toggleToolbarAutoHide: () =>
         set((state) => ({ toolbarAutoHide: !state.toolbarAutoHide })),
-      setSoundscape: (value) => set({ soundscape: value }),
     }),
     {
       name: "grimoire-focus-mode",

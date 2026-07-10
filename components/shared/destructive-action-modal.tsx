@@ -64,7 +64,7 @@ export function DestructiveActionModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-50 bg-[color-mix(in_srgb,var(--bg)_60%,transparent)] backdrop-blur-sm"
             onClick={handleClose}
           />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 py-12 sm:p-6 drop-shadow-2xl">

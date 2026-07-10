@@ -3,6 +3,7 @@ import JSZip from "jszip";
 import { requireUser, jsonError, jsonRateLimited } from "@/lib/api";
 import { checkAndIncrement } from "@/lib/rate-limit";
 import { DAILY_LIMITS } from "@/lib/constants";
+import { withErrorMonitoring } from "@/lib/sentry";
 
 function safeFileName(value: string) {
   return value.trim().toLowerCase().replace(/[^a-z0-9-_]+/g, "_").replace(/^_+|_+$/g, "") || "world";
@@ -146,6 +147,7 @@ export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  return withErrorMonitoring(async (req) => {
   const auth = await requireUser();
   if ("error" in auth) return auth.error;
   const { user, supabase } = auth;
@@ -270,7 +272,7 @@ export async function GET(
     },
   };
 
-  const url = new URL(request.url);
+  const url = new URL(req.url);
   const format = url.searchParams.get("format");
 
   if (format === "markdown") {
@@ -297,4 +299,5 @@ export async function GET(
       "Content-Disposition": `attachment; filename="grimoire_export_${safeFileName(world.name)}.json"`,
     },
   });
+  })(request);
 }
