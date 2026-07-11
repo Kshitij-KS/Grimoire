@@ -27,6 +27,32 @@ function sseEvent(event: string, data: Record<string, unknown>) {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
+/**
+ * Extracts a human-readable message from thrown values. Supabase/PostgREST
+ * errors are plain objects (not Error instances) shaped like
+ * `{ message, details, hint, code }`, so a bare `error.message` check misses
+ * them and callers see the opaque fallback. This pulls out whatever detail is
+ * available so the client (and logs) show the real cause.
+ */
+function extractErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  if (error && typeof error === "object") {
+    const e = error as {
+      message?: unknown;
+      details?: unknown;
+      hint?: unknown;
+      code?: unknown;
+    };
+    const parts = [e.message, e.details, e.hint].filter(
+      (p): p is string => typeof p === "string" && p.length > 0,
+    );
+    if (parts.length > 0) {
+      return e.code ? `${parts.join(" — ")} (${String(e.code)})` : parts.join(" — ");
+    }
+  }
+  return "Lore ingest failed.";
+}
+
 export const POST = withErrorMonitoring(async (request) => {
   const auth = await requireUser();
   if ("error" in auth) return auth.error;
@@ -190,18 +216,24 @@ export const POST = withErrorMonitoring(async (request) => {
           ),
         );
       } catch (error) {
+        // Log the full error server-side so the real cause (e.g. a Postgres
+        // error from a chunk insert or an entity RPC) is visible in the terminal.
+        console.error("[lore/ingest] processing failed:", error);
+
         await supabase
           .from("lore_entries")
           .update({ processing_status: "failed" })
           .eq("id", entry.id);
 
+        // Surface a meaningful message. Supabase/PostgREST errors are plain
+        // objects (not Error instances) with message/details/hint/code fields,
+        // so extract those rather than collapsing to a generic string.
+        const message = extractErrorMessage(error);
+
         controller.enqueue(
           encoder.encode(
             sseEvent("error", {
-              error:
-                error instanceof Error
-                  ? error.message
-                  : "Lore ingest failed.",
+              error: message,
             }),
           ),
         );
