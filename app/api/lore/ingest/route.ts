@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 import { z } from "zod";
 import { DAILY_LIMITS, FREE_TIER_LIMITS } from "@/lib/constants";
 import { hasAiEnv } from "@/lib/env";
-import { checkAndIncrement } from "@/lib/rate-limit";
+import { checkAndIncrement, decrementRateLimit } from "@/lib/rate-limit";
 import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
 import { inngest } from "@/lib/inngest-client";
 import { requireWorldAccess } from "@/lib/world-access";
@@ -219,6 +219,15 @@ export const POST = withErrorMonitoring(async (request) => {
         // Log the full error server-side so the real cause (e.g. a Postgres
         // error from a chunk insert or an entity RPC) is visible in the terminal.
         console.error("[lore/ingest] processing failed:", error);
+
+        // Refund the daily lore_ingest unit we charged before processing — a
+        // server-side failure must not consume the user's quota. Best-effort:
+        // never let a refund error mask the original failure.
+        try {
+          await decrementRateLimit(supabase, user.id, "lore_ingest");
+        } catch (refundError) {
+          console.error("[lore/ingest] failed to refund rate limit:", refundError);
+        }
 
         await supabase
           .from("lore_entries")

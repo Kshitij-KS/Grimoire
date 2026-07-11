@@ -87,28 +87,28 @@ export function RateLimitModal({ open, onOpenChange, action, limit }: RateLimitM
 
         <div className="space-y-4">
           {/* Usage count display */}
-          <div className="flex items-center justify-between rounded-[18px] border border-border bg-[rgba(13,11,8,0.6)] p-4">
+          <div className="flex items-center justify-between rounded-[18px] border border-border bg-[var(--surface-raised)] p-4">
             <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-secondary">Usage</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">Usage</p>
               <p className="mt-1 font-heading text-3xl text-[var(--accent)]">
                 {currentCount} / {maxCount}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-xs uppercase tracking-[0.2em] text-secondary">Action</p>
-              <p className="mt-1 text-sm text-foreground">{label}</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">Action</p>
+              <p className="mt-1 text-sm text-[var(--text-main)]">{label}</p>
             </div>
           </div>
 
           {/* Reset countdown */}
-          <div className="flex items-center justify-between rounded-[18px] border border-border bg-[rgba(13,11,8,0.6)] p-4">
+          <div className="flex items-center justify-between rounded-[18px] border border-border bg-[var(--surface-raised)] p-4">
             <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-secondary">Resets in</p>
-              <p className="mt-1 font-heading text-3xl text-[rgb(212,168,83)]">{resetTime}</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">Resets in</p>
+              <p className="mt-1 font-heading text-3xl text-[var(--accent)]">{resetTime}</p>
             </div>
             <div className="text-right">
-              <p className="text-xs uppercase tracking-[0.2em] text-secondary">At midnight</p>
-              <p className="mt-1 text-sm text-secondary">UTC</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">At midnight</p>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">UTC</p>
             </div>
           </div>
 
