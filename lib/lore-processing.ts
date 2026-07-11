@@ -90,10 +90,19 @@ export async function processLoreEntry({
   await supabase.from("lore_chunks").delete().eq("lore_entry_id", entryId);
 
 
-  // Insert new chunks
+  // Insert new chunks. These (embeddings + content) are the core searchable
+  // memory, so a failure here is genuinely fatal — but surface the real DB
+  // message instead of throwing a bare Supabase error object (which reaches the
+  // client as the opaque "Lore ingest failed.").
   if (chunkRows.length > 0) {
     const { error } = await supabase.from("lore_chunks").insert(chunkRows);
-    if (error) throw error;
+    if (error) {
+      const message =
+        error && typeof error === "object" && "message" in error
+          ? String((error as { message: unknown }).message)
+          : "Failed to store lore chunks.";
+      throw new Error(message);
+    }
   }
 
 
