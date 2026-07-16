@@ -340,7 +340,8 @@ export function ConstellationCanvas({
       canvas.height = h * dpr;
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
-      ctx.scale(dpr, dpr);
+      // NOTE: no ctx.scale(dpr) here — the draw loop sets an absolute transform
+      // every frame (which would discard it). The dpr is applied there instead.
       nodesRef.current = buildNodes(w, h);
     };
 
@@ -351,9 +352,10 @@ export function ConstellationCanvas({
     let t = 0;
 
     const draw = () => {
-      const w = container.offsetWidth;
-      const h = container.offsetHeight;
-      ctx.clearRect(0, 0, w, h);
+      const dpr = window.devicePixelRatio || 1;
+      // Clear the full device buffer under the identity transform.
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       t += 0.007;
       // Resolve theme-accurate colors each frame (cheap CSS var read)
       const themeColors = resolveThemeColors();
@@ -365,7 +367,9 @@ export function ConstellationCanvas({
       const scale = scaleRef.current;
       const off = offsetRef.current;
       ctx.save();
-      ctx.setTransform(scale, 0, 0, scale, off.x, off.y);
+      // World → device: apply the user zoom AND the device pixel ratio so what
+      // is drawn lines up 1:1 with CSS-pixel hit-testing (toWorld/findNode).
+      ctx.setTransform(scale * dpr, 0, 0, scale * dpr, off.x * dpr, off.y * dpr);
 
       const nodes = nodesRef.current;
       const hovered = hoveredNodeRef.current;

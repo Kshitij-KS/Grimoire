@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, X } from "lucide-react";
@@ -82,7 +83,12 @@ export function ForgeRelationshipModal({
     }
   };
 
-  return (
+  // Render into document.body so `position: fixed` is relative to the viewport,
+  // not the constellation's transformed/overflow-hidden container (which was
+  // clipping the modal to the canvas area).
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <AnimatePresence>
       {open && sourceEntity && targetEntity && (
         <>
@@ -196,6 +202,7 @@ export function ForgeRelationshipModal({
           </div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
