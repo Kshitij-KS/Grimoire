@@ -65,26 +65,18 @@ interface CanvasNode {
   driftAmplitude: number;
   opacity: number;
   scale: number;
-  isMember: boolean;
-  parentId: string | null;
   visible: boolean;
+  /** Importance in [0,1] derived from mention_count — drives size & glow. */
+  weight: number;
+  /** Deterministic per-node twinkle phase. */
+  twinkle: number;
 }
 
-function inferMemberships(entities: Entity[]): Map<string, Set<string>> {
-  const collectives = entities.filter((e) => e.type === "faction" || e.type === "location");
-  const characters = entities.filter((e) => e.type === "character");
-  const map = new Map<string, Set<string>>();
-  for (const col of collectives) {
-    const members = characters.filter(
-      (ch) =>
-        (ch.summary ?? "").toLowerCase().includes(col.name.toLowerCase()) ||
-        (col.summary ?? "").toLowerCase().includes(ch.name.toLowerCase()),
-    );
-    if (members.length > 0) {
-      map.set(col.id, new Set(members.map((m) => m.id)));
-    }
-  }
-  return map;
+// Deterministic pseudo-random in [0,1) from an integer seed — used for the
+// background starfield so it stays stable across frames (no flicker).
+function seededRandom(seed: number): number {
+  const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
 }
 
 function drawHexagon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
@@ -175,9 +167,7 @@ export function ConstellationCanvas({
   const searchQueryRef = useRef("");
   const activeTypesRef = useRef(activeTypes);
   const nodesRef = useRef<CanvasNode[]>([]);
-  const membershipsRef = useRef<Map<string, Set<string>>>(new Map());
   const hoveredNodeRef = useRef<CanvasNode | null>(null);
-  const expandedIdRef = useRef<string | null>(null);
   const rafRef = useRef<number>(0);
   const scaleRef = useRef(1);
   const offsetRef = useRef({ x: 0, y: 0 });
@@ -230,36 +220,37 @@ export function ConstellationCanvas({
       const cx = width / 2;
       const cy = height / 2;
       const goldenAngle = Math.PI * (3 - Math.sqrt(5));
-      const memberships = membershipsRef.current;
 
-      const memberCharIds = new Set<string>();
-      for (const ids of memberships.values()) ids.forEach((id) => memberCharIds.add(id));
-
-      // Top-level nodes = every entity except characters that belong to a
-      // collective (those orbit their parent only when it is expanded). Sort by
-      // type so same-kind entities land on contiguous arcs of the spiral and
-      // still read as loose groups.
-      const topLevel = entities
-        .filter((e) => !(e.type === "character" && memberCharIds.has(e.id)))
-        .sort((a, b) => TYPE_ORDER.indexOf(a.type) - TYPE_ORDER.indexOf(b.type));
-
-      const nodes: CanvasNode[] = [];
+      // EVERY entity is a visible node (no hidden "members"). Sorted by type so
+      // same-kind entities land on contiguous arcs of the spiral and read as
+      // loose constellations.
+      const ordered = [...entities].sort(
+        (a, b) => TYPE_ORDER.indexOf(a.type) - TYPE_ORDER.indexOf(b.type),
+      );
 
       // Phyllotaxis (sunflower) placement: radius ∝ √index with the golden
-      // angle between successive nodes. This fills the plane evenly and keeps a
-      // guaranteed minimum centre-to-centre gap between EVERY pair of nodes, so
-      // entities can never crowd or overlap no matter how many exist. `spacing`
-      // is that minimum gap; it grows a little with the viewport.
+      // angle between successive nodes — fills the plane evenly with a
+      // guaranteed minimum gap between every pair, so nodes never crowd.
       const spacing = Math.max(66, Math.min(width, height) * 0.12);
 
-      topLevel.forEach((entity, k) => {
+      // Normalise mention_count across the set → importance in [0,1]. The
+      // busiest entities read as brighter, larger "stars"; quiet ones stay
+      // small, giving the map a natural visual hierarchy.
+      const maxMentions = ordered.reduce(
+        (m, e) => Math.max(m, e.mention_count ?? 0),
+        1,
+      );
+
+      return ordered.map((entity, k) => {
         const radius = spacing * Math.sqrt(k + 0.5);
         const angle = k * goldenAngle;
         const hx = cx + Math.cos(angle) * radius;
         const hy = cy + Math.sin(angle) * radius;
         const anchored = entity.type === "faction" || entity.type === "location";
+        // sqrt keeps a single dominant entity from dwarfing everything else.
+        const weight = Math.sqrt((entity.mention_count ?? 0) / maxMentions);
 
-        nodes.push({
+        return {
           entity,
           homeX: hx,
           homeY: hy,
@@ -269,60 +260,17 @@ export function ConstellationCanvas({
           y: hy,
           driftPhase: k * goldenAngle,
           driftSpeed: 0.2 + (k % 5) * 0.04,
-          // Small drift only — the large amplitudes used before let neighbouring
-          // labels wander into each other.
           driftAmplitude: anchored ? 1.4 : 2.4,
           opacity: 1,
           scale: 1,
-          isMember: false,
-          parentId: null,
           visible: true,
-        });
+          weight,
+          twinkle: seededRandom(k + 1) * Math.PI * 2,
+        };
       });
-
-      // Place member characters collapsed at parent position
-      for (const [parentId, charIds] of memberships.entries()) {
-        const parentNode = nodes.find((n) => n.entity.id === parentId);
-        if (!parentNode) continue;
-
-        const charEntities = [...charIds]
-          .map((id) => entities.find((e) => e.id === id))
-          .filter(Boolean) as Entity[];
-
-        charEntities.forEach((entity, i) => {
-          const orbitR = 55 + Math.floor(i / 6) * 30;
-          const angle = (i / Math.max(charEntities.length, 1)) * Math.PI * 2 - Math.PI / 2;
-          const tx = parentNode.homeX + Math.cos(angle) * orbitR;
-          const ty = parentNode.homeY + Math.sin(angle) * orbitR;
-
-          nodes.push({
-            entity,
-            homeX: parentNode.homeX,
-            homeY: parentNode.homeY,
-            targetX: tx,
-            targetY: ty,
-            x: parentNode.homeX,
-            y: parentNode.homeY,
-            driftPhase: i * goldenAngle,
-            driftSpeed: 0.4 + Math.random() * 0.3,
-            driftAmplitude: 3 + Math.random() * 3,
-            opacity: 0,
-            scale: 0,
-            isMember: true,
-            parentId,
-            visible: false,
-          });
-        });
-      }
-
-      return nodes;
     },
     [entities],
   );
-
-  useEffect(() => {
-    membershipsRef.current = inferMemberships(entities);
-  }, [entities]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -373,15 +321,40 @@ export function ConstellationCanvas({
 
       const nodes = nodesRef.current;
       const hovered = hoveredNodeRef.current;
-      const expandedId = expandedIdRef.current;
-      const memberships = membershipsRef.current;
 
-      // Relationship focus: when a top-level node is hovered, collect the ids it
-      // is linked to via forged relationships. We use this both to keep those
-      // neighbours lit (while dimming everyone else) and to draw only that
-      // node's labelled edges — so the map reveals one entity's web at a time
-      // instead of showing every link at once.
-      const focusNode = hovered && !hovered.isMember ? hovered : null;
+      // ── Background starfield ────────────────────────────────────────────
+      // A faint, deterministic field of distant stars drawn in world space so
+      // it pans/zooms with the map. Gives the void depth without competing
+      // with the entity nodes. Drawn before everything else.
+      {
+        const starColor = themeColors.artifact ?? "#C3CBEC";
+        const spanX = (canvas.width / dpr) / scale;
+        const spanY = (canvas.height / dpr) / scale;
+        const originX = -off.x / scale;
+        const originY = -off.y / scale;
+        const STAR_COUNT = 90;
+        for (let i = 0; i < STAR_COUNT; i++) {
+          const sx = originX + seededRandom(i * 2 + 1) * spanX;
+          const sy = originY + seededRandom(i * 2 + 2) * spanY;
+          const tw = 0.5 + 0.5 * Math.sin(t * 1.6 + i);
+          const sr = 0.4 + seededRandom(i * 3 + 5) * 0.9;
+          ctx.beginPath();
+          ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+          ctx.fillStyle =
+            starColor +
+            Math.round((0.08 + tw * 0.14) * 0xff)
+              .toString(16)
+              .padStart(2, "0");
+          ctx.fill();
+        }
+      }
+
+      // Relationship focus: when a node is hovered, collect the ids it is linked
+      // to via forged relationships. We use this both to keep those neighbours
+      // lit (while dimming everyone else) and to draw only that node's labelled
+      // edges — so the map reveals one entity's web at a time instead of
+      // showing every link at once.
+      const focusNode = hovered;
       const neighborIds = new Set<string>();
       if (focusNode) {
         for (const rel of relationshipsRef.current) {
@@ -391,22 +364,11 @@ export function ConstellationCanvas({
       }
 
       for (const node of nodes) {
-        if (node.visible) {
-          const driftX = Math.cos(node.driftPhase + t * node.driftSpeed) * node.driftAmplitude;
-          const driftY =
-            Math.sin(node.driftPhase + t * node.driftSpeed * 0.7) * node.driftAmplitude * 0.6;
-
-          if (node.isMember) {
-            node.x += (node.targetX + driftX - node.x) * 0.07;
-            node.y += (node.targetY + driftY - node.y) * 0.07;
-          } else {
-            node.x = node.homeX + driftX;
-            node.y = node.homeY + driftY;
-          }
-        } else {
-          node.x += (node.homeX - node.x) * 0.1;
-          node.y += (node.homeY - node.y) * 0.1;
-        }
+        const driftX = Math.cos(node.driftPhase + t * node.driftSpeed) * node.driftAmplitude;
+        const driftY =
+          Math.sin(node.driftPhase + t * node.driftSpeed * 0.7) * node.driftAmplitude * 0.6;
+        node.x = node.homeX + driftX;
+        node.y = node.homeY + driftY;
 
         const sq = searchQueryRef.current.toLowerCase();
         const atypes = activeTypesRef.current;
@@ -414,15 +376,11 @@ export function ConstellationCanvas({
         const matchesType = atypes.has(node.entity.type);
 
         let targetOpacity: number;
-        if (!node.visible) {
-          targetOpacity = 0;
-        } else if (!matchesType) {
+        if (!matchesType) {
           targetOpacity = 0.04;
         } else if (sq && !matchesSearch) {
           targetOpacity = 0.06;
-        } else if (expandedId && !node.isMember && node.entity.id !== expandedId) {
-          targetOpacity = 0.18;
-        } else if (focusNode && !node.isMember) {
+        } else if (focusNode) {
           // The hovered node stays full; its related neighbours stay bright so
           // the relationship is legible; unrelated nodes recede.
           targetOpacity = node === focusNode ? 1 : neighborIds.has(node.entity.id) ? 0.95 : 0.12;
@@ -430,31 +388,12 @@ export function ConstellationCanvas({
           targetOpacity = 1;
         }
         node.opacity += (targetOpacity - node.opacity) * 0.1;
-        const targetScale = node.visible ? 1 : 0;
-        node.scale += (targetScale - node.scale) * 0.1;
+        node.scale += (1 - node.scale) * 0.1;
       }
 
       // NOTE: the old faint "same-type proximity web" was removed — those lines
       // implied relationships that don't exist and were the main source of
       // visual clutter. Only real, forged relationships are drawn (below).
-
-      // Member edges
-      if (expandedId) {
-        const parentNode = nodes.find((n) => n.entity.id === expandedId);
-        if (parentNode) {
-          for (const mn of nodes) {
-            if (mn.parentId !== expandedId || !mn.visible) continue;
-            ctx.beginPath();
-            ctx.moveTo(parentNode.x, parentNode.y);
-            ctx.lineTo(mn.x, mn.y);
-            ctx.strokeStyle = `rgba(196,168,106,${0.15 * mn.opacity})`;
-            ctx.lineWidth = 0.8;
-            ctx.setLineDash([3, 5]);
-            ctx.stroke();
-            ctx.setLineDash([]);
-          }
-        }
-      }
 
       // Draw forged relationships as soft curved threads. When a node is
       // focused (hovered) we show ONLY its links, brightened and labelled;
@@ -564,84 +503,103 @@ export function ConstellationCanvas({
         ctx.restore();
       }
 
-      // Draw nodes
+      // ── Draw nodes ──────────────────────────────────────────────────────
+      // Each entity is rendered as a layered "star": a soft outer glow, a
+      // radial-gradient core, a crisp rim-light stroke, and a bright inner
+      // highlight. Size scales with importance (weight) so busy entities read
+      // as bright anchors and quiet ones as distant sparks.
       for (const node of nodes) {
         if (node.opacity < 0.01 && node.scale < 0.01) continue;
 
         const color = themeColors[node.entity.type] ?? TYPE_COLORS[node.entity.type] ?? "#E0E0E0";
         const isHov = node === hovered;
         const baseR = TYPE_RADIUS[node.entity.type] ?? 5;
-        const r = (isHov ? baseR + 2.5 : baseR) * node.scale;
+        // Importance adds up to ~70% to the base radius; hover adds a fixed pop.
+        const importanceR = baseR * (1 + node.weight * 0.7);
+        const r = (isHov ? importanceR + 2.5 : importanceR) * node.scale;
+        // Gentle per-node twinkle keeps the field alive without being busy.
+        const twinkle = 0.85 + 0.15 * Math.sin(t * 1.4 + node.twinkle);
+        const alpha = node.opacity * twinkle;
+        const hex = (a: number) =>
+          Math.round(Math.max(0, Math.min(1, a)) * 0xff)
+            .toString(16)
+            .padStart(2, "0");
 
         ctx.save();
-        ctx.globalAlpha = node.opacity;
 
-        // Faction orbit ring
-        if (
-          node.entity.type === "faction" &&
-          memberships.has(node.entity.id) &&
-          node.scale > 0.1
-        ) {
-          ctx.beginPath();
-          ctx.arc(node.x, node.y, 22 * node.scale, 0, Math.PI * 2);
-          ctx.strokeStyle = color + "44";
-          ctx.lineWidth = 1;
-          ctx.setLineDash([3, 4]);
-          ctx.stroke();
-          ctx.setLineDash([]);
-
-          const memberCount = memberships.get(node.entity.id)?.size ?? 0;
-          const isExpanded = expandedIdRef.current === node.entity.id;
-          ctx.font = "bold 8px Inter, sans-serif";
-          ctx.textAlign = "center";
-          ctx.fillStyle = (themeColors[node.entity.type] ?? color) + "CC";
-          ctx.fillText(isExpanded ? "▾" : `+${memberCount}`, node.x, node.y - 28 * node.scale);
-        }
-
-        // Glow
-        const glowR = r * 3.8;
+        // Layered soft glow — larger & warmer for important/hovered nodes.
+        const glowR = r * (isHov ? 5.4 : 3.8) * (1 + node.weight * 0.5);
         const grd = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, glowR);
-        grd.addColorStop(0, color + "44");
+        grd.addColorStop(0, color + hex(alpha * (0.34 + node.weight * 0.25)));
+        grd.addColorStop(0.5, color + hex(alpha * 0.12));
         grd.addColorStop(1, "transparent");
         ctx.beginPath();
         ctx.arc(node.x, node.y, glowR, 0, Math.PI * 2);
         ctx.fillStyle = grd;
         ctx.fill();
 
-        // Node shape + fill
+        // Core fill — radial gradient from a near-white centre to the type hue
+        // gives each node a lit, three-dimensional feel.
+        const coreGrad = ctx.createRadialGradient(
+          node.x - r * 0.3,
+          node.y - r * 0.3,
+          r * 0.1,
+          node.x,
+          node.y,
+          r,
+        );
+        coreGrad.addColorStop(0, "#FFFFFF" + hex(alpha * 0.95));
+        coreGrad.addColorStop(0.45, color + hex(alpha));
+        coreGrad.addColorStop(1, color + hex(alpha * 0.72));
         drawNodeShape(ctx, node.entity.type, node.x, node.y, r);
-        ctx.fillStyle = color + Math.round(node.opacity * 0xff).toString(16).padStart(2, "0");
+        ctx.fillStyle = coreGrad;
         ctx.fill();
 
-        // Rule inner ring
+        // Rim light — crisp outline that separates the node from its glow.
+        drawNodeShape(ctx, node.entity.type, node.x, node.y, r);
+        ctx.strokeStyle = color + hex(alpha * 0.9);
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Inner specular highlight for a glassy, gem-like read.
+        ctx.beginPath();
+        ctx.arc(node.x - r * 0.32, node.y - r * 0.32, Math.max(0.6, r * 0.22), 0, Math.PI * 2);
+        ctx.fillStyle = "#FFFFFF" + hex(alpha * 0.8);
+        ctx.fill();
+
+        // Rule inner ring (kept — reads as an inscribed sigil).
         if (node.entity.type === "rule") {
           ctx.beginPath();
           ctx.arc(node.x, node.y, r * 0.5, 0, Math.PI * 2);
-          ctx.strokeStyle = color + "99";
+          ctx.strokeStyle = color + hex(alpha * 0.6);
           ctx.lineWidth = 1;
           ctx.stroke();
         }
 
-        // Hover ring
+        // Hover ring — a soft halo pulse around the focused node.
         if (isHov) {
-          drawNodeShape(ctx, node.entity.type, node.x, node.y, r + 2);
-          ctx.strokeStyle = color + "CC";
-          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, r + 6 + Math.sin(t * 3) * 1.5, 0, Math.PI * 2);
+          ctx.strokeStyle = color + hex(0.55);
+          ctx.lineWidth = 1.25;
           ctx.stroke();
         }
 
         ctx.restore();
 
-        // Label — always show for hovered nodes, threshold 0.25 for others
+        // Label — always show for hovered nodes, threshold 0.25 for others.
+        // A dark legibility halo (shadow) keeps names readable over glow.
         if ((node.opacity > 0.25 || isHov) && node.scale > 0.3) {
           const raw = node.entity.name;
           const label = raw.length > 20 ? raw.slice(0, 18) + "…" : raw;
           const labelAlpha = isHov ? 1 : node.opacity * 0.78;
+          const isBold = node.entity.type === "faction" || node.entity.type === "location";
           ctx.save();
           ctx.globalAlpha = labelAlpha;
-          const isBold = node.entity.type === "faction" || node.entity.type === "location";
-          ctx.font = `${isBold ? "bold " : ""}${node.isMember ? 9 : 10}px Inter, sans-serif`;
+          ctx.font = `${isBold ? "600 " : ""}${10 + node.weight * 2}px Inter, sans-serif`;
           ctx.textAlign = "center";
+          ctx.shadowColor = "rgba(0,0,0,0.55)";
+          ctx.shadowBlur = 4;
           ctx.fillStyle = color;
           ctx.fillText(label, node.x, node.y + r + 14);
           ctx.restore();
@@ -795,47 +753,7 @@ export function ConstellationCanvas({
 
       const { x, y } = toWorld(e.clientX, e.clientY);
       const node = findNode(x, y);
-
-      if (!node) {
-        if (expandedIdRef.current) {
-          for (const n of nodesRef.current) {
-            if (n.parentId === expandedIdRef.current) n.visible = false;
-          }
-          expandedIdRef.current = null;
-        }
-        return;
-      }
-
-      const memberships = membershipsRef.current;
-      const isCollective =
-        (node.entity.type === "faction" || node.entity.type === "location") &&
-        memberships.has(node.entity.id);
-
-      if (isCollective) {
-        const isExpanded = expandedIdRef.current === node.entity.id;
-
-        if (expandedIdRef.current) {
-          for (const n of nodesRef.current) {
-            if (n.parentId === expandedIdRef.current) n.visible = false;
-          }
-        }
-
-        if (!isExpanded) {
-          expandedIdRef.current = node.entity.id;
-          for (const n of nodesRef.current) {
-            if (n.parentId === node.entity.id) {
-              n.visible = true;
-              n.x = node.x;
-              n.y = node.y;
-              n.opacity = 0;
-              n.scale = 0;
-            }
-          }
-        } else {
-          expandedIdRef.current = null;
-        }
-      }
-
+      if (!node) return;
       setSelectedEntity(node.entity);
     },
     [toWorld, findNode, setSelectedEntity],

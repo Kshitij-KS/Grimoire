@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { GitMerge, X, AlertTriangle, Loader2, Check } from "lucide-react";
 import { toast } from "sonner";
@@ -73,7 +74,12 @@ export function EntityMergeModal({
     }
   };
 
-  return (
+  // Portal to document.body so `position: fixed` is relative to the viewport,
+  // not the constellation's transformed/overflow-hidden container (which was
+  // clipping this modal to the canvas area).
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <AnimatePresence>
       {open && (
         <>
@@ -218,6 +224,7 @@ export function EntityMergeModal({
           </div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
