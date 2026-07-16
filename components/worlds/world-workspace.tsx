@@ -147,10 +147,14 @@ export function WorldWorkspace({
   const meta = SECTION_META[data.activeSection] ?? SECTION_META.lore;
   const structuredSection = data.activeSection === "lore" || data.activeSection === "consistency" || data.activeSection === "tapestry" || data.activeSection === "narrator";
 
-  // Simulate loading on section change for "perceived performance" and skeletal demo
+  // Show the transition animation on section change. Heavy sections (the
+  // Archive canvas, Tavern, and the Souls grid) genuinely take longer to mount,
+  // so we hold the animation a beat longer to cover that work; light sections
+  // stay snappy so navigation never feels artificially slow.
   useEffect(() => {
     setIsTransitioning(true);
-    const timer = setTimeout(() => setIsTransitioning(false), 400);
+    const heavy = data.activeSection === "bible" || data.activeSection === "tavern" || data.activeSection === "souls";
+    const timer = setTimeout(() => setIsTransitioning(false), heavy ? 650 : 320);
     return () => clearTimeout(timer);
   }, [data.activeSection]);
 
