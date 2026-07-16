@@ -24,6 +24,7 @@ import { Progress } from "@/components/ui/progress";
 import { AmbientToggle } from "@/components/shared/ambient-audio";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { WorldSettingsDrawer } from "@/components/layout/world-settings-drawer";
+import { useWorkspaceStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import type { UsageMeter, World } from "@/lib/types";
 import type { WorldSection } from "@/lib/constants";
@@ -62,6 +63,8 @@ export function WorldSidebar({
   const [isUsageOpen, setIsUsageOpen] = useState(true);
   const [moreSheetOpen, setMoreSheetOpen] = useState(false);
 
+  const startSectionNav = useWorkspaceStore((s) => s.startSectionNav);
+
   const nextHref = (section: WorldSection) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("section", section);
@@ -71,10 +74,18 @@ export function WorldSidebar({
   const primaryItems = items.slice(0, 5);
   const overflowItems = items.slice(5);
 
+  // Raise the transition curtain the instant the button is clicked — BEFORE
+  // router.push kicks off the (1–3s) route load — so the animation covers the
+  // navigation instead of appearing only once the new section is ready.
+  const go = (section: WorldSection) => {
+    if (section !== activeSection) startSectionNav(section);
+    router.push(nextHref(section));
+  };
+
   const navigateTo = (section: WorldSection) => {
     // Close the sheet before navigating so it never lingers over a changed route.
     setMoreSheetOpen(false);
-    router.push(nextHref(section));
+    go(section);
   };
 
   return (
@@ -137,7 +148,7 @@ export function WorldSidebar({
                       <button
                         key={item.key}
                         type="button"
-                        onClick={() => router.push(nextHref(item.key))}
+                        onClick={() => go(item.key)}
                         className={cn(
                           "group relative flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition-[background,color,transform] duration-150 active:scale-[0.97]",
                           active

@@ -82,13 +82,14 @@ export function WorldWorkspace({
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { limitModal, hideLimitModal, forgeSoulName, setForgeSoulName, selectedEntity } = useWorkspaceStore();
+  const { limitModal, hideLimitModal, forgeSoulName, setForgeSoulName, selectedEntity, navSection, startSectionNav, endSectionNav } = useWorkspaceStore();
 
   const navigateToSection = useCallback((section: string) => {
+    if (section !== data.activeSection) startSectionNav(section as (typeof data)["activeSection"]);
     const params = new URLSearchParams(searchParams.toString());
     params.set("section", section);
     router.push(`${pathname}?${params.toString()}`);
-  }, [pathname, router, searchParams]);
+  }, [pathname, router, searchParams, data.activeSection, startSectionNav]);
   const [soulModalOpen, setSoulModalOpen] = useState(false);
   const [activeSoulId, setActiveSoulId] = useState<string | null>(null);
   const [activeSoulCardId, setActiveSoulCardId] = useState<string | null>(null);
@@ -146,6 +147,10 @@ export function WorldWorkspace({
   const activeSoulCard = souls.find((s) => s.id === activeSoulCardId) ?? null;
   const deletingSoul = souls.find((s) => s.id === deletingSoulId) ?? null;
   const meta = SECTION_META[data.activeSection] ?? SECTION_META.lore;
+  // Curtain reflects the DESTINATION section (set at click time) while a nav is
+  // pending, otherwise the current one.
+  const overlayMeta = SECTION_META[navSection ?? data.activeSection] ?? SECTION_META.lore;
+  const showTransition = isTransitioning || navSection !== null;
   const structuredSection = data.activeSection === "lore" || data.activeSection === "consistency" || data.activeSection === "tapestry" || data.activeSection === "narrator";
 
   // Show the transition animation on section change. Heavy sections (the
@@ -154,12 +159,22 @@ export function WorldWorkspace({
   // stay snappy so navigation never feels artificially slow.
   useEffect(() => {
     setIsTransitioning(true);
-    const timer = setTimeout(
-      () => setIsTransitioning(false),
-      sectionTransitionMs(data.activeSection),
-    );
+    const timer = setTimeout(() => {
+      setIsTransitioning(false);
+      // The new section has now mounted — clear the click-time pending flag so
+      // the curtain lifts.
+      endSectionNav();
+    }, sectionTransitionMs(data.activeSection));
     return () => clearTimeout(timer);
-  }, [data.activeSection]);
+  }, [data.activeSection, endSectionNav]);
+
+  // Safety net: never let the curtain stick if a navigation is abandoned or the
+  // section never actually changes (e.g. a route error).
+  useEffect(() => {
+    if (!navSection) return;
+    const t = setTimeout(() => endSectionNav(), 6000);
+    return () => clearTimeout(t);
+  }, [navSection, endSectionNav]);
 
   // Track section views for analytics
   useEffect(() => {
@@ -533,11 +548,11 @@ export function WorldWorkspace({
       {/* Full-screen section transition — covers the whole viewport while the
           next section mounts behind it. */}
       <AnimatePresence>
-        {isTransitioning && (
+        {showTransition && (
           <SectionLoadingScreen
             key="section-transition"
-            label={meta.label}
-            subtitle={meta.subtitle}
+            label={overlayMeta.label}
+            subtitle={overlayMeta.subtitle}
           />
         )}
       </AnimatePresence>

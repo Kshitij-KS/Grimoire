@@ -66,6 +66,32 @@ const MOTES = Array.from({ length: 18 }, (_, i) => {
   };
 });
 
+// ── Summoning-circle geometry (viewBox 200×200, centre 100,100) ────────────
+const RING_TICKS = Array.from({ length: 48 }, (_, i) => {
+  const a = (i / 48) * Math.PI * 2;
+  const major = i % 4 === 0;
+  const inner = major ? 78 : 84;
+  return {
+    x1: 100 + Math.cos(a) * inner,
+    y1: 100 + Math.sin(a) * inner,
+    x2: 100 + Math.cos(a) * 90,
+    y2: 100 + Math.sin(a) * 90,
+    major,
+  };
+});
+
+const RING_RUNES = ["ᚠ", "ᚢ", "ᚦ", "ᚨ", "ᚱ", "ᚲ", "ᚷ", "ᚹ", "ᛟ", "ᛞ", "ᛉ", "ᛊ"].map(
+  (g, i, arr) => {
+    const a = (i / arr.length) * Math.PI * 2 - Math.PI / 2;
+    return { g, x: 100 + Math.cos(a) * 66, y: 100 + Math.sin(a) * 66 };
+  },
+);
+
+const CONVERGE = Array.from({ length: 8 }, (_, i) => {
+  const a = (i / 8) * Math.PI * 2;
+  return { x: 100 + Math.cos(a) * 88, y: 100 + Math.sin(a) * 88, delay: i * 0.16 };
+});
+
 export function SectionLoadingScreen({
   label = "Loading",
   subtitle = "",
@@ -132,10 +158,10 @@ export function SectionLoadingScreen({
       )}
 
       <motion.div
-        className="relative h-40 w-40"
-        initial={reduce ? undefined : { scale: 0.85, opacity: 0 }}
-        animate={reduce ? undefined : { scale: 1, opacity: 1 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="relative h-64 w-64"
+        initial={reduce ? undefined : { scale: 0.7, opacity: 0, rotate: -12 }}
+        animate={reduce ? undefined : { scale: 1, opacity: 1, rotate: 0 }}
+        transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
       >
         {/* Soft arcane glow */}
         <motion.div
@@ -149,67 +175,154 @@ export function SectionLoadingScreen({
           transition={{ duration: 2.6, ease: "easeInOut", repeat: Infinity }}
         />
 
-        <svg viewBox="0 0 120 120" className="absolute inset-0 h-full w-full" fill="none">
-          {/* Faint base ring */}
-          <circle
-            cx="60" cy="60" r="46"
-            stroke="color-mix(in srgb, var(--border) 70%, transparent)"
-            strokeWidth="1"
-          />
+        {/* Radar sweep — a slow wedge of light raking the circle */}
+        {!reduce && (
+          <div className="absolute inset-0 overflow-hidden rounded-full">
+            <motion.div
+              aria-hidden
+              className="absolute inset-0"
+              style={{
+                background:
+                  "conic-gradient(from 0deg, transparent 0deg, color-mix(in srgb, var(--accent) 22%, transparent) 44deg, transparent 92deg)",
+              }}
+              animate={{ rotate: 360 }}
+              transition={{ duration: 4, ease: "linear", repeat: Infinity }}
+            />
+          </div>
+        )}
 
-          {/* Outer ring inscribing itself + slow spin */}
+        <svg viewBox="0 0 200 200" className="absolute inset-0 h-full w-full" fill="none">
+          <defs>
+            <radialGradient id="sigil-core" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="var(--accent-soft)" stopOpacity="0.95" />
+              <stop offset="60%" stopColor="var(--accent)" stopOpacity="0.5" />
+              <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+
+          {/* Faint base rings */}
+          <circle cx="100" cy="100" r="90" stroke="color-mix(in srgb, var(--border) 70%, transparent)" strokeWidth="1" />
+          <circle cx="100" cy="100" r="60" stroke="color-mix(in srgb, var(--border) 55%, transparent)" strokeWidth="1" />
+
+          {/* Tick ring — slow clockwise dial */}
+          <motion.g
+            style={{ transformOrigin: "100px 100px" }}
+            animate={reduce ? undefined : { rotate: 360 }}
+            transition={{ duration: 24, ease: "linear", repeat: Infinity }}
+          >
+            {RING_TICKS.map((t, i) => (
+              <line
+                key={i}
+                x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2}
+                stroke={t.major ? "var(--accent)" : "color-mix(in srgb, var(--accent) 45%, transparent)"}
+                strokeWidth={t.major ? 1.4 : 0.7}
+                strokeLinecap="round"
+              />
+            ))}
+          </motion.g>
+
+          {/* Outer ring — inscribes itself, then rotates */}
           <motion.circle
-            cx="60" cy="60" r="46"
-            stroke="var(--accent)"
-            strokeWidth="2"
-            strokeLinecap="round"
-            style={{ transformOrigin: "60px 60px" }}
-            initial={{ pathLength: 0, opacity: 0.25 }}
-            animate={
-              reduce
-                ? { pathLength: 1, opacity: 0.85 }
-                : { pathLength: [0, 1, 0], opacity: [0.25, 0.95, 0.25], rotate: 360 }
-            }
+            cx="100" cy="100" r="90"
+            stroke="var(--accent)" strokeWidth="2" strokeLinecap="round"
+            style={{ transformOrigin: "100px 100px" }}
+            initial={{ pathLength: 0, opacity: 0.3 }}
+            animate={reduce ? { pathLength: 1, opacity: 0.9 } : { pathLength: [0, 1], opacity: [0.3, 0.95], rotate: 360 }}
             transition={
               reduce
-                ? { duration: 0.3 }
+                ? { duration: 0.4 }
                 : {
-                    pathLength: { duration: 2.8, ease: "easeInOut", repeat: Infinity },
-                    opacity: { duration: 2.8, ease: "easeInOut", repeat: Infinity },
-                    rotate: { duration: 9, ease: "linear", repeat: Infinity },
+                    pathLength: { duration: 2.4, ease: "easeInOut" },
+                    opacity: { duration: 2.4, ease: "easeInOut" },
+                    rotate: { duration: 18, ease: "linear", repeat: Infinity },
                   }
             }
           />
 
-          {/* Inner dashed ring, counter-rotating */}
-          <motion.circle
-            cx="60" cy="60" r="32"
-            stroke="var(--ai-pulse)"
-            strokeWidth="1"
-            strokeDasharray="2 9"
-            opacity="0.55"
-            style={{ transformOrigin: "60px 60px" }}
+          {/* Rune ring — counter-rotating dial of glyphs */}
+          <motion.g
+            style={{ transformOrigin: "100px 100px" }}
             animate={reduce ? undefined : { rotate: -360 }}
-            transition={{ duration: 7, ease: "linear", repeat: Infinity }}
+            transition={{ duration: 20, ease: "linear", repeat: Infinity }}
+          >
+            {RING_RUNES.map((r, i) => (
+              <text
+                key={i}
+                x={r.x} y={r.y}
+                textAnchor="middle" dominantBaseline="central"
+                fontSize="11"
+                fill="color-mix(in srgb, var(--accent) 75%, var(--text-muted))"
+                style={{ fontFamily: "var(--font-crimson), serif" }}
+              >
+                {r.g}
+              </text>
+            ))}
+          </motion.g>
+
+          {/* Hexagram — two triangles drawing on, slowly counter-rotating */}
+          <motion.g
+            style={{ transformOrigin: "100px 100px" }}
+            animate={reduce ? undefined : { rotate: 360 }}
+            transition={{ duration: 30, ease: "linear", repeat: Infinity }}
+          >
+            <motion.path
+              d="M100,34 L157,133 L43,133 Z"
+              stroke="var(--ai-pulse)" strokeWidth="1.4" strokeLinejoin="round"
+              initial={{ pathLength: 0, opacity: 0.2 }}
+              animate={reduce ? { pathLength: 1, opacity: 0.7 } : { pathLength: [0, 1], opacity: [0.2, 0.75] }}
+              transition={{ duration: 2.2, ease: "easeInOut" }}
+            />
+            <motion.path
+              d="M100,166 L43,67 L157,67 Z"
+              stroke="var(--ai-pulse)" strokeWidth="1.4" strokeLinejoin="round"
+              initial={{ pathLength: 0, opacity: 0.2 }}
+              animate={reduce ? { pathLength: 1, opacity: 0.7 } : { pathLength: [0, 1], opacity: [0.2, 0.75] }}
+              transition={{ duration: 2.2, ease: "easeInOut", delay: 0.2 }}
+            />
+          </motion.g>
+
+          {/* Inner dashed ring — counter-rotating */}
+          <motion.circle
+            cx="100" cy="100" r="42"
+            stroke="var(--accent-soft)" strokeWidth="1" strokeDasharray="2 10" opacity="0.6"
+            style={{ transformOrigin: "100px 100px" }}
+            animate={reduce ? undefined : { rotate: -360 }}
+            transition={{ duration: 12, ease: "linear", repeat: Infinity }}
           />
 
-          {/* Orbiting ink-motes */}
+          {/* Energy motes drawn inward to the core */}
           {!reduce &&
-            [0, 1, 2].map((i) => (
-              <motion.g
+            CONVERGE.map((c, i) => (
+              <motion.circle
                 key={i}
-                style={{ transformOrigin: "60px 60px" }}
-                initial={{ rotate: i * 120 }}
-                animate={{ rotate: i * 120 + 360 }}
-                transition={{ duration: 3.2 + i * 0.9, ease: "linear", repeat: Infinity }}
-              >
-                <circle
-                  cx="60" cy="14" r={2.6 - i * 0.4}
-                  fill="var(--accent-soft)"
-                  opacity={0.9 - i * 0.18}
-                />
-              </motion.g>
+                r="2.2" fill="var(--accent-soft)"
+                initial={{ cx: c.x, cy: c.y, opacity: 0 }}
+                animate={{ cx: [c.x, 100], cy: [c.y, 100], opacity: [0, 1, 0] }}
+                transition={{ duration: 1.8, delay: c.delay, ease: "easeIn", repeat: Infinity }}
+              />
             ))}
+
+          {/* Shockwave pulses radiating out */}
+          {!reduce &&
+            [0, 1].map((i) => (
+              <motion.circle
+                key={i}
+                cx="100" cy="100" r="34" fill="none"
+                stroke="var(--accent)" strokeWidth="1.4"
+                style={{ transformOrigin: "100px 100px" }}
+                initial={{ scale: 0.4, opacity: 0 }}
+                animate={{ scale: [0.4, 2.4], opacity: [0.5, 0] }}
+                transition={{ duration: 2.6, delay: i * 1.3, ease: "easeOut", repeat: Infinity }}
+              />
+            ))}
+
+          {/* Pulsing core */}
+          <motion.circle
+            cx="100" cy="100" r="20" fill="url(#sigil-core)"
+            style={{ transformOrigin: "100px 100px" }}
+            animate={reduce ? undefined : { scale: [0.85, 1.15, 0.85], opacity: [0.7, 1, 0.7] }}
+            transition={{ duration: 2, ease: "easeInOut", repeat: Infinity }}
+          />
         </svg>
 
         {/* Breathing glyph at the centre */}

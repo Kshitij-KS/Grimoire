@@ -26,6 +26,12 @@ interface WorkspaceStore {
   autoSaveDraft: string | null;
   loreDetectedToast: { show: boolean; summary: string | null };
   rateLimits: Record<string, RateLimitEntry>;
+  /** Section being navigated to (set on click, before the route resolves) so
+   *  the full-screen transition can appear instantly instead of after Next
+   *  finishes loading the new section. null when no navigation is pending. */
+  navSection: WorldSection | null;
+  startSectionNav: (section: WorldSection) => void;
+  endSectionNav: () => void;
   setSection: (section: WorldSection) => void;
   setRightPanelOpen: (open: boolean) => void;
   setSelectedEntity: (entity: Entity | null) => void;
@@ -49,6 +55,9 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
   autoSaveDraft: null,
   loreDetectedToast: { show: false, summary: null },
   rateLimits: {},
+  navSection: null,
+  startSectionNav: (navSection) => set({ navSection }),
+  endSectionNav: () => set({ navSection: null }),
   setSection: (section) => set({ section }),
   setRightPanelOpen: (open) => set({ rightPanelOpen: open }),
   setSelectedEntity: (selectedEntity) => set({ selectedEntity }),
