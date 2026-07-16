@@ -5,6 +5,7 @@ import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MODAL_EXIT_S, MODAL_EXIT_MS } from "@/lib/archive-ui";
 import type { Entity, EntityRelationship } from "@/lib/types";
 
 interface ForgeRelationshipModalProps {
@@ -32,11 +33,13 @@ export function ForgeRelationshipModal({
   const handleClose = () => {
     if (!loading) {
       onOpenChange(false);
+      // Reset exactly when the exit animation ends (same source of truth), so
+      // the fields never clear mid-fade or flash stale values on reopen.
       setTimeout(() => {
         setLabel("");
         setTensionScore(0);
         setError(null);
-      }, 200);
+      }, MODAL_EXIT_MS);
     }
   };
 
@@ -87,6 +90,7 @@ export function ForgeRelationshipModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: MODAL_EXIT_S }}
             className="fixed inset-0 z-50 bg-[color-mix(in_srgb,var(--bg)_78%,transparent)] backdrop-blur-sm"
             onClick={handleClose}
           />
@@ -95,6 +99,7 @@ export function ForgeRelationshipModal({
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: MODAL_EXIT_S }}
               className="glass-panel flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-[32px] border-[var(--accent)]/30 bg-[var(--surface)] shadow-arcane-glow"
             >
               <div className="flex shrink-0 items-center justify-between border-b border-[var(--accent)]/10 p-6">

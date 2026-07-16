@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, User, MapPin, Users, Gem, Calendar, BookOpen, Swords } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { RESIZE_SETTLE_MS, ARCHIVE_NARROW_PX } from "@/lib/archive-ui";
 import type { Entity, EntityRelationship, EntityType } from "@/lib/types";
 
 // ── Type colors ────────────────────────────────────────────────────────────
@@ -344,7 +345,7 @@ export function ArchiveWeb({
       // dozens of times and judder the animation. Coalesce and only commit once
       // the size has settled, so the layout is computed once — after the slide.
       if (settleTimer) clearTimeout(settleTimer);
-      settleTimer = setTimeout(() => setSize({ w: width, h: height }), 120);
+      settleTimer = setTimeout(() => setSize({ w: width, h: height }), RESIZE_SETTLE_MS);
     });
     ro.observe(containerRef.current);
     return () => {
@@ -355,7 +356,7 @@ export function ArchiveWeb({
 
   // Narrow container (e.g. the 45% split) → grouped list; wide → force graph.
   // Driven by the measured CONTAINER width, not the viewport.
-  const isNarrow = size.w > 0 && size.w < 640;
+  const isNarrow = size.w > 0 && size.w < ARCHIVE_NARROW_PX;
 
   const nodeIds = visibleEntities.map((e) => e.id);
   const edges = visibleRelationships.map((r) => ({ source: r.source_entity_id, target: r.target_entity_id }));

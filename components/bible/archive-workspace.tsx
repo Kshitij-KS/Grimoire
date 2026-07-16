@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Network, LayoutGrid, GitBranch, Dices, Camera, RefreshCw, Plus, ArrowLeft, X, ArrowRight, Users, GitFork, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PANEL_ANIM_S } from "@/lib/archive-ui";
 import { useWorkspaceStore } from "@/lib/store";
 import type { Entity, EntityRelationship, EntityType, Soul } from "@/lib/types";
 import { ConstellationCanvas } from "./constellation-canvas";
@@ -491,7 +492,7 @@ export function ArchiveWorkspace({
             {/* Left: navigation/macro panel */}
             <motion.div
               layout
-              transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+              transition={{ duration: PANEL_ANIM_S, ease: [0.32, 0.72, 0, 1] }}
               className={cn(
                 "relative flex min-w-0 flex-col overflow-hidden",
                 showRightPanel && !isMobile ? "w-[45%]" : "flex-1"
@@ -548,7 +549,7 @@ export function ArchiveWorkspace({
                   initial={isMobile ? { x: "100%" } : { width: 0, opacity: 0 }}
                   animate={isMobile ? { x: 0 } : { width: "55%", opacity: 1 }}
                   exit={isMobile ? { x: "100%" } : { width: 0, opacity: 0 }}
-                  transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+                  transition={{ duration: PANEL_ANIM_S, ease: [0.32, 0.72, 0, 1] }}
                   className={cn(
                     "flex flex-col overflow-hidden border-l border-[var(--border)] bg-[var(--surface)]",
                     isMobile && "absolute inset-0 z-30"
