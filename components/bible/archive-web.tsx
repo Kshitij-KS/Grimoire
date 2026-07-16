@@ -306,7 +306,6 @@ export function ArchiveWeb({
 }: ArchiveWebProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
-  const [isMobile, setIsMobile] = useState(false);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const [edgeTooltip, setEdgeTooltip] = useState<{ x: number; y: number; label: string } | null>(null);
   const [conflictsOnly, setConflictsOnly] = useState(false);
@@ -336,25 +335,33 @@ export function ArchiveWeb({
   const visibleEntities = entities.filter((e) => connectedIds.has(e.id));
 
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener("resize", check, { passive: true });
-    return () => window.removeEventListener("resize", check);
-  }, []);
-
-  useEffect(() => {
     if (!containerRef.current) return;
+    let settleTimer: ReturnType<typeof setTimeout> | null = null;
     const ro = new ResizeObserver((entries) => {
       const { width, height } = entries[0].contentRect;
-      setSize({ w: width, h: height });
+      // The panel open/close is a 300ms width animation, so this fires on every
+      // frame. Committing size on each one would re-run the O(n²) force sim
+      // dozens of times and judder the animation. Coalesce and only commit once
+      // the size has settled, so the layout is computed once — after the slide.
+      if (settleTimer) clearTimeout(settleTimer);
+      settleTimer = setTimeout(() => setSize({ w: width, h: height }), 120);
     });
     ro.observe(containerRef.current);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      if (settleTimer) clearTimeout(settleTimer);
+    };
   }, []);
+
+  // Narrow container (e.g. the 45% split) → grouped list; wide → force graph.
+  // Driven by the measured CONTAINER width, not the viewport.
+  const isNarrow = size.w > 0 && size.w < 640;
 
   const nodeIds = visibleEntities.map((e) => e.id);
   const edges = visibleRelationships.map((r) => ({ source: r.source_entity_id, target: r.target_entity_id }));
-  const positions = useForceLayout(nodeIds, edges, size.w, size.h);
+  // Skip the expensive simulation entirely while in list mode (w = 0 makes the
+  // hook bail early).
+  const positions = useForceLayout(nodeIds, edges, isNarrow ? 0 : size.w, size.h);
 
   const posMap = Object.fromEntries(positions.map((p) => [p.id, p]));
 
@@ -385,23 +392,21 @@ export function ArchiveWeb({
     );
   }
 
-  // Mobile: grouped list view
-  if (isMobile) {
-    return (
-      <div className="h-full overflow-y-auto px-2 pt-2">
-        <MobileWebList
-          entities={visibleEntities}
-          relationships={relationships}
-          onSelectEntity={onSelectEntity}
-          selectedEntityId={selectedEntityId}
-        />
-      </div>
-    );
-  }
-
-  // Desktop: force-directed SVG graph
+  // The measuring root is ALWAYS rendered so the container width is known
+  // regardless of which view we show; the content switches on that width.
   return (
     <div ref={containerRef} className="relative h-full w-full overflow-hidden" style={{ touchAction: "none" }}>
+      {isNarrow ? (
+        <div className="h-full overflow-y-auto px-2 pt-2">
+          <MobileWebList
+            entities={visibleEntities}
+            relationships={relationships}
+            onSelectEntity={onSelectEntity}
+            selectedEntityId={selectedEntityId}
+          />
+        </div>
+      ) : (
+      <>
       {/* Conflicts Only toggle */}
       <div className="absolute right-3 top-3 z-10">
         <button
@@ -556,6 +561,8 @@ export function ArchiveWeb({
         <div className="flex h-full items-center justify-center">
           <p className="text-sm text-[var(--text-muted)]">Laying out the web…</p>
         </div>
+      )}
+      </>
       )}
     </div>
   );

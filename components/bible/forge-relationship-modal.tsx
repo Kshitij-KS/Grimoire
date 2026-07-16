@@ -87,7 +87,7 @@ export function ForgeRelationshipModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-[rgba(13,11,8,0.8)] backdrop-blur-sm"
+            className="fixed inset-0 z-50 bg-[color-mix(in_srgb,var(--bg)_78%,transparent)] backdrop-blur-sm"
             onClick={handleClose}
           />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -95,9 +95,9 @@ export function ForgeRelationshipModal({
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="glass-panel w-full max-w-md overflow-hidden rounded-[32px] border-[var(--accent)]/30 bg-[var(--surface)] shadow-arcane-glow"
+              className="glass-panel flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-[32px] border-[var(--accent)]/30 bg-[var(--surface)] shadow-arcane-glow"
             >
-              <div className="flex items-center justify-between border-b border-[var(--accent)]/10 p-6">
+              <div className="flex shrink-0 items-center justify-between border-b border-[var(--accent)]/10 p-6">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent)]/10 text-[var(--accent)]">
                     <Link className="h-5 w-5" />
@@ -114,8 +114,8 @@ export function ForgeRelationshipModal({
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-6">
-                <div className="mb-6 flex flex-col items-center justify-center gap-2 rounded-2xl bg-black/20 p-4 border border-[var(--border)]/50">
+              <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-y-auto p-6">
+                <div className="mb-6 flex flex-col items-center justify-center gap-2 rounded-2xl bg-[var(--surface-raised)] p-4 border border-[var(--border)]">
                   <span className="font-heading text-lg text-[var(--text-main)]">{sourceEntity.name}</span>
                   <div className="flex flex-col items-center">
                     <div className="h-4 w-[2px] bg-[var(--accent)]/30" />
@@ -165,7 +165,7 @@ export function ForgeRelationshipModal({
                       required
                       value={label}
                       onChange={(e) => setLabel(e.target.value)}
-                      className="w-full rounded-xl border border-[var(--border)] bg-black/40 px-4 py-3 text-sm text-[var(--text-main)] outline-none transition-all focus:border-[var(--accent)] focus:bg-[color-mix(in_srgb,var(--surface)_80%,transparent)]"
+                      className="w-full rounded-xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--surface-raised)_75%,transparent)] px-4 py-3 text-sm text-[var(--text-main)] outline-none transition-all focus:border-[var(--accent)] focus:bg-[color-mix(in_srgb,var(--surface)_80%,transparent)]"
                       placeholder="e.g. Rules over"
                     />
                   </div>

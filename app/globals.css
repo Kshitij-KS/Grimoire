@@ -1208,3 +1208,29 @@ button:not(:disabled),
   50%  { opacity: 1; }
   100% { opacity: 0.7; }
 }
+
+/* ── Archive Codex: container-query master–detail ───────────────────────────
+   The codex lives inside a panel that shrinks to ~45% when the detail view
+   opens. Viewport media queries (Tailwind's sm/lg/xl) can't see that, so the
+   card grid used to keep forcing 4 columns into a sliver and crush every card
+   into a truncated slit. These container queries make the grid (and the type
+   rail) respond to their OWN width instead, so cards stay readable at any
+   split ratio. */
+.codex-root { container-type: inline-size; }
+.codex-scroll { container-type: inline-size; }
+
+/* Type rail only appears once the codex itself is wide enough to spare the
+   ~176px — otherwise it hides and hands the space back to the cards. */
+.codex-typebar { display: none; }
+@container (min-width: 640px) {
+  .codex-typebar { display: flex; }
+}
+
+.codex-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+@container (min-width: 380px) { .codex-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container (min-width: 680px) { .codex-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container (min-width: 940px) { .codex-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }

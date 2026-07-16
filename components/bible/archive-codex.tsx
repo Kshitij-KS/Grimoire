@@ -235,9 +235,9 @@ export function ArchiveCodex({
   }, [entities, activeType, search, sortKey]);
 
   return (
-    <div className="flex h-full overflow-hidden">
+    <div className="codex-root flex h-full overflow-hidden">
       {/* ── Left type sidebar ─────────────────────────────────────────── */}
-      <div className="hidden w-44 shrink-0 flex-col gap-1 overflow-y-auto border-r border-[var(--border)] p-3 md:flex">
+      <div className="codex-typebar w-44 shrink-0 flex-col gap-1 overflow-y-auto border-r border-[var(--border)] p-3">
         <button
           onClick={() => setActiveType("all")}
           className={cn(
@@ -308,14 +308,14 @@ export function ArchiveCodex({
         </div>
 
         {/* Grid */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="codex-scroll flex-1 overflow-y-auto p-4">
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <p className="font-heading text-5xl opacity-20">ᚷ</p>
               <p className="mt-3 text-sm text-[var(--text-muted)]">No entities found</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="codex-grid">
               <AnimatePresence>
                 {filtered.map((entity, i) => (
                   <CodexCard
