@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, User, MapPin, Users, Gem, Calendar, BookOpen, Swords } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { RESIZE_SETTLE_MS, ARCHIVE_NARROW_PX } from "@/lib/archive-ui";
+import { RESIZE_SETTLE_MS, ARCHIVE_NARROW_PX } from "@/lib/ui-timing";
 import type { Entity, EntityRelationship, EntityType } from "@/lib/types";
 
 // ── Type colors ────────────────────────────────────────────────────────────

@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Network, LayoutGrid, GitBranch, Dices, Camera, RefreshCw, Plus, ArrowLeft, X, ArrowRight, Users, GitFork, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { PANEL_ANIM_S } from "@/lib/archive-ui";
+import { PANEL_ANIM_S } from "@/lib/ui-timing";
 import { useWorkspaceStore } from "@/lib/store";
 import type { Entity, EntityRelationship, EntityType, Soul } from "@/lib/types";
 import { ConstellationCanvas } from "./constellation-canvas";

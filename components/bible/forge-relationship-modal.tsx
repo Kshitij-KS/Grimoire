@@ -5,7 +5,7 @@ import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { MODAL_EXIT_S, MODAL_EXIT_MS } from "@/lib/archive-ui";
+import { MODAL_EXIT_S, MODAL_EXIT_MS } from "@/lib/ui-timing";
 import type { Entity, EntityRelationship } from "@/lib/types";
 
 interface ForgeRelationshipModalProps {

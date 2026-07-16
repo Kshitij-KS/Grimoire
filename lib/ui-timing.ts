@@ -1,8 +1,8 @@
-// Shared UI timing + layout constants for the Archive panels (Codex / Web /
-// detail split / forge modal). These used to be magic numbers scattered across
+// Single home for UI timing + layout constants (Archive panels, the workspace
+// section transition, modals). These used to be magic numbers scattered across
 // components, which is how coupled values (e.g. a modal's exit animation and
 // the setTimeout that resets its state) silently drift out of sync. Keep them
-// here so a single edit tunes every panel consistently.
+// here so a single edit tunes everything consistently.
 
 /** Detail split / overlay slide animation, in seconds (framer-motion). */
 export const PANEL_ANIM_S = 0.3;
@@ -30,3 +30,20 @@ export const RESIZE_SETTLE_MS = 120;
  * for `.codex-typebar` in `app/globals.css` — keep the two in step.
  */
 export const ARCHIVE_NARROW_PX = 640;
+
+// ── Workspace section transition ───────────────────────────────────────────
+// How long the section-change loading sigil is held. Heavy sections genuinely
+// take longer to mount, so the animation covers that work; light sections stay
+// snappy so navigation never feels artificially slow.
+export const SECTION_TRANSITION_HEAVY_MS = 650;
+export const SECTION_TRANSITION_LIGHT_MS = 320;
+
+/** Sections whose views are expensive to mount (canvas / graph / large grids). */
+export const HEAVY_SECTIONS: ReadonlySet<string> = new Set(["bible", "tavern", "souls"]);
+
+/** Loading-sigil hold duration (ms) for a given section. */
+export function sectionTransitionMs(section: string): number {
+  return HEAVY_SECTIONS.has(section)
+    ? SECTION_TRANSITION_HEAVY_MS
+    : SECTION_TRANSITION_LIGHT_MS;
+}

@@ -31,6 +31,7 @@ import { useWorkspaceStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { FREE_TIER_LIMITS } from "@/lib/constants";
 import { trackSectionViewed } from "@/lib/analytics";
+import { sectionTransitionMs } from "@/lib/ui-timing";
 import type { ConsistencyCheck, Entity, EntityRelationship, Soul, UsageMeter, WorldWorkspaceData } from "@/lib/types";
 
 const SECTION_META: Record<string, { label: string; subtitle: string; description: string }> = {
@@ -153,8 +154,10 @@ export function WorldWorkspace({
   // stay snappy so navigation never feels artificially slow.
   useEffect(() => {
     setIsTransitioning(true);
-    const heavy = data.activeSection === "bible" || data.activeSection === "tavern" || data.activeSection === "souls";
-    const timer = setTimeout(() => setIsTransitioning(false), heavy ? 650 : 320);
+    const timer = setTimeout(
+      () => setIsTransitioning(false),
+      sectionTransitionMs(data.activeSection),
+    );
     return () => clearTimeout(timer);
   }, [data.activeSection]);
 
