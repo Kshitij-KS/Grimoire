@@ -18,6 +18,7 @@ export function EchoesInterface({
   remaining = 50,
   onBack,
   isDemo = false,
+  onMessageSent,
 }: {
   soul: Soul;
   worldId: string;
@@ -25,6 +26,8 @@ export function EchoesInterface({
   remaining?: number;
   onBack?: () => void;
   isDemo?: boolean;
+  /** Fired after a message is successfully sent and answered. */
+  onMessageSent?: () => void;
 }) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [displayedWords, setDisplayedWords] = useState<{ msgId: string; words: string[] }[]>([]);
@@ -148,13 +151,14 @@ export function EchoesInterface({
       }
 
       if (!isDemo) setMessagesLeft((n) => Math.max(0, n - 1));
+      onMessageSent?.();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Chat failed.");
     } finally {
       setSending(false);
       setIsStreaming(false);
     }
-  }, [input, sending, soul.id, worldId, isDemo]);
+  }, [input, sending, soul.id, worldId, isDemo, onMessageSent]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {

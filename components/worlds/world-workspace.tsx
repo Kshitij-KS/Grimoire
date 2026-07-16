@@ -317,7 +317,16 @@ export function WorldWorkspace({
                 </div>
               ) : (
                 <div className={cn("relative h-[calc(100vh-230px)]", structuredSection ? "mx-auto max-w-[1100px]" : "")}>
-                  <LoomEditor worldId={data.world.id} initialEntries={data.loreEntries} isReadonly={data.isReadonly} onUsageIncrement={incrementUsage} />
+                  <LoomEditor
+                    worldId={data.world.id}
+                    initialEntries={data.loreEntries}
+                    isReadonly={data.isReadonly}
+                    onUsageIncrement={(action) => {
+                      incrementUsage(action);
+                      // Onboarding step 0: first lore inscribed.
+                      if (action === "lore_ingest" && !isDemo) onboarding.completeStep(0);
+                    }}
+                  />
                 </div>
               )
             ) : null}
@@ -394,7 +403,16 @@ export function WorldWorkspace({
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <EchoesInterface soul={activeSoul} worldId={data.world.id} onBack={() => setActiveSoulId(null)} isDemo={isDemo} />
+                    <EchoesInterface
+                      soul={activeSoul}
+                      worldId={data.world.id}
+                      onBack={() => setActiveSoulId(null)}
+                      isDemo={isDemo}
+                      onMessageSent={() => {
+                        // Onboarding step 3: spoke with a bound soul.
+                        if (!isDemo) onboarding.completeStep(3);
+                      }}
+                    />
                   </motion.div>
                 ) : (
                   <motion.div
@@ -573,6 +591,8 @@ export function WorldWorkspace({
           if (newSoul) {
             setSouls((prev) => [...prev, newSoul]);
             incrementUsage("soul_generate");
+            // Onboarding step 2: a soul has been forged.
+            if (!isDemo) onboarding.completeStep(2);
           }
         }}
       />

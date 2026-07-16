@@ -32,7 +32,6 @@ export function useOnboarding({
 }: UseOnboardingOptions): UseOnboardingReturn {
   const [state, setState] = useState<OnboardingState>(DEFAULT_ONBOARDING_STATE);
   const [loaded, setLoaded] = useState(false);
-  const persistingRef = useRef(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollingStartRef = useRef<number | null>(null);
 
@@ -68,26 +67,35 @@ export function useOnboarding({
   }, [userId]);
 
   // ── Persist state to profiles.onboarding_state on every change ──
+  // Always writes the LATEST state. (The previous version guarded with a
+  // "persisting" ref that could drop the final write — e.g. a dismiss — if two
+  // state changes landed close together.)
   useEffect(() => {
     if (!userId || !loaded) return;
-    if (persistingRef.current) return;
-    persistingRef.current = true;
+    let cancelled = false;
 
     async function persist() {
       try {
         const supabase = createBrowserSupabaseClient();
-        await supabase
+        const { error } = await supabase
           .from("profiles")
           .update({ onboarding_state: state })
           .eq("id", userId);
-      } catch {
-        // Silent failure on persistence
-      } finally {
-        persistingRef.current = false;
+        // Surface a real failure (e.g. the onboarding_state column not existing
+        // in this database) instead of hiding it — this is the difference
+        // between "dismiss sticks" and "panel returns on every refresh".
+        if (error && !cancelled) {
+          console.error("[onboarding] failed to persist state:", error.message);
+        }
+      } catch (e) {
+        if (!cancelled) console.error("[onboarding] persist threw:", e);
       }
     }
 
     persist();
+    return () => {
+      cancelled = true;
+    };
   }, [userId, state, loaded]);
 
   // ── Complete a step ──
@@ -157,17 +165,10 @@ export function useOnboarding({
     });
   }, []);
 
-  // ── Auto-resume on re-entry (when dismissed, automatically re-display) ──
-  useEffect(() => {
-    if (!loaded) return;
-    if (state.finished) return;
-    if (state.dismissed) {
-      // Auto-resume per requirement 9.6
-      resume();
-    }
-    // Only run on initial load
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded]);
+  // NOTE: dismissal is now respected across reloads. The panel stays hidden
+  // once dismissed (or once finished); `resume()` is exposed for an explicit
+  // "restart the tour" affordance rather than firing automatically on load,
+  // which is what made the panel reappear on every refresh.
 
   // ── Step 2 polling: check for entities every 3s for up to 60s ──
   useEffect(() => {
@@ -185,8 +186,12 @@ export function useOnboarding({
           `/api/entities?worldId=${worldId}`,
         );
         if (response.ok) {
-          const entities = await response.json();
-          if (Array.isArray(entities) && entities.length > 0) {
+          // GET /api/entities returns `{ entities: [...] }`, not a bare array.
+          // The old code checked Array.isArray() on the object and so never
+          // detected extracted entities → step 2 never auto-completed.
+          const json = await response.json();
+          const list = Array.isArray(json) ? json : json?.entities;
+          if (Array.isArray(list) && list.length > 0) {
             completeStep(1);
             stopPolling();
           }
