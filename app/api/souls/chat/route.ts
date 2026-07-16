@@ -4,7 +4,7 @@ import { DAILY_LIMITS, SEMANTIC_CACHE_THRESHOLD } from "@/lib/constants";
 import { hasAiEnv } from "@/lib/env";
 // import { getChatModel } from "@/lib/gemini"; // REPLACED — Groq handles generation now
 import { groqStream, GROQ_MODEL_FAST, type GroqMessage } from "@/lib/groq";
-import { embedText, assertModelConsistency } from "@/lib/embeddings";
+import { embedText, assertModelConsistency, buildSoulSystemBlock } from "@/lib/embeddings";
 import { checkAndIncrement } from "@/lib/rate-limit";
 import { jsonError, jsonRateLimited, requireUser, zodErrorResponse } from "@/lib/api";
 import crypto from "crypto";
@@ -233,10 +233,9 @@ export const POST = withErrorMonitoring(async (request) => {
     (chunk: { id: string }) => chunk.id,
   );
 
-  const systemInstruction = `You are ${soul.name}. You are a fictional character in a worldbuilding project.
+  const systemInstruction = `You are ${soul.name}, a real person inside a living fictional world — not an assistant.
 
-YOUR SOUL CARD:
-${JSON.stringify(soul.soul_card, null, 2)}
+${buildSoulSystemBlock({ name: soul.name, soul_card: (soul.soul_card ?? {}) as Record<string, unknown> })}
 
 RELEVANT WORLD LORE (with chunk IDs for attribution):
 ${(loreChunks ?? [])
@@ -250,12 +249,12 @@ CONVERSATION HISTORY SUMMARY:
 ${compressedHistory}
 
 RULES:
-- Speak entirely as this character. Never break character.
-- Only know what your soul card says you know.
-- If asked about something you don't know, respond as the character would.
-- Keep responses 2-4 paragraphs max unless the scene demands more.
-- Do not reference that you are an AI.
-- When you rely heavily on a specific piece of lore for your answer, naturally mention the fact. The system tracks sources automatically.`;
+- Speak entirely as this character. Never break character or reference being an AI.
+- Only know what your soul card and the lore above say you know. If asked about something you don't know, react as this person would — deflect, guess, admit ignorance, get curious — never as a helpful assistant.
+- Answer at a natural length: sometimes a single sharp line, sometimes a few sentences. Match the weight of what was asked. Do NOT default to multi-paragraph monologues.
+- Do NOT reuse your own earlier phrasings, sentence openings, or pet images from this conversation. If you already made a point, advance it rather than restate it.
+- Never quote your sample lines verbatim — they only show your cadence.
+- When you lean heavily on a specific piece of lore, weave the fact in naturally. The system tracks sources automatically.`;
 
   // Convert message history from Gemini's {role, parts} format to Groq's {role, content} format
   // Previously: const history = lastMessages.map(m => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }));
@@ -277,8 +276,11 @@ RULES:
         ...history,
         { role: "user", content: parsed.data.message },
       ],
-      temperature: 0.8,
+      temperature: 0.85,
       max_tokens: 2048,
+      // Curb the 8B model's tendency to reuse stock openings and pet phrases.
+      frequency_penalty: 0.4,
+      presence_penalty: 0.3,
     });
   } catch (error: unknown) {
     console.error("Groq API error:", error);

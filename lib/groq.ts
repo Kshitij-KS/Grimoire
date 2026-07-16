@@ -31,6 +31,10 @@ export interface GroqGenerateOptions {
   messages: GroqMessage[];
   temperature?: number;
   max_tokens?: number;
+  /** Penalize tokens by prior frequency — reduces verbatim word/phrase reuse. */
+  frequency_penalty?: number;
+  /** Penalize tokens already present — nudges toward new topics/phrasing. */
+  presence_penalty?: number;
   stream?: false;
 }
 
@@ -39,6 +43,8 @@ export interface GroqStreamOptions {
   messages: GroqMessage[];
   temperature?: number;
   max_tokens?: number;
+  frequency_penalty?: number;
+  presence_penalty?: number;
 }
 
 /**
@@ -51,6 +57,8 @@ export async function groqGenerate(opts: GroqGenerateOptions): Promise<string> {
     messages: opts.messages,
     temperature: opts.temperature ?? 0.7,
     max_tokens: opts.max_tokens ?? 4096,
+    frequency_penalty: opts.frequency_penalty,
+    presence_penalty: opts.presence_penalty,
     stream: false,
   });
   return completion.choices[0]?.message?.content ?? "";
@@ -66,6 +74,8 @@ export async function groqStream(opts: GroqStreamOptions) {
     messages: opts.messages,
     temperature: opts.temperature ?? 0.7,
     max_tokens: opts.max_tokens ?? 2048,
+    frequency_penalty: opts.frequency_penalty,
+    presence_penalty: opts.presence_penalty,
     stream: true,
   });
 }

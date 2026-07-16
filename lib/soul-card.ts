@@ -28,7 +28,9 @@ export const soulCardSchema = z.object({
     }),
   ),
   secrets: z.array(z.string()),
-  sample_lines: z.array(z.string()).length(3),
+  // 1-3 authentic lines. We no longer force exactly 3 by padding with shared
+  // filler (that homogenized under-specified souls); see parseSoulCard.
+  sample_lines: z.array(z.string()).min(1).max(3),
 });
 
 function normalizeStringArray(value: unknown, max: number) {
@@ -54,24 +56,39 @@ function normalizeRelationships(value: unknown) {
     .slice(0, 5);
 }
 
+/**
+ * Produces the sample_lines to store. We keep whatever authentic lines the
+ * model returned (1-3) WITHOUT padding to three — padding with fixed clichés
+ * made every under-specified soul share the same "voice". Only when the model
+ * returns zero usable lines do we fall back: to a single line derived from the
+ * character's own `voice` description (so the fallback is still per-soul and
+ * distinct), or, if there is no voice either, one neutral line as a last resort.
+ */
+function resolveSampleLines(rawSampleLines: unknown, voice: string): string[] {
+  const real = normalizeStringArray(rawSampleLines, 3);
+  if (real.length > 0) return real;
+
+  const v = voice.trim();
+  if (v) {
+    // Derive a single cadence sample from the voice description itself.
+    const seed = v.length > 160 ? `${v.slice(0, 157).trimEnd()}…` : v;
+    return [seed];
+  }
+
+  return ["Ask what you truly need, and I will decide how much to reveal."];
+}
+
 export function parseSoulCard(raw: string) {
   const parsed = repairAndParseJSON<Record<string, unknown>>(raw);
-  const sampleLines = normalizeStringArray(parsed.sample_lines, 3);
+  const voice = String(parsed.voice ?? "").trim();
 
   return soulCardSchema.parse({
-    voice: String(parsed.voice ?? "").trim(),
+    voice,
     core: String(parsed.core ?? "").trim(),
     knows: normalizeStringArray(parsed.knows, 8),
     doesnt_know: normalizeStringArray(parsed.doesnt_know, 5),
     relationships: normalizeRelationships(parsed.relationships),
     secrets: normalizeStringArray(parsed.secrets, 3),
-    sample_lines: [
-      ...sampleLines,
-      ...[
-        "I speak carefully when the truth has teeth.",
-        "Some memories belong in candlelight, not daylight.",
-        "Ask what you truly need, and I will decide how much to reveal.",
-      ].slice(0, Math.max(0, 3 - sampleLines.length)),
-    ],
+    sample_lines: resolveSampleLines(parsed.sample_lines, voice),
   });
 }

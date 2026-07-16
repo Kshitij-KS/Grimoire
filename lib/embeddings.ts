@@ -352,7 +352,7 @@ Order numbers should start at 1.`;
 }
 
 // ── Tavern: soul context builder ─────────────────────────────────────────
-function buildSoulSystemBlock(soul: {
+export function buildSoulSystemBlock(soul: {
   name: string;
   soul_card: Record<string, unknown>;
 }): string {
@@ -370,12 +370,24 @@ function buildSoulSystemBlock(soul: {
     ? card.sample_lines.map((l) => `  • "${l}"`).join("\n")
     : "  (no sample lines provided)";
 
+  const relationships = Array.isArray(card.relationships) && card.relationships.length > 0
+    ? card.relationships.map((r) => `  • ${r.name}: ${r.attitude}`).join("\n")
+    : "  (none specified)";
+
+  const secrets = Array.isArray(card.secrets) && card.secrets.length > 0
+    ? card.secrets.map((s) => `  • ${s}`).join("\n")
+    : "  (none)";
+
   return `CHARACTER: ${soul.name}
-VOICE (memorize and replicate): ${card.voice ?? "No voice description."}
+VOICE (inhabit this cadence — do NOT quote the sample lines verbatim): ${card.voice ?? "No voice description."}
 CORE WOUND / DRIVE: ${card.core ?? "No core description."}
 THINGS THEY KNOW: ${Array.isArray(card.knows) ? card.knows.join("; ") : "unknown"}
 THINGS THEY DON'T KNOW: ${Array.isArray(card.doesnt_know) ? card.doesnt_know.join("; ") : "unknown"}
-SAMPLE SPEECH PATTERNS (match this cadence and vocabulary exactly):
+HOW THEY FEEL ABOUT OTHERS (color every interaction with these — especially anyone present):
+${relationships}
+PRIVATE SECRETS (these shape what they say and dodge, but they NEVER volunteer them):
+${secrets}
+SAMPLE SPEECH PATTERNS (a guide to rhythm and vocabulary only — never repeat them word-for-word):
 ${sampleLines}`;
 }
 
@@ -418,6 +430,9 @@ RULES:
 - Do not introduce facts absent from the world lore above.
 - Keep your response under 160 words.
 - Respond in dialogue only — no stage directions, no narration.
+- Let your relationships and private motives color your reply — react as THIS person, not a neutral narrator.
+- Do NOT reuse sentence openings, pet phrases, or imagery already present in the recent conversation. Bring something new.
+- Vary your sentence length and rhythm; avoid a formulaic reply shape.
 - ${isAddressed ? "You must respond." : "Only respond if you have a compelling character reason."}
 
 Return ONLY valid JSON, no other text:
@@ -439,6 +454,8 @@ If this soul would stay silent, return: {"responses": []}`;
       messages: [{ role: "user", content: prompt }],
       temperature: 0.8,
       max_tokens: 512,
+      frequency_penalty: 0.4,
+      presence_penalty: 0.3,
     });
     const parsed = repairAndParseJSON<{
       responses: Array<{ soulName: string; reasoning: string; response: string }>;
@@ -495,6 +512,9 @@ RULES:
 - Never merge the two voices.
 - No stage directions, narration, or invented lore.
 - Each response under 160 words.
+- Let their relationship and private motives shape the exchange — they can bristle, tease, deflect, or probe. Do not have them politely agree.
+- Do NOT reuse sentence openings, pet phrases, or imagery that already appear in the recent conversation. Say something new.
+- Vary sentence length and rhythm; avoid a formulaic reply shape.
 - ${context.directedToName && context.directedToName !== soulA.name ? `${soulA.name} may briefly acknowledge but keep it short.` : ""}
 - ${context.directedToName && context.directedToName !== soulB.name ? `${soulB.name} may briefly acknowledge but keep it short.` : ""}
 
@@ -512,6 +532,8 @@ Return ONLY valid JSON, no other text:
       messages: [{ role: "user", content: prompt }],
       temperature: 0.8,
       max_tokens: 1024,
+      frequency_penalty: 0.4,
+      presence_penalty: 0.3,
     });
     const parsed = repairAndParseJSON<{
       responses: Array<{ soulName: string; reasoning: string; response: string }>;
@@ -531,8 +553,11 @@ Return ONLY valid JSON, no other text:
  *
  * Strategy:
  * - 2 souls → single "duo" call (monolithic, with explicit turn order).
- * - 3 souls → N parallel isolated calls, each soul sees only its own card.
- *   This eliminates persona blending at the context level.
+ * - 3+ souls → sequential isolated calls, one per soul, in order. Each soul's
+ *   own card is the only persona in its prompt (no blending), but the running
+ *   history is extended with each soul's reply as it lands, so later souls in
+ *   the same turn actually react to what the earlier ones just said instead of
+ *   all answering the director in isolation (which makes them converge).
  *
  * Reasoning fields are generated internally (chain-of-thought grounding)
  * but discarded before responses are returned and saved.
@@ -559,17 +584,28 @@ export async function generateTavernResponse(
     return generateDuoResponse(validSouls, context);
   }
 
-  // 3-soul path: parallel isolated calls (one per soul), merged server-side
-  const soulsToQuery = targetSoulName
-    ? validSouls // each soul still gets its own call; directed clause handles skipping
-    : validSouls;
+  // 3+ soul path: sequential isolated calls so each soul reacts to what the
+  // others just said this turn. Parallel calls make souls converge because none
+  // sees the others' fresh replies; feeding each new line into the running
+  // history fixes that while keeping one persona per prompt.
+  const results: Array<{ soulName: string; response: string }> = [];
+  let runningHistory = context.history;
 
-  const results = await Promise.all(
-    soulsToQuery.map((soul) => generateSingleSoulResponse(soul, context)),
-  );
+  for (const soul of validSouls) {
+    const result = await generateSingleSoulResponse(soul, {
+      ...context,
+      history: runningHistory,
+    });
+    if (!result) continue; // soul stayed silent
 
-  // Filter nulls (silent souls), preserve generation order
-  return results.filter((r): r is { soulName: string; response: string } => r !== null);
+    results.push(result);
+    // Extend the history so the next soul in this turn can respond to this line.
+    runningHistory = runningHistory
+      ? `${runningHistory}\n${result.soulName}: ${result.response}`
+      : `${result.soulName}: ${result.response}`;
+  }
+
+  return results;
 }
 
 // ── New: Detect declarative facts in chat messages ──────────────────────

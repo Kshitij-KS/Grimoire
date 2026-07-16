@@ -235,55 +235,48 @@ export function ConstellationCanvas({
       const memberCharIds = new Set<string>();
       for (const ids of memberships.values()) ids.forEach((id) => memberCharIds.add(id));
 
-      const groups: Record<EntityType, Entity[]> = {
-        faction: [],
-        location: [],
-        character: [],
-        artifact: [],
-        event: [],
-        rule: [],
-      };
-      for (const e of entities) {
-        if (e.type === "character" && memberCharIds.has(e.id)) continue;
-        if (groups[e.type]) groups[e.type].push(e);
-      }
+      // Top-level nodes = every entity except characters that belong to a
+      // collective (those orbit their parent only when it is expanded). Sort by
+      // type so same-kind entities land on contiguous arcs of the spiral and
+      // still read as loose groups.
+      const topLevel = entities
+        .filter((e) => !(e.type === "character" && memberCharIds.has(e.id)))
+        .sort((a, b) => TYPE_ORDER.indexOf(a.type) - TYPE_ORDER.indexOf(b.type));
 
       const nodes: CanvasNode[] = [];
-      const totalGroups = TYPE_ORDER.length;
 
-      TYPE_ORDER.forEach((type, groupIdx) => {
-        const groupEntities = groups[type];
-        if (groupEntities.length === 0) return;
+      // Phyllotaxis (sunflower) placement: radius ∝ √index with the golden
+      // angle between successive nodes. This fills the plane evenly and keeps a
+      // guaranteed minimum centre-to-centre gap between EVERY pair of nodes, so
+      // entities can never crowd or overlap no matter how many exist. `spacing`
+      // is that minimum gap; it grows a little with the viewport.
+      const spacing = Math.max(66, Math.min(width, height) * 0.12);
 
-        const arcStart = (groupIdx / totalGroups) * Math.PI * 2 - Math.PI / 2;
-        const arcEnd = ((groupIdx + 1) / totalGroups) * Math.PI * 2 - Math.PI / 2;
+      topLevel.forEach((entity, k) => {
+        const radius = spacing * Math.sqrt(k + 0.5);
+        const angle = k * goldenAngle;
+        const hx = cx + Math.cos(angle) * radius;
+        const hy = cy + Math.sin(angle) * radius;
+        const anchored = entity.type === "faction" || entity.type === "location";
 
-        groupEntities.forEach((entity, i) => {
-          const ring = Math.floor(i / 4);
-          const baseRadius = Math.min(width, height) * 0.22 + ring * 80;
-          const t = (i % 4 + 0.5) / Math.min(groupEntities.length, 4);
-          const angle = arcStart + t * (arcEnd - arcStart);
-          const hx = cx + Math.cos(angle) * baseRadius;
-          const hy = cy + Math.sin(angle) * baseRadius;
-
-          nodes.push({
-            entity,
-            homeX: hx,
-            homeY: hy,
-            targetX: hx,
-            targetY: hy,
-            x: hx,
-            y: hy,
-            driftPhase: i * goldenAngle + groupIdx,
-            driftSpeed: 0.28 + Math.random() * 0.35,
-            driftAmplitude:
-              type === "faction" || type === "location" ? 3 : 5 + Math.random() * 5,
-            opacity: 1,
-            scale: 1,
-            isMember: false,
-            parentId: null,
-            visible: true,
-          });
+        nodes.push({
+          entity,
+          homeX: hx,
+          homeY: hy,
+          targetX: hx,
+          targetY: hy,
+          x: hx,
+          y: hy,
+          driftPhase: k * goldenAngle,
+          driftSpeed: 0.2 + (k % 5) * 0.04,
+          // Small drift only — the large amplitudes used before let neighbouring
+          // labels wander into each other.
+          driftAmplitude: anchored ? 1.4 : 2.4,
+          opacity: 1,
+          scale: 1,
+          isMember: false,
+          parentId: null,
+          visible: true,
         });
       });
 
@@ -364,6 +357,10 @@ export function ConstellationCanvas({
       t += 0.007;
       // Resolve theme-accurate colors each frame (cheap CSS var read)
       const themeColors = resolveThemeColors();
+      // Theme-aware colours for relationship-label pills (adapts light/dark).
+      const labelStyle = typeof window !== "undefined" ? getComputedStyle(document.documentElement) : null;
+      const labelBg = labelStyle?.getPropertyValue("--surface-raised").trim() || "#1C1C1F";
+      const labelFg = labelStyle?.getPropertyValue("--text-main").trim() || "#F4F4F5";
 
       const scale = scaleRef.current;
       const off = offsetRef.current;
@@ -374,6 +371,20 @@ export function ConstellationCanvas({
       const hovered = hoveredNodeRef.current;
       const expandedId = expandedIdRef.current;
       const memberships = membershipsRef.current;
+
+      // Relationship focus: when a top-level node is hovered, collect the ids it
+      // is linked to via forged relationships. We use this both to keep those
+      // neighbours lit (while dimming everyone else) and to draw only that
+      // node's labelled edges — so the map reveals one entity's web at a time
+      // instead of showing every link at once.
+      const focusNode = hovered && !hovered.isMember ? hovered : null;
+      const neighborIds = new Set<string>();
+      if (focusNode) {
+        for (const rel of relationshipsRef.current) {
+          if (rel.source_entity_id === focusNode.entity.id) neighborIds.add(rel.target_entity_id);
+          else if (rel.target_entity_id === focusNode.entity.id) neighborIds.add(rel.source_entity_id);
+        }
+      }
 
       for (const node of nodes) {
         if (node.visible) {
@@ -407,8 +418,10 @@ export function ConstellationCanvas({
           targetOpacity = 0.06;
         } else if (expandedId && !node.isMember && node.entity.id !== expandedId) {
           targetOpacity = 0.18;
-        } else if (hovered && !node.isMember) {
-          targetOpacity = node === hovered ? 1 : 0.22;
+        } else if (focusNode && !node.isMember) {
+          // The hovered node stays full; its related neighbours stay bright so
+          // the relationship is legible; unrelated nodes recede.
+          targetOpacity = node === focusNode ? 1 : neighborIds.has(node.entity.id) ? 0.95 : 0.12;
         } else {
           targetOpacity = 1;
         }
@@ -417,23 +430,9 @@ export function ConstellationCanvas({
         node.scale += (targetScale - node.scale) * 0.1;
       }
 
-      // Edges between same-type top-level nodes
-      for (let i = 0; i < nodes.length; i++) {
-        if (!nodes[i].visible || nodes[i].opacity < 0.05 || nodes[i].isMember) continue;
-        for (let j = i + 1; j < nodes.length; j++) {
-          if (!nodes[j].visible || nodes[j].opacity < 0.05 || nodes[j].isMember) continue;
-          if (nodes[i].entity.type !== nodes[j].entity.type) continue;
-          const dist = Math.hypot(nodes[i].x - nodes[j].x, nodes[i].y - nodes[j].y);
-          if (dist > 210) continue;
-          const a = 0.07 * Math.min(nodes[i].opacity, nodes[j].opacity);
-          ctx.beginPath();
-          ctx.moveTo(nodes[i].x, nodes[i].y);
-          ctx.lineTo(nodes[j].x, nodes[j].y);
-          ctx.strokeStyle = `rgba(215,221,242,${a})`;
-          ctx.lineWidth = 0.5;
-          ctx.stroke();
-        }
-      }
+      // NOTE: the old faint "same-type proximity web" was removed — those lines
+      // implied relationships that don't exist and were the main source of
+      // visual clutter. Only real, forged relationships are drawn (below).
 
       // Member edges
       if (expandedId) {
@@ -453,32 +452,86 @@ export function ConstellationCanvas({
         }
       }
 
-      // Draw explicitly forged relationships
+      // Draw forged relationships as soft curved threads. When a node is
+      // focused (hovered) we show ONLY its links, brightened and labelled;
+      // otherwise every link is drawn quietly so the resting map stays calm and
+      // never becomes a hairball.
+      // In busy worlds the quiet all-links pass would still read as noise, so
+      // above this many links we draw nothing at rest and rely on hover to
+      // reveal each entity's web one at a time.
+      const showRestingEdges = relationshipsRef.current.length <= 60;
       relationshipsRef.current.forEach((rel) => {
         const sourceNode = nodes.find((n) => n.entity.id === rel.source_entity_id);
         const targetNode = nodes.find((n) => n.entity.id === rel.target_entity_id);
-        
-        if (sourceNode && targetNode && sourceNode.visible && targetNode.visible) {
+        if (!sourceNode || !targetNode || !sourceNode.visible || !targetNode.visible) return;
+
+        const focused =
+          !!focusNode &&
+          (rel.source_entity_id === focusNode.entity.id ||
+            rel.target_entity_id === focusNode.entity.id);
+        // While focusing one node, hide links that don't touch it. At rest,
+        // hide all links once the map is dense.
+        if (focusNode && !focused) return;
+        if (!focusNode && !showRestingEdges) return;
+
+        // Tension → hue: calm gold (0) shifting toward alarm red (high).
+        const tension = Math.max(0, Math.min(1, (rel.tension_score ?? 0) / 10));
+        const rr = Math.round(212 + (224 - 212) * tension);
+        const gg = Math.round(168 - 120 * tension);
+        const bb = Math.round(83 - 40 * tension);
+        const edgeAlpha = focused ? 0.9 : 0.3;
+        const edgeColor = `rgba(${rr}, ${gg}, ${bb}, ${edgeAlpha})`;
+
+        // Gentle quadratic curve so parallel links between clusters separate
+        // instead of overlapping as straight lines.
+        const dx = targetNode.x - sourceNode.x;
+        const dy = targetNode.y - sourceNode.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const curve = Math.min(30, len * 0.14);
+        const apexX = (sourceNode.x + targetNode.x) / 2 + (-dy / len) * curve;
+        const apexY = (sourceNode.y + targetNode.y) / 2 + (dx / len) * curve;
+
+        ctx.beginPath();
+        ctx.moveTo(sourceNode.x, sourceNode.y);
+        ctx.quadraticCurveTo(apexX, apexY, targetNode.x, targetNode.y);
+        ctx.strokeStyle = edgeColor;
+        ctx.lineWidth = focused ? 1.8 : 1;
+        if (!focused) ctx.setLineDash([4, 5]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Relationship label — only for the focused node's links, sitting on the
+        // curve apex with a theme-aware pill so text never smears over the map.
+        if (focused && rel.label) {
+          const text = rel.label.length > 24 ? rel.label.slice(0, 22) + "…" : rel.label;
+          ctx.font = "600 9px Inter, sans-serif";
+          ctx.textAlign = "center";
+          const tw = ctx.measureText(text).width;
+          const padX = 6;
+          const pillH = 15;
+          const pillW = tw + padX * 2;
+          const pillX = apexX - pillW / 2;
+          const pillY = apexY - pillH / 2;
+          const radius = pillH / 2;
+
+          ctx.save();
+          ctx.globalAlpha = 0.92;
           ctx.beginPath();
-          ctx.moveTo(sourceNode.x, sourceNode.y);
-          ctx.setLineDash([4, 4]);
-          ctx.lineTo(targetNode.x, targetNode.y);
-          ctx.strokeStyle = "rgba(212, 168, 83, 0.4)"; // Gold color
+          ctx.moveTo(pillX + radius, pillY);
+          ctx.arcTo(pillX + pillW, pillY, pillX + pillW, pillY + pillH, radius);
+          ctx.arcTo(pillX + pillW, pillY + pillH, pillX, pillY + pillH, radius);
+          ctx.arcTo(pillX, pillY + pillH, pillX, pillY, radius);
+          ctx.arcTo(pillX, pillY, pillX + pillW, pillY, radius);
+          ctx.closePath();
+          ctx.fillStyle = labelBg;
+          ctx.fill();
+          ctx.strokeStyle = edgeColor;
           ctx.lineWidth = 1;
           ctx.stroke();
-          ctx.setLineDash([]);
-          
-          // Tiny diamond in middle
-          const midX = (sourceNode.x + targetNode.x) / 2;
-          const midY = (sourceNode.y + targetNode.y) / 2;
-          ctx.beginPath();
-          ctx.save();
-          ctx.translate(midX, midY);
-          ctx.rotate(Math.PI / 4);
-          ctx.rect(-2, -2, 4, 4);
-          ctx.fillStyle = "rgba(212, 168, 83, 0.8)";
-          ctx.fill();
           ctx.restore();
+
+          ctx.fillStyle = labelFg;
+          ctx.fillText(text, apexX, apexY + 3);
         }
       });
 
@@ -919,7 +972,7 @@ export function ConstellationCanvas({
                 </div>
               ))}
               <p className="mt-1 border-t border-[var(--border)] pt-1.5 text-[9px] text-[var(--text-muted)] opacity-60">
-                Scroll to zoom · Drag to pan · Drag node to forge link
+                Hover a node to reveal its links · Drag node to node to forge one · Scroll to zoom · Drag to pan
               </p>
             </div>
           )}
