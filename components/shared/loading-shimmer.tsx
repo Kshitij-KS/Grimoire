@@ -49,6 +49,23 @@ const SECTION_LORE: Record<string, { glyph: string; flavor: string }> = {
   Tools:          { glyph: "ᚷ", flavor: "Consulting the narrator" },
 };
 
+// Deterministic "dust mote" field for the full-screen backdrop — a lightweight
+// pseudo-random spread so it looks scattered without pulling in a RNG or
+// risking SSR hydration drift. Transform/opacity only, so it stays on the
+// compositor and doesn't fight the heavy view mounting behind it.
+const MOTES = Array.from({ length: 18 }, (_, i) => {
+  const r = ((i * 9301 + 49297) % 233280) / 233280;
+  const r2 = ((i * 4523 + 12345) % 233280) / 233280;
+  return {
+    left: 4 + r * 92,
+    top: 6 + r2 * 88,
+    size: 1.5 + r * 3,
+    delay: r2 * 3,
+    duration: 4.5 + r * 4.5,
+    drift: r * 18 - 9,
+  };
+});
+
 export function SectionLoadingScreen({
   label = "Loading",
   subtitle = "",
@@ -64,10 +81,62 @@ export function SectionLoadingScreen({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.18 }}
-      className="flex min-h-[52vh] flex-col items-center justify-center gap-7 px-4"
+      transition={{ duration: 0.24, ease: "easeOut" }}
+      className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-8 overflow-hidden"
+      style={{ background: "var(--bg)" }}
+      aria-live="polite"
+      aria-busy="true"
     >
-      <div className="relative h-28 w-28">
+      {/* Accent vignette glows */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 55%)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(circle at 50% 108%, color-mix(in srgb, var(--ai-pulse) 10%, transparent), transparent 60%)",
+        }}
+      />
+
+      {/* Drifting dust motes */}
+      {!reduce && (
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          {MOTES.map((m, i) => (
+            <motion.span
+              key={i}
+              className="absolute rounded-full"
+              style={{
+                left: `${m.left}%`,
+                top: `${m.top}%`,
+                width: m.size,
+                height: m.size,
+                background: "var(--accent-soft)",
+              }}
+              animate={{ opacity: [0, 0.7, 0], y: [0, -16, 0], x: [0, m.drift, 0] }}
+              transition={{
+                duration: m.duration,
+                delay: m.delay,
+                ease: "easeInOut",
+                repeat: Infinity,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      <motion.div
+        className="relative h-40 w-40"
+        initial={reduce ? undefined : { scale: 0.85, opacity: 0 }}
+        animate={reduce ? undefined : { scale: 1, opacity: 1 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      >
         {/* Soft arcane glow */}
         <motion.div
           aria-hidden
@@ -149,14 +218,14 @@ export function SectionLoadingScreen({
           animate={reduce ? undefined : { scale: [1, 1.14, 1], opacity: [0.7, 1, 0.7] }}
           transition={{ duration: 2.4, ease: "easeInOut", repeat: Infinity }}
         >
-          <span className="font-heading text-3xl leading-none" style={{ color: "var(--accent)" }}>
+          <span className="font-heading text-5xl leading-none" style={{ color: "var(--accent)" }}>
             {lore.glyph}
           </span>
         </motion.div>
-      </div>
+      </motion.div>
 
       {/* Flavour line + inking dots */}
-      <div className="flex flex-col items-center gap-1.5 text-center">
+      <div className="relative flex flex-col items-center gap-1.5 text-center">
         {subtitle && (
           <p
             className="text-[10px] font-bold uppercase tracking-[0.28em]"
@@ -165,7 +234,7 @@ export function SectionLoadingScreen({
             {subtitle}
           </p>
         )}
-        <p className="flex items-center font-heading text-xl text-[var(--text-main)]">
+        <p className="flex items-center font-heading text-2xl text-[var(--text-main)]">
           {lore.flavor}
           {!reduce && (
             <span className="ml-0.5 inline-flex">

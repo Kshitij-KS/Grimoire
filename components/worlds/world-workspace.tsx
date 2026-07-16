@@ -283,19 +283,6 @@ export function WorldWorkspace({
         </header>
 
         <AnimatePresence mode="wait">
-          {isTransitioning ? (
-            <motion.div
-              key="loading"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <SectionLoadingScreen
-                label={meta.label}
-                subtitle={meta.subtitle}
-              />
-            </motion.div>
-          ) : (
             <motion.div
               key={data.activeSection}
               initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
@@ -538,11 +525,22 @@ export function WorldWorkspace({
               )
             ) : null}
           </motion.div>
-        )}
         </AnimatePresence>
           </main>
         </div>
       </div>
+
+      {/* Full-screen section transition — covers the whole viewport while the
+          next section mounts behind it. */}
+      <AnimatePresence>
+        {isTransitioning && (
+          <SectionLoadingScreen
+            key="section-transition"
+            label={meta.label}
+            subtitle={meta.subtitle}
+          />
+        )}
+      </AnimatePresence>
 
       <SoulCreationModal
         open={soulModalOpen || !!forgeSoulName}
