@@ -41,8 +41,6 @@ const TYPE_COLORS: Record<EntityType, string> = {
   rule: "#7C86A8",
 };
 
-const TYPE_ORDER: EntityType[] = ["faction", "location", "character", "artifact", "event", "rule"];
-
 const TYPE_RADIUS: Record<EntityType, number> = {
   faction: 9,
   location: 8,
@@ -52,12 +50,86 @@ const TYPE_RADIUS: Record<EntityType, number> = {
   rule: 6,
 };
 
+// Containment tiers — smaller number = bigger container. This drives the
+// drill-down tree: locations contain factions, factions contain characters.
+// Loose types (artifact/event/rule) sit at the leaf tier and attach to
+// whatever references them, otherwise they float as their own roots. The
+// "biggest entity present" naturally becomes a root because nothing of a
+// larger tier exists to adopt it.
+const TYPE_TIER: Record<EntityType, number> = {
+  location: 0,
+  faction: 1,
+  character: 2,
+  artifact: 3,
+  event: 3,
+  rule: 3,
+};
+
+// ── Colour helpers ─────────────────────────────────────────────────────────
+// The node styling mixes the type hue toward light/dark to get a soft, matte,
+// gem-like read (classy, not glossy). These parse hex → rgb and blend.
+type RGB = [number, number, number];
+
+function parseHexColor(input: string): RGB {
+  const fallback: RGB = [196, 168, 106];
+  if (!input) return fallback;
+  let h = input.trim();
+  if (h.startsWith("#")) h = h.slice(1);
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  if (h.length !== 6) return fallback;
+  const n = Number.parseInt(h, 16);
+  if (Number.isNaN(n)) return fallback;
+  return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
+}
+
+function mixRgb(a: RGB, b: RGB, amt: number): RGB {
+  const k = Math.max(0, Math.min(1, amt));
+  return [
+    Math.round(a[0] + (b[0] - a[0]) * k),
+    Math.round(a[1] + (b[1] - a[1]) * k),
+    Math.round(a[2] + (b[2] - a[2]) * k),
+  ];
+}
+
+function rgba([r, g, b]: RGB, a: number): string {
+  return `rgba(${r}, ${g}, ${b}, ${Math.max(0, Math.min(1, a)).toFixed(3)})`;
+}
+
+// Infer a containment parent for an entity using name mentions in summaries.
+// A parent must be of a strictly larger container tier; among matches we prefer
+// the closest tier (a character with a faction *and* a location match nests
+// under the faction) and, as a tiebreak, the more-established container.
+function inferParentId(entity: Entity, all: Entity[]): string | null {
+  const eTier = TYPE_TIER[entity.type];
+  if (eTier === 0) return null;
+  const eName = entity.name.toLowerCase();
+  const eSummary = (entity.summary ?? "").toLowerCase();
+  let bestId: string | null = null;
+  let bestScore = 0;
+  for (const c of all) {
+    if (c.id === entity.id) continue;
+    const cTier = TYPE_TIER[c.type];
+    if (cTier >= eTier) continue;
+    const cName = c.name.toLowerCase();
+    let score = 0;
+    if (cName.length >= 3 && eSummary.includes(cName)) score += 5;
+    if (eName.length >= 3 && (c.summary ?? "").toLowerCase().includes(eName)) score += 3;
+    if (score === 0) continue;
+    // Prefer the closest ancestor tier, then the busier container.
+    score += cTier * 2 + Math.min(1, (c.mention_count ?? 0) / 50);
+    if (score > bestScore) {
+      bestScore = score;
+      bestId = c.id;
+    }
+  }
+  return bestId;
+}
+
 interface CanvasNode {
   entity: Entity;
+  /** Phyllotaxis home position (roots only). */
   homeX: number;
   homeY: number;
-  targetX: number;
-  targetY: number;
   x: number;
   y: number;
   driftPhase: number;
@@ -65,11 +137,19 @@ interface CanvasNode {
   driftAmplitude: number;
   opacity: number;
   scale: number;
-  visible: boolean;
   /** Importance in [0,1] derived from mention_count — drives size & glow. */
   weight: number;
   /** Deterministic per-node twinkle phase. */
   twinkle: number;
+  // ── Containment hierarchy ──
+  parentId: string | null;
+  depth: number;
+  /** Base angle of this node on its parent's orbit ring. */
+  orbitAngle: number;
+  /** Distance from parent when the parent is expanded. */
+  orbitRadius: number;
+  /** True when this node contains children that can be revealed. */
+  hasChildren: boolean;
 }
 
 // Deterministic pseudo-random in [0,1) from an integer seed — used for the
@@ -168,6 +248,8 @@ export function ConstellationCanvas({
   const activeTypesRef = useRef(activeTypes);
   const nodesRef = useRef<CanvasNode[]>([]);
   const hoveredNodeRef = useRef<CanvasNode | null>(null);
+  // Set of entity ids whose children are currently revealed (drill-down state).
+  const expandedIdsRef = useRef<Set<string>>(new Set());
   const rafRef = useRef<number>(0);
   const scaleRef = useRef(1);
   const offsetRef = useRef({ x: 0, y: 0 });
@@ -205,8 +287,18 @@ export function ConstellationCanvas({
   // Spotlight: pan to entity when spotlightEntityId changes
   useEffect(() => {
     if (!spotlightEntityId) return;
-    const node = nodesRef.current.find((n) => n.entity.id === spotlightEntityId);
+    const byId = new Map(nodesRef.current.map((n) => [n.entity.id, n]));
+    const node = byId.get(spotlightEntityId);
     if (!node) return;
+    // Reveal the containment path so a deep entity isn't left collapsed inside
+    // its ancestors when it is spotlighted from elsewhere.
+    let cur = node;
+    while (cur.parentId) {
+      const p = byId.get(cur.parentId);
+      if (!p) break;
+      expandedIdsRef.current.add(p.entity.id);
+      cur = p;
+    }
     const w = containerRef.current?.offsetWidth ?? 600;
     const h = containerRef.current?.offsetHeight ?? 400;
     offsetRef.current = {
@@ -221,51 +313,102 @@ export function ConstellationCanvas({
       const cy = height / 2;
       const goldenAngle = Math.PI * (3 - Math.sqrt(5));
 
-      // EVERY entity is a visible node (no hidden "members"). Sorted by type so
-      // same-kind entities land on contiguous arcs of the spiral and read as
-      // loose constellations.
-      const ordered = [...entities].sort(
-        (a, b) => TYPE_ORDER.indexOf(a.type) - TYPE_ORDER.indexOf(b.type),
-      );
+      // 1) Infer the containment forest from name mentions in summaries.
+      const parentOf = new Map<string, string | null>();
+      const childrenOf = new Map<string, string[]>();
+      for (const e of entities) parentOf.set(e.id, inferParentId(e, entities));
+      for (const e of entities) {
+        const p = parentOf.get(e.id) ?? null;
+        if (p) {
+          const arr = childrenOf.get(p);
+          if (arr) arr.push(e.id);
+          else childrenOf.set(p, [e.id]);
+        }
+      }
 
-      // Phyllotaxis (sunflower) placement: radius ∝ √index with the golden
-      // angle between successive nodes — fills the plane evenly with a
-      // guaranteed minimum gap between every pair, so nodes never crowd.
-      const spacing = Math.max(66, Math.min(width, height) * 0.12);
+      // Depth = length of the ancestor chain (roots are depth 0). The tier
+      // ordering guarantees no cycles, so this walk always terminates.
+      const depthCache = new Map<string, number>();
+      const depthOf = (id: string): number => {
+        const cached = depthCache.get(id);
+        if (cached !== undefined) return cached;
+        const p = parentOf.get(id) ?? null;
+        const d = p ? depthOf(p) + 1 : 0;
+        depthCache.set(id, d);
+        return d;
+      };
 
-      // Normalise mention_count across the set → importance in [0,1]. The
-      // busiest entities read as brighter, larger "stars"; quiet ones stay
-      // small, giving the map a natural visual hierarchy.
-      const maxMentions = ordered.reduce(
+      // 2) Roots (the visible top tier) laid out with phyllotaxis so they never
+      // crowd. Ordered by tier then importance so the biggest containers sit
+      // toward the centre.
+      const roots = entities
+        .filter((e) => !(parentOf.get(e.id) ?? null))
+        .sort(
+          (a, b) =>
+            TYPE_TIER[a.type] - TYPE_TIER[b.type] ||
+            (b.mention_count ?? 0) - (a.mention_count ?? 0),
+        );
+      const spacing = Math.max(72, Math.min(width, height) * 0.13);
+      const rootPos = new Map<string, { x: number; y: number }>();
+      roots.forEach((e, k) => {
+        const radius = spacing * Math.sqrt(k + 0.5);
+        const angle = k * goldenAngle;
+        rootPos.set(e.id, {
+          x: cx + Math.cos(angle) * radius,
+          y: cy + Math.sin(angle) * radius,
+        });
+      });
+
+      // 3) Orbit placement for children of each parent — evenly distributed
+      // around a ring sized to fit them without overlap.
+      const byId = new Map(entities.map((e) => [e.id, e]));
+      const orbit = new Map<string, { angle: number; radius: number }>();
+      for (const [pid, kids] of childrenOf) {
+        const parentR = TYPE_RADIUS[byId.get(pid)?.type ?? "character"] ?? 5;
+        kids.forEach((cid, i) => {
+          const childR = TYPE_RADIUS[byId.get(cid)?.type ?? "character"] ?? 5;
+          const minArc = childR * 2 + 30;
+          const needed = (kids.length * minArc) / (2 * Math.PI);
+          const base = parentR + 46 + depthOf(pid) * 4;
+          const angle = (i / kids.length) * Math.PI * 2 + depthOf(pid) * 0.6;
+          orbit.set(cid, { angle, radius: Math.max(base, needed) });
+        });
+      }
+
+      // Importance in [0,1] from mention_count → drives size & glow.
+      const maxMentions = entities.reduce(
         (m, e) => Math.max(m, e.mention_count ?? 0),
         1,
       );
 
-      return ordered.map((entity, k) => {
-        const radius = spacing * Math.sqrt(k + 0.5);
-        const angle = k * goldenAngle;
-        const hx = cx + Math.cos(angle) * radius;
-        const hy = cy + Math.sin(angle) * radius;
-        const anchored = entity.type === "faction" || entity.type === "location";
-        // sqrt keeps a single dominant entity from dwarfing everything else.
+      return entities.map((entity, k) => {
+        const parentId = parentOf.get(entity.id) ?? null;
+        const depth = depthOf(entity.id);
+        const rp = rootPos.get(entity.id);
+        const oi = orbit.get(entity.id);
+        const hx = rp?.x ?? cx;
+        const hy = rp?.y ?? cy;
+        const anchored = TYPE_TIER[entity.type] <= 1;
         const weight = Math.sqrt((entity.mention_count ?? 0) / maxMentions);
 
         return {
           entity,
           homeX: hx,
           homeY: hy,
-          targetX: hx,
-          targetY: hy,
           x: hx,
           y: hy,
           driftPhase: k * goldenAngle,
           driftSpeed: 0.2 + (k % 5) * 0.04,
-          driftAmplitude: anchored ? 1.4 : 2.4,
-          opacity: 1,
-          scale: 1,
-          visible: true,
+          driftAmplitude: anchored ? 1.2 : 2.2,
+          opacity: parentId ? 0 : 1,
+          scale: parentId ? 0 : 1,
           weight,
           twinkle: seededRandom(k + 1) * Math.PI * 2,
+          parentId,
+          depth,
+          orbitAngle: oi?.angle ?? 0,
+          orbitRadius: oi?.radius ?? 0,
+          hasChildren: childrenOf.has(entity.id),
         };
       });
     },
@@ -349,12 +492,30 @@ export function ConstellationCanvas({
         }
       }
 
+      // ── Visibility from the drill-down tree ─────────────────────────────
+      // A node is visible when it is a root OR every ancestor up the chain is
+      // expanded. This is what makes only the biggest containers show at rest
+      // and reveals children as the user clicks inward.
+      const expanded = expandedIdsRef.current;
+      const nodeById = new Map(nodes.map((n) => [n.entity.id, n]));
+      const visibleSet = new Set<string>();
+      const isVisible = (n: CanvasNode): boolean => {
+        let cur: CanvasNode | undefined = n;
+        while (cur && cur.parentId) {
+          const p = nodeById.get(cur.parentId);
+          if (!p) break; // dangling parent → treat this sub-root as visible
+          if (!expanded.has(p.entity.id)) return false;
+          cur = p;
+        }
+        return true;
+      };
+      for (const n of nodes) if (isVisible(n)) visibleSet.add(n.entity.id);
+
       // Relationship focus: when a node is hovered, collect the ids it is linked
       // to via forged relationships. We use this both to keep those neighbours
       // lit (while dimming everyone else) and to draw only that node's labelled
-      // edges — so the map reveals one entity's web at a time instead of
-      // showing every link at once.
-      const focusNode = hovered;
+      // edges — so the map reveals one entity's web at a time.
+      const focusNode = hovered && visibleSet.has(hovered.entity.id) ? hovered : null;
       const neighborIds = new Set<string>();
       if (focusNode) {
         for (const rel of relationshipsRef.current) {
@@ -363,32 +524,82 @@ export function ConstellationCanvas({
         }
       }
 
-      for (const node of nodes) {
-        const driftX = Math.cos(node.driftPhase + t * node.driftSpeed) * node.driftAmplitude;
-        const driftY =
-          Math.sin(node.driftPhase + t * node.driftSpeed * 0.7) * node.driftAmplitude * 0.6;
-        node.x = node.homeX + driftX;
-        node.y = node.homeY + driftY;
+      const sq = searchQueryRef.current.toLowerCase();
+      const atypes = activeTypesRef.current;
 
-        const sq = searchQueryRef.current.toLowerCase();
-        const atypes = activeTypesRef.current;
+      for (const node of nodes) {
+        const vis = visibleSet.has(node.entity.id);
+
+        // Position: roots drift around their phyllotaxis home; visible children
+        // orbit their parent; hidden children collapse into the parent so
+        // expand/collapse reads as a smooth branch in/out.
+        let tx: number;
+        let ty: number;
+        if (!node.parentId) {
+          tx = node.homeX + Math.cos(node.driftPhase + t * node.driftSpeed) * node.driftAmplitude;
+          ty = node.homeY + Math.sin(node.driftPhase + t * node.driftSpeed * 0.7) * node.driftAmplitude * 0.6;
+        } else {
+          const p = nodeById.get(node.parentId);
+          if (p && vis) {
+            const a = node.orbitAngle + t * 0.12 + Math.sin(t * 0.5 + node.twinkle) * 0.04;
+            tx = p.x + Math.cos(a) * node.orbitRadius;
+            ty = p.y + Math.sin(a) * node.orbitRadius;
+          } else if (p) {
+            tx = p.x;
+            ty = p.y;
+          } else {
+            tx = node.homeX;
+            ty = node.homeY;
+          }
+        }
+        // Roots track their (already smooth) drift directly; children ease so
+        // the branch-out animation is visible.
+        const posLerp = node.parentId ? 0.14 : 1;
+        node.x += (tx - node.x) * posLerp;
+        node.y += (ty - node.y) * posLerp;
+
         const matchesSearch = !sq || node.entity.name.toLowerCase().includes(sq) || (node.entity.summary ?? "").toLowerCase().includes(sq);
         const matchesType = atypes.has(node.entity.type);
 
         let targetOpacity: number;
-        if (!matchesType) {
-          targetOpacity = 0.04;
+        if (!vis) {
+          targetOpacity = 0;
+        } else if (!matchesType) {
+          targetOpacity = 0.05;
         } else if (sq && !matchesSearch) {
           targetOpacity = 0.06;
         } else if (focusNode) {
-          // The hovered node stays full; its related neighbours stay bright so
-          // the relationship is legible; unrelated nodes recede.
-          targetOpacity = node === focusNode ? 1 : neighborIds.has(node.entity.id) ? 0.95 : 0.12;
+          targetOpacity = node === focusNode ? 1 : neighborIds.has(node.entity.id) ? 0.95 : 0.14;
         } else {
           targetOpacity = 1;
         }
-        node.opacity += (targetOpacity - node.opacity) * 0.1;
-        node.scale += (1 - node.scale) * 0.1;
+        node.opacity += (targetOpacity - node.opacity) * 0.12;
+        node.scale += ((vis ? 1 : 0) - node.scale) * 0.12;
+      }
+
+      // ── Containment edges ───────────────────────────────────────────────
+      // Faint tapered branches from each expanded parent to its revealed
+      // children — this is the visual "tree" the user drills through.
+      for (const node of nodes) {
+        if (!node.parentId || !visibleSet.has(node.entity.id)) continue;
+        const p = nodeById.get(node.parentId);
+        if (!p) continue;
+        const rgb = parseHexColor(themeColors[node.entity.type] ?? TYPE_COLORS[node.entity.type]);
+        const dx = node.x - p.x;
+        const dy = node.y - p.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const curve = Math.min(24, len * 0.12);
+        const apexX = (p.x + node.x) / 2 + (-dy / len) * curve;
+        const apexY = (p.y + node.y) / 2 + (dx / len) * curve;
+        const grad = ctx.createLinearGradient(p.x, p.y, node.x, node.y);
+        grad.addColorStop(0, rgba(rgb, 0.04 * node.opacity));
+        grad.addColorStop(1, rgba(rgb, 0.3 * node.opacity));
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.quadraticCurveTo(apexX, apexY, node.x, node.y);
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 1;
+        ctx.stroke();
       }
 
       // NOTE: the old faint "same-type proximity web" was removed — those lines
@@ -404,9 +615,10 @@ export function ConstellationCanvas({
       // reveal each entity's web one at a time.
       const showRestingEdges = relationshipsRef.current.length <= 60;
       relationshipsRef.current.forEach((rel) => {
-        const sourceNode = nodes.find((n) => n.entity.id === rel.source_entity_id);
-        const targetNode = nodes.find((n) => n.entity.id === rel.target_entity_id);
-        if (!sourceNode || !targetNode || !sourceNode.visible || !targetNode.visible) return;
+        const sourceNode = nodeById.get(rel.source_entity_id);
+        const targetNode = nodeById.get(rel.target_entity_id);
+        if (!sourceNode || !targetNode) return;
+        if (!visibleSet.has(sourceNode.entity.id) || !visibleSet.has(targetNode.entity.id)) return;
 
         const focused =
           !!focusNode &&
@@ -504,104 +716,112 @@ export function ConstellationCanvas({
       }
 
       // ── Draw nodes ──────────────────────────────────────────────────────
-      // Each entity is rendered as a layered "star": a soft outer glow, a
-      // radial-gradient core, a crisp rim-light stroke, and a bright inner
-      // highlight. Size scales with importance (weight) so busy entities read
-      // as bright anchors and quiet ones as distant sparks.
+      // Each entity is a soft, matte "gem": a restrained ambient glow, a core
+      // shaded from a lightly-lit hue down to a deeper edge (no glossy white
+      // hotspot), and a fine rim for definition. Containers carry a subtle ring
+      // — dashed when collapsed, solid when expanded — as a quiet affordance.
       for (const node of nodes) {
         if (node.opacity < 0.01 && node.scale < 0.01) continue;
 
-        const color = themeColors[node.entity.type] ?? TYPE_COLORS[node.entity.type] ?? "#E0E0E0";
+        const hexColor = themeColors[node.entity.type] ?? TYPE_COLORS[node.entity.type] ?? "#E0E0E0";
+        const rgb = parseHexColor(hexColor);
+        const lightRgb = mixRgb(rgb, [255, 255, 255], 0.4);
+        const darkRgb = mixRgb(rgb, [8, 6, 12], 0.35);
         const isHov = node === hovered;
         const baseR = TYPE_RADIUS[node.entity.type] ?? 5;
-        // Importance adds up to ~70% to the base radius; hover adds a fixed pop.
-        const importanceR = baseR * (1 + node.weight * 0.7);
-        const r = (isHov ? importanceR + 2.5 : importanceR) * node.scale;
-        // Gentle per-node twinkle keeps the field alive without being busy.
-        const twinkle = 0.85 + 0.15 * Math.sin(t * 1.4 + node.twinkle);
-        const alpha = node.opacity * twinkle;
-        const hex = (a: number) =>
-          Math.round(Math.max(0, Math.min(1, a)) * 0xff)
-            .toString(16)
-            .padStart(2, "0");
+        // Importance and depth: containers read a touch larger, deep leaves
+        // slightly smaller, so the hierarchy is legible at a glance.
+        const depthScale = Math.max(0.72, 1 - node.depth * 0.12);
+        const importanceR = baseR * (1 + node.weight * 0.6) * depthScale;
+        const r = (isHov ? importanceR + 2 : importanceR) * node.scale;
+        if (r < 0.4) continue;
+        // Very gentle breathing keeps the field alive without a "blinky" feel.
+        const breathe = 0.94 + 0.06 * Math.sin(t * 1.1 + node.twinkle);
+        const alpha = node.opacity * breathe;
 
         ctx.save();
 
-        // Layered soft glow — larger & warmer for important/hovered nodes.
-        const glowR = r * (isHov ? 5.4 : 3.8) * (1 + node.weight * 0.5);
-        const grd = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, glowR);
-        grd.addColorStop(0, color + hex(alpha * (0.34 + node.weight * 0.25)));
-        grd.addColorStop(0.5, color + hex(alpha * 0.12));
-        grd.addColorStop(1, "transparent");
+        // Ambient glow — soft and restrained (matte, not neon).
+        const glowR = r * (isHov ? 4.2 : 3) * (1 + node.weight * 0.35);
+        const grd = ctx.createRadialGradient(node.x, node.y, r * 0.5, node.x, node.y, glowR);
+        grd.addColorStop(0, rgba(rgb, alpha * (0.16 + node.weight * 0.12)));
+        grd.addColorStop(0.55, rgba(rgb, alpha * 0.05));
+        grd.addColorStop(1, rgba(rgb, 0));
         ctx.beginPath();
         ctx.arc(node.x, node.y, glowR, 0, Math.PI * 2);
         ctx.fillStyle = grd;
         ctx.fill();
 
-        // Core fill — radial gradient from a near-white centre to the type hue
-        // gives each node a lit, three-dimensional feel.
+        // Core — top-lit gradient from a softly lightened hue to a deeper edge.
         const coreGrad = ctx.createRadialGradient(
-          node.x - r * 0.3,
-          node.y - r * 0.3,
-          r * 0.1,
+          node.x - r * 0.4,
+          node.y - r * 0.45,
+          r * 0.15,
           node.x,
           node.y,
-          r,
+          r * 1.05,
         );
-        coreGrad.addColorStop(0, "#FFFFFF" + hex(alpha * 0.95));
-        coreGrad.addColorStop(0.45, color + hex(alpha));
-        coreGrad.addColorStop(1, color + hex(alpha * 0.72));
+        coreGrad.addColorStop(0, rgba(lightRgb, alpha));
+        coreGrad.addColorStop(0.5, rgba(rgb, alpha));
+        coreGrad.addColorStop(1, rgba(darkRgb, alpha));
         drawNodeShape(ctx, node.entity.type, node.x, node.y, r);
         ctx.fillStyle = coreGrad;
         ctx.fill();
 
-        // Rim light — crisp outline that separates the node from its glow.
+        // Fine rim for definition — a hairline lighter edge, kept subtle.
         drawNodeShape(ctx, node.entity.type, node.x, node.y, r);
-        ctx.strokeStyle = color + hex(alpha * 0.9);
+        ctx.strokeStyle = rgba(lightRgb, alpha * 0.55);
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // Inner specular highlight for a glassy, gem-like read.
-        ctx.beginPath();
-        ctx.arc(node.x - r * 0.32, node.y - r * 0.32, Math.max(0.6, r * 0.22), 0, Math.PI * 2);
-        ctx.fillStyle = "#FFFFFF" + hex(alpha * 0.8);
-        ctx.fill();
-
-        // Rule inner ring (kept — reads as an inscribed sigil).
+        // Rule inner ring (reads as an inscribed sigil).
         if (node.entity.type === "rule") {
           ctx.beginPath();
           ctx.arc(node.x, node.y, r * 0.5, 0, Math.PI * 2);
-          ctx.strokeStyle = color + hex(alpha * 0.6);
+          ctx.strokeStyle = rgba(lightRgb, alpha * 0.5);
           ctx.lineWidth = 1;
           ctx.stroke();
         }
 
-        // Hover ring — a soft halo pulse around the focused node.
+        // Container affordance ring — quietly signals "click to reveal more".
+        if (node.hasChildren && node.scale > 0.4) {
+          const isExp = expanded.has(node.entity.id);
+          const ringR = r + 4.5 + node.weight * 2;
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, ringR, 0, Math.PI * 2);
+          ctx.strokeStyle = rgba(rgb, alpha * (isExp ? 0.5 : 0.32));
+          ctx.lineWidth = 1;
+          ctx.setLineDash(isExp ? [] : [2, 4]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        // Hover halo — a single soft ring, gently pulsing.
         if (isHov) {
           ctx.beginPath();
-          ctx.arc(node.x, node.y, r + 6 + Math.sin(t * 3) * 1.5, 0, Math.PI * 2);
-          ctx.strokeStyle = color + hex(0.55);
+          ctx.arc(node.x, node.y, r + 7 + Math.sin(t * 2.4) * 1.2, 0, Math.PI * 2);
+          ctx.strokeStyle = rgba(lightRgb, alpha * 0.5);
           ctx.lineWidth = 1.25;
           ctx.stroke();
         }
 
         ctx.restore();
 
-        // Label — always show for hovered nodes, threshold 0.25 for others.
-        // A dark legibility halo (shadow) keeps names readable over glow.
-        if ((node.opacity > 0.25 || isHov) && node.scale > 0.3) {
+        // Label — shown for hovered nodes and for sufficiently visible ones.
+        // A dark halo (shadow) keeps names readable over glow and edges.
+        if ((node.opacity > 0.3 || isHov) && node.scale > 0.4) {
           const raw = node.entity.name;
           const label = raw.length > 20 ? raw.slice(0, 18) + "…" : raw;
-          const labelAlpha = isHov ? 1 : node.opacity * 0.78;
-          const isBold = node.entity.type === "faction" || node.entity.type === "location";
+          const labelAlpha = isHov ? 1 : node.opacity * 0.8;
+          const isBold = TYPE_TIER[node.entity.type] <= 1;
           ctx.save();
           ctx.globalAlpha = labelAlpha;
-          ctx.font = `${isBold ? "600 " : ""}${10 + node.weight * 2}px Inter, sans-serif`;
+          ctx.font = `${isBold ? "600 " : ""}${Math.round(9.5 + node.weight * 2 - node.depth * 0.6)}px Inter, sans-serif`;
           ctx.textAlign = "center";
-          ctx.shadowColor = "rgba(0,0,0,0.55)";
+          ctx.shadowColor = "rgba(0,0,0,0.6)";
           ctx.shadowBlur = 4;
-          ctx.fillStyle = color;
-          ctx.fillText(label, node.x, node.y + r + 14);
+          ctx.fillStyle = rgba(mixRgb(rgb, [255, 255, 255], 0.15), 1);
+          ctx.fillText(label, node.x, node.y + r + 13);
           ctx.restore();
         }
       }
@@ -628,12 +848,21 @@ export function ConstellationCanvas({
   }, [canvasRef]);
 
   const findNode = useCallback((wx: number, wy: number) => {
+    let best: CanvasNode | null = null;
+    let bestDist = Infinity;
     for (const node of nodesRef.current) {
-      if (!node.visible && node.scale < 0.1) continue;
-      const r = (TYPE_RADIUS[node.entity.type] ?? 5) + 10;
-      if (Math.hypot(node.x - wx, node.y - wy) < r) return node;
+      // Only currently-revealed nodes are hittable (collapsed children shrink
+      // to scale 0 inside their parent).
+      if (node.scale < 0.25) continue;
+      const baseR = TYPE_RADIUS[node.entity.type] ?? 5;
+      const hitR = baseR * (1 + node.weight * 0.6) + 12;
+      const d = Math.hypot(node.x - wx, node.y - wy);
+      if (d < hitR && d < bestDist) {
+        bestDist = d;
+        best = node;
+      }
     }
-    return null;
+    return best;
   }, []);
 
   const handleMouseMove = useCallback(
@@ -668,7 +897,13 @@ export function ConstellationCanvas({
         if (rect) {
           const screenX = found.x * scaleRef.current + offsetRef.current.x;
           const screenY = found.y * scaleRef.current + offsetRef.current.y;
-          setHoverTooltip({ x: screenX, y: screenY - 44, label: "Drag to forge a link" });
+          const isExp = expandedIdsRef.current.has(found.entity.id);
+          const label = found.hasChildren
+            ? isExp
+              ? "Click to collapse · drag to forge"
+              : "Click to reveal within · drag to forge"
+            : "Drag to forge a link";
+          setHoverTooltip({ x: screenX, y: screenY - 44, label });
         }
       } else {
         setHoverTooltip(null);
@@ -754,6 +989,26 @@ export function ConstellationCanvas({
       const { x, y } = toWorld(e.clientX, e.clientY);
       const node = findNode(x, y);
       if (!node) return;
+
+      // Drill-down: clicking a container reveals its children; clicking an
+      // expanded one collapses it (and any descendants, so re-opening starts
+      // fresh). Selection happens either way so the detail panel stays in sync.
+      if (node.hasChildren) {
+        const ex = expandedIdsRef.current;
+        if (ex.has(node.entity.id)) {
+          const stack = [node.entity.id];
+          while (stack.length) {
+            const id = stack.pop() as string;
+            ex.delete(id);
+            for (const n of nodesRef.current) {
+              if (n.parentId === id && ex.has(n.entity.id)) stack.push(n.entity.id);
+            }
+          }
+        } else {
+          ex.add(node.entity.id);
+        }
+      }
+
       setSelectedEntity(node.entity);
     },
     [toWorld, findNode, setSelectedEntity],
@@ -894,7 +1149,7 @@ export function ConstellationCanvas({
                 </div>
               ))}
               <p className="mt-1 border-t border-[var(--border)] pt-1.5 text-[9px] text-[var(--text-muted)] opacity-60">
-                Hover a node to reveal its links · Drag node to node to forge one · Scroll to zoom · Drag to pan
+Click a ringed node to reveal what lives within · Hover to trace its links · Drag node to node to forge one · Scroll to zoom
               </p>
             </div>
           )}
